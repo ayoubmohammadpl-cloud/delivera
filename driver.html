@@ -766,12 +766,12 @@ let currentLang = "en";
 
 const translations = {
   en: {
-    // العنوان الأساسي و التبويبات
+    // Main header and tabs
     mainHeader: "Delivery System — Driver Interface",
     tab_register: "Register",
     tab_login: "Log in",
 
-    // تسجيل سائق
+    // Register driver
     driver_register_title: "Driver registration",
     firstName_placeholder: "First name",
     lastName_placeholder: "Last name",
@@ -782,17 +782,17 @@ const translations = {
     driverPassword_placeholder: "Password (6+ characters)",
     register_submit: "Register driver",
 
-    // تسجيل الدخول
+    // Login
     driver_login_title: "Driver login",
     loginEmail_placeholder: "Email",
     loginPassword_placeholder: "Password",
     login_submit: "Log in",
 
-    // عنوان العميل
+    // Customer address
     customerAddress_placeholder: "Enter customer address",
     start_customer_nav: "Start navigation",
 
-    // زر الحالة والكبسولة السفلية
+    // Online/offline button + bottom capsule
     online_btn_online: "Status: Online",
     online_btn_offline: "Status: Offline",
     status_hint_online: "You are online and ready to receive orders",
@@ -800,7 +800,7 @@ const translations = {
     status_active_one: "You have 1 active order",
     status_active_many: "You have {count} active orders",
 
-    // القائمة الجانبية
+    // Side panel
     side_menu_title: "Menu",
     side_summary_title: "Orders summary",
     active_section_btn: "Active orders",
@@ -808,27 +808,123 @@ const translations = {
     pricing_section_btn: "Delivery pricing",
     logout: "Log out",
 
-    // الإحصاءات
+    // Stats
     summary_active_orders: "Active orders",
     summary_completed_orders: "Previous orders",
     summary_earnings: "Earnings",
-    // --- Pricing (delivery settings) ---
-    pricing_intro: "Set your delivery pricing so each trip is calculated automatically.",
+
+    // Pricing (delivery settings)
+    pricing_intro:
+      "Set your delivery pricing so each trip is calculated automatically.",
     pricing_label_delivery: "Price per km from merchant to drop-off (€)",
     pricing_include_to_merchant: "Include distance from my location to merchant",
     pricing_use_same_for_both: "Use the same price for both segments",
-    pricing_label_to_merchant: "Price per km from my location to merchant (€)",
+    pricing_label_to_merchant:
+      "Price per km from my location to merchant (€)",
     pricing_free_km: "Number of free first kilometers",
     pricing_save_btn: "Save",
-    pricing_base_fee_hint: "Fixed base fee per delivered order: {fee} €",
+    pricing_base_fee_hint:
+      "Fixed base fee per delivered order: {fee} €",
     pricing_error_delivery_price:
       "Please enter a valid price per kilometer from merchant to drop-off.",
     pricing_error_to_merchant_price:
       "Please enter a valid price per kilometer from your location to the merchant.",
     pricing_saved_success: "Pricing settings saved successfully.",
 
-    // الفوتر
-    footer_text: "Driver interface — connected to Firebase & Google Maps (distance calculation)"
+    // Footer
+    footer_text:
+      "Driver interface — connected to Firebase & Google Maps (distance calculation)",
+
+    // Status labels
+    status_pending: "Pending",
+    status_accepted: "Accepted",
+    status_inProgress: "In progress",
+    status_delivered: "Delivered",
+    status_cancelled: "Cancelled",
+    status_rejected: "Rejected",
+    status_unknown: "Unknown",
+
+    // Bottom sheet (current order)
+    currentOrder_btn_startToMerchant: "Start driving to merchant",
+    currentOrder_btn_delivered: "Mark as delivered",
+    currentOrder_btn_cancel: "Cancel order",
+    currentOrder_expectedCost: "Estimated cost",
+
+    // Order details modal
+    orderDetails_title: "Order details",
+    orderDetails_status: "Status",
+    orderDetails_createdAt: "Order time",
+    orderDetails_startedAt: "Start of delivery",
+    orderDetails_deliveredAt: "Delivery time",
+    orderDetails_merchant: "Merchant",
+    orderDetails_customerName: "Customer name",
+    orderDetails_address: "Address",
+    orderDetails_totalDistance: "Total distance",
+    orderDetails_deliveryCost: "Delivery fee",
+    orderDetails_notes: "Notes",
+    orderDetails_closeBtn: "Close",
+
+    // New call modal
+    newCall_title: "New call from merchant",
+    newCall_merchant: "Merchant",
+    newCall_city: "City",
+    newCall_time: "Time",
+    newCall_question: "Do you want to accept this call?",
+    newCall_btn_accept: "Accept",
+    newCall_btn_reject: "Reject",
+
+    // Distance / units
+    distance_km_short: "km",
+
+    // Side list order cards
+    orderCard_status: "Status",
+    orderCard_address: "Address",
+    orderCard_expectedCost: "Estimated cost",
+    orderCard_totalDistance: "Total distance",
+    orderCard_finalCost: "Final cost",
+
+    // Alerts / confirmations
+    alert_password_too_short:
+      "Password must be at least 6 characters.",
+    alert_driver_register_success: "Driver registered successfully!",
+    alert_generic_error_prefix: "Error: ",
+    alert_login_driver_only:
+      "This interface is for drivers only. If you are a merchant, please use the merchant interface link.",
+    alert_toggle_offline_with_active:
+      "You can't go offline or close the session while there is an active order. Please finish the order first.",
+    alert_geo_failed_prefix: "Unable to get location: ",
+    alert_geo_not_supported: "Your browser does not support geolocation.",
+    alert_status_update_failed: "Error while updating status: ",
+    alert_logout_forbidden_while_busy:
+      "You can't log out while there is an active order or accepted call. Please finish the order first.",
+    alert_logout_failed: "Error while logging out: ",
+    alert_address_geocode_failed:
+      "Unable to get the location for this address.",
+    alert_customer_address_required:
+      "Please select a valid customer address first.",
+    alert_live_nav_not_supported:
+      "Your browser does not support live navigation.",
+    alert_map_not_ready: "Map is not ready yet.",
+    alert_call_update_failed: "Error while updating call status: ",
+    alert_currentDriverNotSet: "Current driver is not set.",
+    alert_orderNotInDriverLog: "Order not found in driver's log.",
+    alert_readOrderDetailsError:
+      "Error while reading order details: ",
+    alert_cannotAcceptCallNoDriver:
+      "Cannot accept the call: no driver is set.",
+    alert_acceptCallError: "Error while accepting the call: ",
+    alert_rejectCallError: "Error while rejecting the call: ",
+    alert_orderNotFound: "Order not found.",
+    alert_driverStartError:
+      "Error while registering start of the trip: ",
+    alert_driverStartSuccess:
+      "Trip towards merchant has been registered and map navigation started.",
+    alert_completeDeliveryError:
+      "Error while completing the delivery: ",
+    alert_completeDeliverySuccess:
+      "Distance and delivery fee have been calculated and order status updated.",
+    confirm_cancel_order:
+      "Are you sure you want to cancel this order?"
   },
 
   de: {
@@ -857,7 +953,8 @@ const translations = {
     online_btn_online: "Status: Online",
     online_btn_offline: "Status: Offline",
     status_hint_online: "Du bist online und kannst Aufträge erhalten",
-    status_hint_offline: "Du bist derzeit offline – tippe, um online zu gehen",
+    status_hint_offline:
+      "Du bist derzeit offline – tippe, um online zu gehen",
     status_active_one: "Du hast eine aktive Bestellung",
     status_active_many: "Du hast {count} aktive Bestellungen",
 
@@ -871,12 +968,17 @@ const translations = {
     summary_active_orders: "Aktive Bestellungen",
     summary_completed_orders: "Frühere Bestellungen",
     summary_earnings: "Einnahmen",
-    // --- Pricing (delivery settings) ---
-    pricing_intro: "Lege deine Lieferpreise fest, damit jede Fahrt automatisch berechnet wird.",
-    pricing_label_delivery: "Preis pro km vom Händler zur Lieferadresse (€)",
-    pricing_include_to_merchant: "Distanz von meinem Standort zum Händler berücksichtigen",
-    pricing_use_same_for_both: "Gleichen Preis für beide Strecken verwenden",
-    pricing_label_to_merchant: "Preis pro km von meinem Standort zum Händler (€)",
+
+    pricing_intro:
+      "Lege deine Lieferpreise fest, damit jede Fahrt automatisch berechnet wird.",
+    pricing_label_delivery:
+      "Preis pro km vom Händler zur Lieferadresse (€)",
+    pricing_include_to_merchant:
+      "Distanz von meinem Standort zum Händler berücksichtigen",
+    pricing_use_same_for_both:
+      "Gleichen Preis für beide Strecken verwenden",
+    pricing_label_to_merchant:
+      "Preis pro km von meinem Standort zum Händler (€)",
     pricing_free_km: "Anzahl der ersten kostenlosen Kilometer",
     pricing_save_btn: "Speichern",
     pricing_base_fee_hint:
@@ -885,9 +987,113 @@ const translations = {
       "Bitte gib einen gültigen Preis pro Kilometer vom Händler zur Lieferadresse ein.",
     pricing_error_to_merchant_price:
       "Bitte gib einen gültigen Preis pro Kilometer von deinem Standort zum Händler ein.",
-    pricing_saved_success: "Preis-Einstellungen wurden erfolgreich gespeichert.",
+    pricing_saved_success:
+      "Preis-Einstellungen wurden erfolgreich gespeichert.",
 
-    footer_text: "Fahreroberfläche – verbunden mit Firebase & Google Maps (Distanzberechnung)"
+    footer_text:
+      "Fahreroberfläche – verbunden mit Firebase & Google Maps (Distanzberechnung)",
+
+    // Status labels
+    status_pending: "Ausstehend",
+    status_accepted: "Angenommen",
+    status_inProgress: "In Bearbeitung",
+    status_delivered: "Zugestellt",
+    status_cancelled: "Storniert",
+    status_rejected: "Abgelehnt",
+    status_unknown: "Unbekannt",
+
+    // Bottom sheet (current order)
+    currentOrder_btn_startToMerchant:
+      "Fahrt zum Händler starten",
+    currentOrder_btn_delivered: "Als zugestellt markieren",
+    currentOrder_btn_cancel: "Bestellung stornieren",
+    currentOrder_expectedCost: "Voraussichtliche Kosten",
+
+    // Order details modal
+    orderDetails_title: "Bestelldetails",
+    orderDetails_status: "Status",
+    orderDetails_createdAt: "Bestellzeit",
+    orderDetails_startedAt: "Start der Lieferung",
+    orderDetails_deliveredAt: "Lieferzeit",
+    orderDetails_merchant: "Händler",
+    orderDetails_customerName: "Kundenname",
+    orderDetails_address: "Adresse",
+    orderDetails_totalDistance: "Gesamtstrecke",
+    orderDetails_deliveryCost: "Liefergebühr",
+    orderDetails_notes: "Notizen",
+    orderDetails_closeBtn: "Schließen",
+
+    // New call modal
+    newCall_title: "Neuer Auftrag vom Händler",
+    newCall_merchant: "Händler",
+    newCall_city: "Stadt",
+    newCall_time: "Zeit",
+    newCall_question: "Möchtest du diesen Auftrag annehmen?",
+    newCall_btn_accept: "Annehmen",
+    newCall_btn_reject: "Ablehnen",
+
+    // Distance / units
+    distance_km_short: "km",
+
+    // Side list order cards
+    orderCard_status: "Status",
+    orderCard_address: "Adresse",
+    orderCard_expectedCost: "Voraussichtliche Kosten",
+    orderCard_totalDistance: "Gesamtstrecke",
+    orderCard_finalCost: "Endgültige Kosten",
+
+    // Alerts / confirmations
+    alert_password_too_short:
+      "Das Passwort muss mindestens 6 Zeichen lang sein.",
+    alert_driver_register_success:
+      "Fahrer wurde erfolgreich registriert!",
+    alert_generic_error_prefix: "Fehler: ",
+    alert_login_driver_only:
+      "Diese Oberfläche ist nur für Fahrer. Wenn du ein Händler bist, nutze bitte den Händler-Zugang.",
+    alert_toggle_offline_with_active:
+      "Du kannst nicht offline gehen oder die Sitzung schließen, solange ein Auftrag aktiv ist. Bitte schließe den Auftrag zuerst ab.",
+    alert_geo_failed_prefix:
+      "Standort konnte nicht ermittelt werden: ",
+    alert_geo_not_supported:
+      "Dein Browser unterstützt keine Standortbestimmung.",
+    alert_status_update_failed:
+      "Fehler beim Aktualisieren des Status: ",
+    alert_logout_forbidden_while_busy:
+      "Du kannst dich nicht abmelden, solange ein Auftrag aktiv oder ein Ruf angenommen ist. Bitte schließe den Auftrag zuerst ab.",
+    alert_logout_failed: "Fehler beim Abmelden: ",
+    alert_address_geocode_failed:
+      "Der Standort zu dieser Adresse konnte nicht ermittelt werden.",
+    alert_customer_address_required:
+      "Bitte zuerst eine gültige Kundenadresse auswählen.",
+    alert_live_nav_not_supported:
+      "Dein Browser unterstützt keine Live-Navigation.",
+    alert_map_not_ready: "Die Karte ist noch nicht bereit.",
+    alert_call_update_failed:
+      "Fehler beim Aktualisieren des Rufs: ",
+    alert_currentDriverNotSet:
+      "Aktueller Fahrer ist nicht gesetzt.",
+    alert_orderNotInDriverLog:
+      "Bestellung wurde nicht im Fahrerverlauf gefunden.",
+    alert_readOrderDetailsError:
+      "Fehler beim Laden der Bestelldetails: ",
+    alert_cannotAcceptCallNoDriver:
+      "Ruf kann nicht angenommen werden: kein Fahrer gesetzt.",
+    alert_acceptCallError:
+      "Fehler beim Annehmen des Rufs: ",
+    alert_rejectCallError:
+      "Fehler beim Ablehnen des Rufs: ",
+    alert_orderNotFound:
+      "Diese Bestellung wurde nicht gefunden.",
+    alert_driverStartError:
+      "Fehler beim Registrieren des Fahrtbeginns: ",
+    alert_driverStartSuccess:
+      "Fahrt zum Händler wurde registriert und Karte gestartet.",
+    alert_completeDeliveryError:
+      "Fehler beim Abschluss der Lieferung: ",
+    alert_completeDeliverySuccess:
+      "Strecke und Liefergebühr wurden berechnet und der Status aktualisiert.",
+    confirm_cancel_order:
+      "Bist du sicher, dass du diese Bestellung stornieren möchtest?"
   },
 
   ar: {
@@ -915,8 +1121,10 @@ const translations = {
 
     online_btn_online: "الحالة: أونلاين",
     online_btn_offline: "الحالة: أوفلاين",
-    status_hint_online: "أنت متصل الآن ومستعد لاستقبال الطلبات",
-    status_hint_offline: "أنت أوفلاين حالياً — اضغط لتفعيل الحالة",
+    status_hint_online:
+      "أنت متصل الآن ومستعد لاستقبال الطلبات",
+    status_hint_offline:
+      "أنت أوفلاين حالياً — اضغط لتفعيل الحالة",
     status_active_one: "لديك طلب واحد قيد التنفيذ",
     status_active_many: "لديك {count} طلبات قيد التنفيذ",
 
@@ -930,12 +1138,17 @@ const translations = {
     summary_active_orders: "الطلبات الحالية",
     summary_completed_orders: "الطلبات السابقة",
     summary_earnings: "الأرباح",
-    // --- Pricing (delivery settings) ---
-    pricing_intro: "قم بضبط تسعيرة التوصيل ليتم احتساب تكلفة كل رحلة تلقائياً.",
-    pricing_label_delivery: "سعر الكيلومتر من التاجر إلى نقطة التسليم (€)",
-    pricing_include_to_merchant: "احتساب المسافة من موقعي إلى التاجر",
-    pricing_use_same_for_both: "استخدام نفس السعر للمسارين",
-    pricing_label_to_merchant: "سعر الكيلومتر من موقعي إلى التاجر (€)",
+
+    pricing_intro:
+      "قم بضبط تسعيرة التوصيل ليتم احتساب تكلفة كل رحلة تلقائياً.",
+    pricing_label_delivery:
+      "سعر الكيلومتر من التاجر إلى نقطة التسليم (€)",
+    pricing_include_to_merchant:
+      "احتساب المسافة من موقعي إلى التاجر",
+    pricing_use_same_for_both:
+      "استخدام نفس السعر للمسارين",
+    pricing_label_to_merchant:
+      "سعر الكيلومتر من موقعي إلى التاجر (€)",
     pricing_free_km: "عدد الكيلومترات المجانية الأولى",
     pricing_save_btn: "حفظ",
     pricing_base_fee_hint:
@@ -946,9 +1159,109 @@ const translations = {
       "رجاءً أدخل سعرًا صالحًا لكل كيلومتر من موقعك إلى التاجر.",
     pricing_saved_success: "تم حفظ إعدادات التسعير بنجاح.",
 
-    footer_text: "واجهة السائق — مربوطة مع Firebase & Google Maps (لحساب المسافة)"
+    footer_text:
+      "واجهة السائق — مربوطة مع Firebase & Google Maps (لحساب المسافة)",
+
+    // Status labels
+    status_pending: "قيد الانتظار",
+    status_accepted: "مقبول",
+    status_inProgress: "قيد التنفيذ",
+    status_delivered: "تم التسليم",
+    status_cancelled: "ملغى",
+    status_rejected: "مرفوض",
+    status_unknown: "غير معروف",
+
+    // Bottom sheet (current order)
+    currentOrder_btn_startToMerchant:
+      "بدء التوجه إلى التاجر",
+    currentOrder_btn_delivered: "تم التسليم",
+    currentOrder_btn_cancel: "إلغاء",
+    currentOrder_expectedCost: "التكلفة المتوقعة",
+
+    // Order details modal
+    orderDetails_title: "تفاصيل الطلب",
+    orderDetails_status: "الحالة",
+    orderDetails_createdAt: "وقت الطلب",
+    orderDetails_startedAt: "بداية التوصيل",
+    orderDetails_deliveredAt: "وقت التسليم",
+    orderDetails_merchant: "التاجر",
+    orderDetails_customerName: "اسم العميل",
+    orderDetails_address: "العنوان",
+    orderDetails_totalDistance: "المسافة الكلية",
+    orderDetails_deliveryCost: "تكلفة التوصيل",
+    orderDetails_notes: "ملاحظات",
+    orderDetails_closeBtn: "إغلاق",
+
+    // New call modal
+    newCall_title: "نداء جديد من التاجر",
+    newCall_merchant: "المتجر",
+    newCall_city: "المدينة",
+    newCall_time: "الوقت",
+    newCall_question: "هل ترغب في قبول هذا النداء؟",
+    newCall_btn_accept: "قبول",
+    newCall_btn_reject: "رفض",
+
+    // Distance / units
+    distance_km_short: "كم",
+
+    // Side list order cards
+    orderCard_status: "الحالة",
+    orderCard_address: "العنوان",
+    orderCard_expectedCost: "التكلفة المتوقعة",
+    orderCard_totalDistance: "المسافة الكلية",
+    orderCard_finalCost: "التكلفة النهائية",
+
+    // Alerts / confirmations
+    alert_password_too_short:
+      "كلمة السر يجب أن تكون 6 أحرف على الأقل.",
+    alert_driver_register_success: "تم تسجيل السائق بنجاح!",
+    alert_generic_error_prefix: "خطأ: ",
+    alert_login_driver_only:
+      "هذه الواجهة مخصصة للسائقين فقط. إن كنت تاجرًا، يرجى استخدام رابط واجهة التاجر.",
+    alert_toggle_offline_with_active:
+      "لا يمكنك التحول إلى أوفلاين أو إغلاق الجلسة أثناء وجود طلب قيد التنفيذ. يرجى إنهاء الطلب أولاً.",
+    alert_geo_failed_prefix: "تعذر الحصول على الموقع: ",
+    alert_geo_not_supported:
+      "المتصفح لا يدعم الحصول على الموقع الجغرافي.",
+    alert_status_update_failed: "خطأ في تحديث الحالة: ",
+    alert_logout_forbidden_while_busy:
+      "لا يمكنك تسجيل الخروج أثناء وجود طلب قيد التنفيذ أو نداء مقبول. يرجى إنهاء الطلب أولاً.",
+    alert_logout_failed: "خطأ في تسجيل الخروج: ",
+    alert_address_geocode_failed:
+      "تعذر الحصول على موقع هذا العنوان.",
+    alert_customer_address_required:
+      "رجاءً اختر عنواناً صحيحاً للعميل أولاً.",
+    alert_live_nav_not_supported:
+      "المتصفح لا يدعم التوجيه الحي.",
+    alert_map_not_ready: "الخريطة غير جاهزة بعد.",
+    alert_call_update_failed:
+      "خطأ أثناء تحديث حالة النداء: ",
+    alert_currentDriverNotSet:
+      "لم يتم تحديد السائق الحالي.",
+    alert_orderNotInDriverLog:
+      "الطلب غير موجود في سجل السائق.",
+    alert_readOrderDetailsError:
+      "خطأ أثناء قراءة تفاصيل الطلب: ",
+    alert_cannotAcceptCallNoDriver:
+      "لا يمكن قبول النداء: لم يتم تحديد السائق.",
+    alert_acceptCallError:
+      "خطأ أثناء قبول النداء: ",
+    alert_rejectCallError:
+      "خطأ أثناء رفض النداء: ",
+    alert_orderNotFound: "لم يتم العثور على هذا الطلب.",
+    alert_driverStartError:
+      "خطأ أثناء تسجيل بداية الرحلة: ",
+    alert_driverStartSuccess:
+      "تم تسجيل بداية الرحلة نحو التاجر وتم توجيه الخريطة.",
+    alert_completeDeliveryError:
+      "خطأ أثناء إكمال التوصيل: ",
+    alert_completeDeliverySuccess:
+      "تم حساب مسافة وتكلفة التوصيل وتحديث حالة الطلب.",
+    confirm_cancel_order:
+      "هل أنت متأكد من إلغاء هذا الطلب؟"
   }
 };
+
 
 function t(key) {
   const dict = translations[currentLang] || translations.en;
@@ -1345,7 +1658,8 @@ driverForm.addEventListener("submit", async (e) => {
   const email = document.getElementById("driverEmail").value.trim();
   const phone = document.getElementById("driverPhone").value.trim();
   const password = document.getElementById("driverPassword").value;
-  if (password.length < 6) return alert("كلمة السر يجب أن تكون 6 أحرف على الأقل.");
+  if (password.length < 6) return alert(t("alert_password_too_short"));
+
   try {
     const userCredential = await auth.createUserWithEmailAndPassword(
       email,
@@ -1374,10 +1688,12 @@ driverForm.addEventListener("submit", async (e) => {
       freeKm: 0
     });
 
-    alert("تم تسجيل السائق بنجاح!");
+    alert(t("alert_driver_register_success"));
+
     driverForm.reset();
   } catch (err) {
-    alert("خطأ: " + err.message);
+    alert(t("alert_generic_error_prefix") + err.message);
+
   }
 });
 
@@ -1400,7 +1716,8 @@ loginForm.addEventListener("submit", async (e) => {
       await showDriverDashboard(uid);
     } else {
       await auth.signOut();
-      alert("هذه الواجهة مخصصة للسائقين فقط. إن كنت تاجرًا، يرجى استخدام رابط واجهة التاجر.");
+      alert(t("alert_login_driver_only"));
+
     }
 
     loginForm.reset();
@@ -1421,7 +1738,8 @@ toggleOnlineBtn.addEventListener("click", async () => {
     const hasActiveJob = driverHasActiveJob();
 
     if (driverCurrentOnline && (isBusy || hasActiveJob)) {
-      alert("لا يمكنك التحول إلى أوفلاين أو إغلاق الجلسة أثناء وجود طلب قيد التنفيذ. يرجى إنهاء الطلب أولاً.");
+      alert(t("alert_toggle_offline_with_active"));
+
       return;
     }
 
@@ -1450,7 +1768,8 @@ toggleOnlineBtn.addEventListener("click", async () => {
             updateOnlineBtn();
           },
           async (err) => {
-            alert("تعذر الحصول على الموقع: " + err.message);
+            alert(t("alert_geo_failed_prefix") + err.message);
+
             await driverRef.update({
               online: true,
               lastOnline: firebase.firestore.FieldValue.serverTimestamp()
@@ -1460,7 +1779,8 @@ toggleOnlineBtn.addEventListener("click", async () => {
           geoOptions
         );
       } else {
-        alert("المتصفح لا يدعم الحصول على الموقع الجغرافي.");
+        alert(t("alert_geo_not_supported"));
+
         await driverRef.update({
           online: true,
           lastOnline: firebase.firestore.FieldValue.serverTimestamp()
@@ -1475,7 +1795,8 @@ toggleOnlineBtn.addEventListener("click", async () => {
       updateOnlineBtn();
     }
   } catch (err) {
-    alert("خطأ في تحديث الحالة: " + err.message);
+    alert(t("alert_status_update_failed") + err.message);
+
   }
 });
 
@@ -1523,7 +1844,8 @@ driverLogoutBtn.addEventListener("click", async () => {
     const hasActiveJob = driverHasActiveJob();
 
     if (isBusy || hasActiveJob) {
-      alert("لا يمكنك تسجيل الخروج أثناء وجود طلب قيد التنفيذ أو نداء مقبول. يرجى إنهاء الطلب أولاً.");
+      alert(t("alert_logout_forbidden_while_busy"));
+
       return;
     }
 
@@ -1539,7 +1861,8 @@ driverLogoutBtn.addEventListener("click", async () => {
     if (footerEl) footerEl.classList.remove("hidden");
     document.body.classList.remove("driver-mode");
   } catch (err) {
-    alert("خطأ في تسجيل الخروج: " + err.message);
+    alert(t("alert_logout_failed") + err.message);
+
   }
 });
 
@@ -1589,6 +1912,20 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"]/g, function (c) {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
   });
+}
+// ترجمة حالة الطلب حسب الـ status code
+function getStatusLabel(status) {
+  const s = (status || "accepted").toLowerCase();
+  const map = {
+    pending: "status_pending",
+    accepted: "status_accepted",
+    in_progress: "status_inProgress",
+    delivered: "status_delivered",
+    cancelled: "status_cancelled",
+    rejected: "status_rejected"
+  };
+  const key = map[s] || "status_unknown";
+  return t(key);
 }
 
 /* خريطة السائق */
@@ -1770,7 +2107,8 @@ function initCustomerAutocomplete() {
   customerAutocomplete.addListener("place_changed", () => {
     const place = customerAutocomplete.getPlace();
     if (!place || !place.geometry || !place.geometry.location) {
-      alert("تعذر الحصول على موقع هذا العنوان.");
+      alert(t("alert_address_geocode_failed"));
+
       return;
     }
     const lat = place.geometry.location.lat();
@@ -1817,11 +2155,13 @@ async function setCustomerDestination(lat, lng, address) {
 /* بدء التوجيه إلى العميل من موقع السائق الحالي */
 function startCustomerNavigation() {
   if (!customerDestination || customerDestination.lat == null || customerDestination.lng == null) {
-    alert("رجاءً اختر عنواناً صحيحاً للعميل أولاً.");
+    alert(t("alert_customer_address_required"));
+
     return;
   }
   if (!navigator.geolocation) {
-    alert("المتصفح لا يدعم تحديد الموقع الجغرافي.");
+    alert(t("alert_geo_not_supported"));
+
     return;
   }
 
@@ -1849,7 +2189,8 @@ function startCustomerNavigation() {
       startGuidance(customerDestination.lat, customerDestination.lng);
     },
     (err) => {
-      alert("تعذر الحصول على الموقع: " + err.message);
+      alert(t("alert_geo_failed_prefix") + err.message);
+
     },
     geoOptions
   );
@@ -1874,11 +2215,13 @@ function clearCustomerDestination() {
 function startGuidance(targetLat, targetLng) {
   if (isGuidanceOn) return;
   if (!navigator.geolocation) {
-    alert("المتصفح لا يدعم التوجيه الحي.");
+    alert(t("alert_live_nav_not_supported"));
+
     return;
   }
   if (!driverMap) {
-    alert("الخريطة غير جاهزة بعد.");
+    alert(t("alert_map_not_ready"));
+
     return;
   }
 
@@ -2143,7 +2486,8 @@ alert(t("pricing_error_delivery_price"));
     await db.collection("drivers").doc(driverUid).update(updateData);
     currentDriverData = currentDriverData || {};
     Object.assign(currentDriverData, updateData);
-    alert("تم حفظ إعدادات التسعير بنجاح.");
+    alert(t("pricing_saved_success"));
+
     populatePricingFormFromData();
   } catch (err) {
     alert("خطأ أثناء حفظ إعدادات التسعير: " + err.message);
@@ -2229,7 +2573,8 @@ async function updateDriverCallAndMerchant(callId, dataPatch) {
       await db.doc(merchantCallPath).update(dataPatch);
     }
   } catch (err) {
-    alert("خطأ أثناء تحديث حالة النداء: " + err.message);
+    alert(t("alert_call_update_failed") + err.message);
+
   }
 }
 
@@ -2245,7 +2590,7 @@ function renderDriverCurrentOrder(call) {
     return;
   }
 
-  const statusLabel = escapeHtml(call.status || "مقبول");
+  const statusLabel = escapeHtml(getStatusLabel(call.status));
   const feeLabel =
     call.cost && typeof call.cost.totalFee === "number"
       ? call.cost.totalFee.toFixed(2) + " €"
@@ -2256,16 +2601,16 @@ function renderDriverCurrentOrder(call) {
   let buttonsHtml = "";
   if (!call.status || call.status === "accepted") {
     buttonsHtml = `
-      <button onclick="driverStartCall('${call.id}')">بدء التوجه إلى التاجر</button>
-      <button class="secondary" onclick="driverCompleteCall('${call.id}')">تم التسليم</button>
+      <button onclick="driverStartCall('${call.id}')">${t("currentOrder_btn_startToMerchant")}</button>
+      <button class="secondary" onclick="driverCompleteCall('${call.id}')">${t("currentOrder_btn_delivered")}</button>
     `;
   } else if (call.status === "in_progress") {
     buttonsHtml = `
-      <button onclick="driverCompleteCall('${call.id}')">تم التسليم</button>
+      <button onclick="driverCompleteCall('${call.id}')">${t("currentOrder_btn_delivered")}</button>
     `;
   }
   buttonsHtml += `
-      <button class="secondary" onclick="driverCancelCall('${call.id}')">إلغاء</button>
+      <button class="secondary" onclick="driverCancelCall('${call.id}')">${t("currentOrder_btn_cancel")}</button>
   `;
 
   driverCurrentOrderEl.innerHTML = `
@@ -2279,7 +2624,7 @@ function renderDriverCurrentOrder(call) {
     <div class="driver-current-order-body">
       <div class="small">
         ${escapeHtml(call.deliveryAddress || "-")}<br/>
-        التكلفة المتوقعة: ${feeLabel}
+        ${t("currentOrder_expectedCost")}: ${feeLabel}
       </div>
       <div class="btn-row">
         ${buttonsHtml}
@@ -2290,6 +2635,7 @@ function renderDriverCurrentOrder(call) {
   driverCurrentOrderEl.classList.remove("collapsed");
   currentOrderCollapsed = false;
 }
+
 // زر طيّ/إظهار بطاقة الطلب النشط (Bottom Sheet)
 window.toggleCurrentOrderPanel = function (forceCollapse) {
   if (!driverCurrentOrderEl || driverCurrentOrderEl.classList.contains("hidden")) return;
@@ -2334,7 +2680,7 @@ function renderDriverOrders(allCalls) {
     );
   });
 
-  // عناوين الإحصاءات (مترجمة) + الأرقام
+  // الإحصاءات العلوية
   if (driverActiveCountEl) {
     driverActiveCountEl.innerHTML =
       t("summary_active_orders") +
@@ -2373,7 +2719,7 @@ function renderDriverOrders(allCalls) {
   const currentActiveCall = getCurrentActiveCall();
   renderDriverCurrentOrder(currentActiveCall);
 
-  // إظهار/إخفاء كبسولة الحالة السفلية حسب وجود طلبات
+  // إظهار/إخفاء كبسولة الحالة السفلية
   if (driverBottomStatusEl) {
     if (active.length > 0) {
       driverBottomStatusEl.classList.add("hidden");
@@ -2385,12 +2731,16 @@ function renderDriverOrders(allCalls) {
   if (driverActiveOrdersEl) driverActiveOrdersEl.innerHTML = "";
   if (driverCompletedOrdersEl) driverCompletedOrdersEl.innerHTML = "";
 
-  // الطلبات الحالية (القائمة الجانبية) - نفس النصوص القديمة حالياً
+  const statusLabelTitle = t("orderCard_status");
+  const addressLabelTitle = t("orderCard_address");
+  const expectedCostTitle = t("orderCard_expectedCost");
+
+  // الطلبات الحالية
   active.forEach((c) => {
     const card = document.createElement("div");
     card.className = "order-card";
 
-    const statusLabel = escapeHtml(c.status || "accepted");
+    const statusLabel = escapeHtml(getStatusLabel(c.status));
     const feeLabel =
       c.cost && typeof c.cost.totalFee === "number"
         ? c.cost.totalFee.toFixed(2) + " €"
@@ -2401,12 +2751,14 @@ function renderDriverOrders(allCalls) {
     card.innerHTML = `
       <div>
         <strong>#${c.id}</strong><br/>
-        <span class="small">الحالة: ${statusLabel}</span><br/>
-        العنوان: ${escapeHtml(c.deliveryAddress || "-")}<br/>
-        التكلفة المتوقعة: ${feeLabel}
+        <span class="small">${statusLabelTitle}: ${statusLabel}</span><br/>
+        ${addressLabelTitle}: ${escapeHtml(c.deliveryAddress || "-")}<br/>
+        ${expectedCostTitle}: ${feeLabel}
       </div>
     `;
-    driverActiveOrdersEl.appendChild(card);
+    if (driverActiveOrdersEl) {
+      driverActiveOrdersEl.appendChild(card);
+    }
 
     card.addEventListener("click", () => {
       viewDriverCallDetails(c.id);
@@ -2414,14 +2766,18 @@ function renderDriverOrders(allCalls) {
   });
 
   // الطلبات السابقة
+  const distanceUnit = t("distance_km_short");
+  const totalDistanceTitle = t("orderCard_totalDistance");
+  const finalCostTitle = t("orderCard_finalCost");
+
   completed.forEach((c) => {
     const card = document.createElement("div");
     card.className = "order-card";
 
-    const statusLabel = escapeHtml(c.status || "");
+    const statusLabel = escapeHtml(getStatusLabel(c.status));
     const totalKm =
       c.distance && typeof c.distance.totalKm === "number"
-        ? c.distance.totalKm.toFixed(2) + " كم"
+        ? c.distance.totalKm.toFixed(2) + " " + distanceUnit
         : "—";
     const feeLabel =
       c.cost && typeof c.cost.totalFee === "number"
@@ -2433,13 +2789,15 @@ function renderDriverOrders(allCalls) {
     card.innerHTML = `
       <div>
         <strong>#${c.id}</strong><br/>
-        <span class="small">الحالة: ${statusLabel}</span><br/>
-        العنوان: ${escapeHtml(c.deliveryAddress || "-")}<br/>
-        المسافة الكلية: ${totalKm}<br/>
-        التكلفة النهائية: ${feeLabel}
+        <span class="small">${statusLabelTitle}: ${statusLabel}</span><br/>
+        ${addressLabelTitle}: ${escapeHtml(c.deliveryAddress || "-")}<br/>
+        ${totalDistanceTitle}: ${totalKm}<br/>
+        ${finalCostTitle}: ${feeLabel}
       </div>
     `;
-    driverCompletedOrdersEl.appendChild(card);
+    if (driverCompletedOrdersEl) {
+      driverCompletedOrdersEl.appendChild(card);
+    }
 
     card.addEventListener("click", () => {
       viewDriverCallDetails(c.id);
@@ -2465,10 +2823,11 @@ function renderDriverOrders(allCalls) {
   }
 }
 
+
 /* ========== تفاصيل الطلب (من calls) للسائق ========== */
 window.viewDriverCallDetails = async function (callId) {
   if (!driverUid) {
-    alert("لم يتم تحديد السائق الحالي.");
+    alert(t("alert_currentDriverNotSet"));
     return;
   }
 
@@ -2481,28 +2840,30 @@ window.viewDriverCallDetails = async function (callId) {
       .get();
 
     if (!doc.exists) {
-      alert("الطلب غير موجود في سجل السائق.");
+      alert(t("alert_orderNotInDriverLog"));
       return;
     }
 
     const o = { id: doc.id, ...doc.data() };
+    const statusLabel = getStatusLabel(o.status);
+    const distanceUnit = t("distance_km_short");
 
-    let html = `<div><strong>تفاصيل الطلب #${escapeHtml(o.id)}</strong></div>`;
-    html += `<div class="small">الحالة: ${escapeHtml(o.status || "")}</div>`;
+    let html = `<div><strong>${t("orderDetails_title")} #${escapeHtml(o.id)}</strong></div>`;
+    html += `<div class="small">${t("orderDetails_status")}: ${escapeHtml(statusLabel)}</div>`;
 
     if (o.createdAt && o.createdAt.toDate) {
-      html += `<div class="small">وقت الطلب: ${formatDate(o.createdAt.toDate())}</div>`;
+      html += `<div class="small">${t("orderDetails_createdAt")}: ${formatDate(o.createdAt.toDate())}</div>`;
     }
     if (o.startedAt && o.startedAt.toDate) {
-      html += `<div class="small">بداية التوصيل: ${formatDate(o.startedAt.toDate())}</div>`;
+      html += `<div class="small">${t("orderDetails_startedAt")}: ${formatDate(o.startedAt.toDate())}</div>`;
     }
     if (o.deliveredAt && o.deliveredAt.toDate) {
-      html += `<div class="small">وقت التسليم: ${formatDate(o.deliveredAt.toDate())}</div>`;
+      html += `<div class="small">${t("orderDetails_deliveredAt")}: ${formatDate(o.deliveredAt.toDate())}</div>`;
     }
 
     const distanceLabel =
       o.distance && typeof o.distance.totalKm === "number"
-        ? o.distance.totalKm.toFixed(2) + " كم"
+        ? o.distance.totalKm.toFixed(2) + " " + distanceUnit
         : "—";
 
     let feeLabel = "—";
@@ -2513,16 +2874,16 @@ window.viewDriverCallDetails = async function (callId) {
     }
 
     html += `<div style="margin-top:8px;">`;
-    html += `<div>التاجر: ${escapeHtml(o.merchantName || "-")} (${escapeHtml(o.merchantCity || "-")})</div>`;
-    html += `<div>اسم العميل: ${escapeHtml(o.customerName || "-")}</div>`;
-    html += `<div>العنوان: ${escapeHtml(o.deliveryAddress || "-")}</div>`;
-    html += `<div>المسافة الكلية: ${distanceLabel}</div>`;
-    html += `<div>تكلفة التوصيل: ${feeLabel}</div>`;
-    html += `<div>ملاحظات: ${escapeHtml(o.notes || "-")}</div>`;
+    html += `<div>${t("orderDetails_merchant")}: ${escapeHtml(o.merchantName || "-")} (${escapeHtml(o.merchantCity || "-")})</div>`;
+    html += `<div>${t("orderDetails_customerName")}: ${escapeHtml(o.customerName || "-")}</div>`;
+    html += `<div>${t("orderDetails_address")}: ${escapeHtml(o.deliveryAddress || "-")}</div>`;
+    html += `<div>${t("orderDetails_totalDistance")}: ${distanceLabel}</div>`;
+    html += `<div>${t("orderDetails_deliveryCost")}: ${feeLabel}</div>`;
+    html += `<div>${t("orderDetails_notes")}: ${escapeHtml(o.notes || "-")}</div>`;
     html += `</div>`;
 
     html += `<div class="btn-row">`;
-    html += `<button class="secondary" onclick="closeOrderModal()">إغلاق</button>`;
+    html += `<button class="secondary" onclick="closeOrderModal()">${t("orderDetails_closeBtn")}</button>`;
     html += `</div>`;
 
     modalContent.innerHTML = html;
@@ -2530,7 +2891,7 @@ window.viewDriverCallDetails = async function (callId) {
     modalBackdrop.style.display = "flex";
     window.scrollTo(0, 0);
   } catch (err) {
-    alert("خطأ أثناء قراءة تفاصيل الطلب: " + err.message);
+    alert(t("alert_readOrderDetailsError") + err.message);
   }
 };
 
@@ -2542,14 +2903,14 @@ function showCallModalForDriver(call) {
       : "";
 
   let html = `
-    <div><strong>نداء جديد من التاجر</strong></div>
-    <div class="small">المتجر: ${escapeHtml(call.merchantName || "")}</div>
-    <div class="small">المدينة: ${escapeHtml(call.merchantCity || "")}</div>
-    <div class="small">الوقت: ${when}</div>
-    <div style="margin-top:10px;">هل ترغب في قبول هذا النداء؟</div>
+    <div><strong>${t("newCall_title")}</strong></div>
+    <div class="small">${t("newCall_merchant")}: ${escapeHtml(call.merchantName || "")}</div>
+    <div class="small">${t("newCall_city")}: ${escapeHtml(call.merchantCity || "")}</div>
+    <div class="small">${t("newCall_time")}: ${when}</div>
+    <div style="margin-top:10px;">${t("newCall_question")}</div>
     <div class="btn-row">
-      <button id="acceptCallBtn">قبول</button>
-      <button id="rejectCallBtn" class="secondary">رفض</button>
+      <button id="acceptCallBtn">${t("newCall_btn_accept")}</button>
+      <button id="rejectCallBtn" class="secondary">${t("newCall_btn_reject")}</button>
     </div>
   `;
 
@@ -2566,7 +2927,7 @@ function showCallModalForDriver(call) {
       try {
         const driverId = driverUid || call.driverId;
         if (!driverId) {
-          alert("لا يمكن قبول النداء: لم يتم تحديد السائق.");
+          alert(t("alert_cannotAcceptCallNoDriver"));
           return;
         }
 
@@ -2580,10 +2941,8 @@ function showCallModalForDriver(call) {
             typeof driverPricing.pricePerKmDelivery === "number"
               ? driverPricing.pricePerKmDelivery
               : null,
-          includeToMerchantSegment:
-            !!driverPricing.includeToMerchantSegment,
-          useSamePriceForBoth:
-            driverPricing.useSamePriceForBoth !== false,
+          includeToMerchantSegment: !!driverPricing.includeToMerchantSegment,
+          useSamePriceForBoth: driverPricing.useSamePriceForBoth !== false,
           pricePerKmToMerchant:
             typeof driverPricing.pricePerKmToMerchant === "number"
               ? driverPricing.pricePerKmToMerchant
@@ -2606,8 +2965,7 @@ function showCallModalForDriver(call) {
           driverPhone: call.driverPhone || "",
           status: "accepted",
           createdAt:
-            call.createdAt ||
-            firebase.firestore.FieldValue.serverTimestamp(),
+            call.createdAt || firebase.firestore.FieldValue.serverTimestamp(),
           respondedAt: firebase.firestore.FieldValue.serverTimestamp(),
           merchantCallPath: call.ref.path,
           deliveryFee: call.deliveryFee || 0,
@@ -2631,7 +2989,7 @@ function showCallModalForDriver(call) {
 
         closeOrderModal();
       } catch (err) {
-        alert("خطأ أثناء قبول النداء: " + err.message);
+        alert(t("alert_acceptCallError") + err.message);
       }
     };
   }
@@ -2652,7 +3010,7 @@ function showCallModalForDriver(call) {
 
         closeOrderModal();
       } catch (err) {
-        alert("خطأ أثناء رفض النداء: " + err.message);
+        alert(t("alert_rejectCallError") + err.message);
       }
     };
   }
@@ -2664,12 +3022,14 @@ window.driverStartCall = function (callId) {
     return c.id === callId;
   });
   if (!call) {
-    alert("لم يتم العثور على هذا الطلب.");
+    alert(t("alert_orderNotFound"));
+
     return;
   }
 
   if (!navigator.geolocation) {
-    alert("المتصفح لا يدعم تحديد الموقع الجغرافي.");
+    alert(t("alert_geo_not_supported"));
+
     return;
   }
 
@@ -2714,13 +3074,16 @@ window.driverStartCall = function (callId) {
           toggleCurrentOrderPanel(true);
         }
 
-        alert("تم تسجيل بداية الرحلة نحو التاجر وتم توجيه الخريطة.");
+        alert(t("alert_driverStartSuccess"));
+
       } catch (err) {
-        alert("خطأ أثناء تسجيل بداية الرحلة: " + err.message);
+        alert(t("alert_driverStartError") + err.message);
+
       }
     },
     function (err) {
-      alert("تعذر الحصول على الموقع: " + err.message);
+      alert(t("alert_geo_failed_prefix") + err.message);
+
     },
     geoOptions
   );
@@ -2731,12 +3094,14 @@ window.driverCompleteCall = function (callId) {
     return c.id === callId;
   });
   if (!call) {
-    alert("لم يتم العثور على هذا الطلب.");
+alert(t("alert_orderNotFound"));
+
     return;
   }
 
   if (!navigator.geolocation) {
-    alert("المتصفح لا يدعم تحديد الموقع الجغرافي.");
+    alert(t("alert_geo_not_supported"));
+
     return;
   }
 
@@ -2867,21 +3232,25 @@ window.driverCompleteCall = function (callId) {
           toggleCurrentOrderPanel(true);
         }
 
-        alert("تم حساب مسافة وتكلفة التوصيل وتحديث حالة الطلب.");
+        alert(t("alert_completeDeliverySuccess"));
+
 
       } catch (err) {
-        alert("خطأ أثناء إكمال التوصيل: " + err.message);
+        alert(t("alert_completeDeliveryError") + err.message);
+
       }
     },
     function (err) {
-      alert("تعذر الحصول على الموقع: " + err.message);
+      alert(t("alert_geo_failed_prefix") + err.message);
+
     },
     geoOptions
   );
 };
 
 window.driverCancelCall = async function (callId) {
-  if (!confirm("هل أنت متأكد من إلغاء هذا الطلب؟")) return;
+  if (!confirm(t("confirm_cancel_order"))) return;
+
 
     try {
     await updateDriverCallAndMerchant(callId, {
@@ -2904,7 +3273,8 @@ window.driverCancelCall = async function (callId) {
     }
 
   } catch (err) {
-    alert("خطأ أثناء إلغاء الطلب: " + err.message);
+    alert(t("alert_call_update_failed") + err.message);
+
   }
 };
 
