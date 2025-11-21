@@ -114,8 +114,8 @@
 
         /* أيقونة المتجر */
 .driver-nav-btn .driver-nav-icon {
-    width: 50px;                 /* تقدر تزبطها 28 / 30 حسب ذوقك */
-    height: 50px;
+    width: 70px;                 /* تقدر تزبطها 28 / 30 حسب ذوقك */
+    height: 70px;
     border-radius: 0;            /* لا دائرة داخلية */
     background-color: transparent; /* 🔴 لا خلفية بيضا */
     background-image: url("markt.png");  /* اسم ملف المتجر */
@@ -147,9 +147,13 @@
     align-items: center;
 }
 
-/* المنتصف يأخذ المساحة ويتوسّط زر الأونلاين */
+/* المنتصف: زر الحالة في وسط الشريط تماماً */
 .driver-top-center {
-    flex: 10;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
     justify-content: center;
 }
 
@@ -461,13 +465,13 @@
 }
 
 .driver-search-btn {
-    bottom: 165px;
+    bottom: 185px;
 }
 
     /* أيقونة المستخدم */
 .driver-search-icon {
-    width: 50px;
-    height: 50px;
+    width: 70px;
+    height: 70px;
     border-radius: 0;
     background-color: transparent; /* 🔴 لا خلفية بيضا */
     background-image: url("kunde.png"); /* اسم ملف العميل */
