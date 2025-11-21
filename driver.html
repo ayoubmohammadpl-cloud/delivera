@@ -823,6 +823,8 @@ const BASE_DELIVERY_FEE = 3.5; // EUR
 
 // أيقونة العميل (نقطة التسليم) من نفس مجلد الملف
 const CUSTOMER_MARKER_ICON_PATH = "kunde.png";
+// أيقونة التاجر (المتجر) من نفس مجلد الملف
+const MERCHANT_MARKER_ICON_PATH = "markt.png"; // غيّر الاسم حسب ملفك
 
 function getCustomerMarkerIcon() {
   if (typeof google === "undefined" || !google.maps) return null;
@@ -2269,14 +2271,13 @@ function showDriverRouteToCustomer(startLat, startLng, destLat, destLng) {
 function getMerchantMarkerIcon() {
   if (typeof google === "undefined" || !google.maps) return null;
   return {
-    path: "M -10 -10 H 10 V 10 H -10 Z",
-    fillColor: "#ff9800",
-    fillOpacity: 1,
-    strokeColor: "#ffffff",
-    strokeWeight: 2,
-    scale: 1.2
+    url: MERCHANT_MARKER_ICON_PATH,              // ملف الصورة
+    scaledSize: new google.maps.Size(52, 52),    // حجم الأيقونة على الخريطة
+    origin: new google.maps.Point(0, 0),
+    anchor: new google.maps.Point(26, 46)        // نقطة الارتكاز (أسفل الأيقونة تقريباً)
   };
 }
+
 
 /* تهيئة Google Places Autocomplete لحقل عنوان العميل */
 function initCustomerAutocomplete() {
