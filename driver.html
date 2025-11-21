@@ -506,6 +506,46 @@
         border-radius: 12px;
         color:#fff;
     }
+	/* ====== Google Places Autocomplete (اقتراح العناوين) ====== */
+.pac-container {
+    /* يخليه فوق كل عناصر الخريطة و القائمة */
+    z-index: 9999 !important;
+
+    /* تكبير الصندوق و جعله أوضح */
+    border-radius: 12px !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    border: none !important;
+    padding: 4px 0;
+    font-size: 14px;
+
+    /* خلفية بيضا ناعمة */
+    background-color: #ffffff;
+}
+
+/* كل عنصر (عنوان) داخل القائمة */
+.pac-item {
+    padding: 10px 14px;
+    line-height: 1.4;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* نص العنوان الأساسي داخل كل عنصر */
+.pac-item .pac-item-query {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+/* لما يمرّ السائق بالمؤشر أو يختار العنصر */
+.pac-item:hover {
+    background-color: #f2f7ff;
+}
+
+/* لو حاب تدعم تعدد الأسطر بشكل أجمل */
+.pac-item {
+    white-space: normal;
+}
+
     .driver-address-input-wrapper {
         display:flex;
         align-items:center;
