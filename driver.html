@@ -1,0 +1,2964 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>نظام التوصيل — واجهة السائق</title>
+
+<!-- Firebase (compat) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<style>
+    :root{--primary:#4285F4;--card-bg:#fff;--muted:#666;}
+    body {
+        font-family: Arial, sans-serif;
+        direction: rtl;
+        padding: 20px;
+        background: #f3f6fb;
+        color:#222;
+        margin: 0;
+    }
+    /* وضع السائق: لا Scroll ولا Padding */
+    body.driver-mode {
+        padding: 0;
+        overflow: hidden;
+    }
+
+    h2 { text-align: center; margin-bottom: 10px; }
+    .tabs { display: flex; justify-content: center; gap:10px; margin-bottom: 20px; }
+    .tab { padding: 10px 18px; border-radius: 8px; cursor: pointer; background: #e6eefc; color: #124; }
+    .tab.active { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(66,133,244,0.3); }
+    .card { background: var(--card-bg); border-radius: 10px; padding: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 12px; }
+    form { max-width: 520px; margin: 0 auto 10px; padding: 16px; border-radius: 10px; background: #fff; box-shadow: 0 1px 6px rgba(0,0,0,0.04); }
+    input, select, button, textarea { width: 100%; padding: 10px; margin: 8px 0; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; }
+    button { background: var(--primary); color: #fff; border: none; cursor: pointer; }
+    button.secondary { background: #fff; color: var(--primary); border: 1px solid #cde; }
+    .hidden { display:none; }
+    .small { font-size:13px; color:var(--muted); }
+    .btn-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+
+    .orders-list {
+        max-height: 260px;
+        overflow:auto;
+        padding:10px;
+        background:#fff;
+        border-radius:10px;
+        /* إخفاء سكرول الطلبات داخل القائمة */
+        -ms-overflow-style: none;   /* IE و Edge */
+        scrollbar-width: none;      /* Firefox */
+    }
+    .orders-list::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+    }
+
+    .order-card { border:1px solid #eef; padding:10px; margin-bottom:8px; border-radius:8px; cursor:pointer; }
+    .order-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+
+    /* modal */
+    .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; z-index:9999; }
+    .modal { width:90%; max-width:520px; background:#fff; padding:18px; border-radius:12px; }
+    .flex-between { display:flex; justify-content:space-between; align-items:center; }
+    footer { text-align:center; margin-top:24px; color:#666; font-size:13px; }
+
+    /* === واجهة السائق — نمط أوبر === */
+    #driverDashboard {
+        position: relative;
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        box-shadow: none;
+        border-radius: 0;
+    }
+
+    /* خريطة تملأ الشاشة */
+    .driver-map {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 0;
+        background: #d0d8e0;
+    }
+
+    /* زر التوجيه (أسفل يمين) */
+    .driver-nav-btn {
+        position: fixed;
+        bottom: 90px;
+        right: 12px;
+        z-index: 3;
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(0,0,0,0.8);
+        color:#fff;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+        cursor:pointer;
+    }
+        .driver-nav-btn .driver-nav-icon {
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        background: #fff;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:16px;
+    }
+    .driver-nav-btn .driver-nav-icon::before {
+        content: "🏬"; /* متجر */
+    }
+
+
+    /* الشريط العلوي */
+    .driver-top-bar {
+        position: fixed;
+        top: 12px;
+        right: 12px;
+        left: 12px;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(0,0,0,0.7);
+        backdrop-filter: blur(10px);
+        border-radius: 999px;
+        padding: 8px 14px;
+        color: #fff;
+    }
+.driver-top-right,
+.driver-top-center,
+.driver-top-left {
+    display: flex;
+    align-items: center;
+}
+
+/* المنتصف يأخذ المساحة ويتوسّط زر الأونلاين */
+.driver-top-center {
+    flex: 1;
+    justify-content: center;
+}
+
+/* الجانبان فقط بحجم محتواهما */
+.driver-top-right,
+.driver-top-left {
+    flex: 0 0 auto;
+}
+
+    .driver-top-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .driver-name {
+        font-weight: 700;
+        font-size: 14px;
+        max-width: 180px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .driver-icon-btn {
+        border: none;
+        background: transparent;
+        color: inherit;
+        font-size: 18px;
+        cursor: pointer;
+        padding: 4px 6px;
+    }
+
+    .driver-toggle-btn {
+    border: none;
+    border-radius: 999px;        /* بيضاوي / دائري */
+    padding: 8px 18px;
+    font-size: 13px;
+    cursor: pointer;
+    background: #6c757d;
+    color: #fff;
+
+    /* الأهم: عدم التمدد على عرض الشريط */
+    width: auto;
+    min-width: 120px;
+    max-width: 200px;
+
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+    /* كبسولة الحالة في الأسفل */
+    .driver-bottom-status {
+        position: fixed;
+        bottom: 18px;
+        right: 50%;
+        transform: translateX(50%);
+        z-index: 2;
+        background: rgba(0,0,0,0.8);
+        color: #fff;
+        padding: 10px 18px;
+        border-radius: 999px;
+        font-size: 13px;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+        max-width: 90%;
+        text-align: center;
+    }
+
+    /* القائمة الجانبية */
+    .driver-side-panel {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        right: 0;
+        width: 340px;
+        max-width: 90%;
+        background: #ffffff;
+        box-shadow: -4px 0 18px rgba(0,0,0,0.25);
+        z-index: 3;
+        transform: translateX(100%);
+        transition: transform 0.25s ease-out;
+        display: flex;
+        flex-direction: column;
+        padding: 16px 14px 18px;
+
+        /* سحب بدون ظهور سكرول */
+        overflow-y: auto;
+        -ms-overflow-style: none;   /* IE و Edge */
+        scrollbar-width: none;      /* Firefox */
+    }
+    .driver-side-panel::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+    }
+
+    .driver-side-panel.open {
+        transform: translateX(0);
+    }
+
+    .driver-side-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.35);
+        z-index: 2;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease-out;
+    }
+
+    .driver-side-backdrop.show {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .driver-side-header {
+        display: flex;
+        justify-content:space-between;
+        align-items:center;
+        margin-bottom: 8px;
+    }
+
+    .driver-side-title {
+        font-weight: 700;
+    }
+.driver-side-header-main {
+    display: flex;
+    flex-direction: column;      /* 🔁 صار عمودي: عنوان + اسم + لغة */
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.driver-lang-controls {
+    margin-top: 4px;
+}
+
+.driver-lang-controls select {
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid #ddd;
+    font-size: 12px;
+    background: #f5f7ff;
+}
+
+.driver-side-driver-name {
+    font-size: 13px;
+    color: #444;
+    margin-top: 0;
+    white-space: nowrap;      /* منع نزول الاسم لسطرين */
+}
+
+    .driver-side-section {
+        margin-top: 12px;
+    }
+
+    .driver-side-stats {
+        display: flex;
+        gap: 8px;
+    }
+
+    .driver-side-stats .stat {
+        flex: 1;
+    }
+
+    .driver-side-card {
+        margin-top: 6px;
+    }
+
+    .driver-side-link {
+        width: 100%;
+        text-align: right;
+        margin-top: 6px;
+        border-radius: 8px;
+        padding: 10px 12px;
+        background: #f3f6fb;
+        border: 1px solid #e0e7ff;
+        color: #124;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .driver-side-link.driver-side-danger {
+        border-color: #f4c2c2;
+        background: #fff5f5;
+        color: #b00020;
+    }
+
+    .driver-side-pane {
+        display: none;
+        margin-top: 6px;
+    }
+    .driver-side-pane.open {
+        display: block;
+    }
+
+    .driver-section-toggle span {
+        font-size: 13px;
+    }
+    .driver-section-toggle::after {
+        content: "▾";
+        font-size: 11px;
+    }
+    .driver-section-toggle.open::after {
+        content: "▴";
+    }
+
+    /* كرت الطلب النشط العائم (Bottom Sheet) */
+.driver-current-order {
+    position: fixed;
+    right: 12px;
+    left: 12px;
+    bottom: 16px; /* أقرب لحافة الشاشة */
+    z-index: 2;
+    background:#fff;
+    border-radius:16px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.35);
+    padding:10px 12px;
+    font-size:13px;
+    transition: transform 0.25s ease-out, right 0.25s ease-out, left 0.25s ease-out, padding 0.25s ease-out;
+}
+.driver-current-order-header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:4px;
+}
+
+/* نص الهيدر (رقم الطلب + الحالة) */
+.driver-current-order-header-text {
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+}
+
+/* زر السهم لطي/إظهار البطاقة */
+.driver-current-order-toggle {
+    border:none;
+    background:transparent;
+    cursor:pointer;
+    font-size:20px;
+    line-height:1;
+    padding:2px 4px;
+}
+
+/* جسم البطاقة */
+.driver-current-order-body {
+    margin-top:4px;
+}
+
+/* وضع مصغّر: فقط سهم في الأسفل لاسترجاع البطاقة */
+.driver-current-order.collapsed {
+    right: 50%;
+    left: auto;
+    transform: translateX(50%);
+    padding:6px 8px;
+    min-width:56px;
+    text-align:center;
+}
+.driver-current-order.collapsed .driver-current-order-header-text,
+.driver-current-order.collapsed .driver-current-order-body {
+    display:none;
+}
+
+    /* كرت الأرباح العائم — الآن داخل الشريط العلوي من اليسار */
+.driver-earnings-floating {
+    background: rgba(0,0,0,0.7);
+    color:#fff;
+    padding:6px 10px;
+    border-radius:999px;
+    font-size:11px;
+    text-align:center;
+    box-shadow:0 4px 12px rgba(0,0,0,0.35);
+    min-width:80px;
+    line-height:1.3;
+}
+.driver-earnings-floating strong {
+    display:block;
+    font-size:13px;
+}
+    /* زر عنوان العميل (أيقونة مستخدم) فوق زر المتجر مباشرة */
+    .driver-search-btn {
+        position: fixed;
+        bottom: 144px; /* فوق زر التوجيه (90px + 46px + شوية مسافة) */
+        right: 12px;
+        z-index: 3;
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(0,0,0,0.8);
+        color:#fff;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+        cursor:pointer;
+    }
+    .driver-search-icon {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background:#fff;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:16px;
+    }
+    .driver-search-icon::before {
+        content:"👤"; /* مستخدم */
+    }
+
+    /* لوحة إدخال عنوان العميل */
+    .driver-address-panel {
+        position: fixed;
+        top: 64px;           /* تحت الشريط العلوي تقريباً */
+        right: 12px;
+        left: 12px;
+        z-index: 3;
+        background: rgba(0,0,0,0.75);
+        backdrop-filter: blur(10px);
+        padding: 10px 12px;
+        border-radius: 12px;
+        color:#fff;
+    }
+    .driver-address-input-wrapper {
+        display:flex;
+        align-items:center;
+        gap:6px;
+    }
+    .driver-address-input-wrapper input {
+        margin:0;
+        flex:1;
+        border-radius: 999px;
+        border:none;
+        padding-inline:12px;
+    }
+    .driver-address-go-btn {
+        width:auto;
+        flex:0 0 auto;
+        padding:8px 12px;
+        border-radius:999px;
+        border:none;
+        background:#4285F4;
+        color:#fff;
+        font-size:13px;
+        cursor:pointer;
+        white-space:nowrap;
+    }
+
+    @media(max-width:600px) {
+        .driver-top-bar {
+            top: 8px;
+            right: 8px;
+            left: 8px;
+        }
+        .driver-bottom-status {
+            bottom: 12px;
+        }
+    }
+	
+</style>
+</head>
+<body>
+
+<h2 id="mainHeader">نظام التوصيل — واجهة السائق</h2>
+
+<!-- التبويبات -->
+<div class="tabs" id="authTabs">
+    <div class="tab active" id="registerTab">تسجيل</div>
+    <div class="tab" id="loginTab">تسجيل الدخول</div>
+</div>
+
+<!-- SECTION: Register (سائق فقط) -->
+<div id="registerSection" class="card">
+    <form id="driverForm" autocomplete="off">
+        <h3>تسجيل سائق</h3>
+        <input type="text" id="firstName" placeholder="الاسم الأول" required />
+        <input type="text" id="lastName" placeholder="الاسم الثاني" required />
+        <input type="text" id="address" placeholder="العنوان" required />
+        <input type="text" id="city" placeholder="المدينة" required />
+        <input type="email" id="driverEmail" placeholder="البريد الإلكتروني" required />
+        <input type="text" id="driverPhone" placeholder="رقم الهاتف" required />
+        <input type="password" id="driverPassword" placeholder="كلمة السر (6+ حروف)" required />
+        <button type="submit">تسجيل السائق</button>
+    </form>
+</div>
+
+<!-- SECTION: Login -->
+<div id="loginSection" class="card hidden">
+    <form id="loginForm" autocomplete="off">
+        <h3>تسجيل الدخول (سائق)</h3>
+        <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" required />
+        <input type="password" id="loginPassword" placeholder="كلمة السر" required />
+        <button type="submit">تسجيل الدخول</button>
+    </form>
+</div>
+
+<!-- SECTION: Driver Dashboard -->
+<div id="driverDashboard" class="hidden">
+        <!-- خريطة كبيرة تملأ الشاشة -->
+    <div id="driverMap" class="driver-map"></div>
+
+    <!-- زر التوجيه إلى المتجر (أيقونة متجر) -->
+    <button id="driverNavBtn" class="driver-nav-btn" title="التوجيه إلى المتجر">
+        <div class="driver-nav-icon"></div>
+    </button>
+
+    <!-- زر عنوان العميل (أيقونة مستخدم) -->
+    <button id="customerSearchBtn" class="driver-search-btn" title="عنوان العميل">
+        <div class="driver-search-icon"></div>
+    </button>
+
+    <!-- لوحة إدخال عنوان العميل -->
+    <div id="customerAddressPanel" class="driver-address-panel hidden">
+        <div class="driver-address-input-wrapper">
+            <input id="customerAddressInput" type="text" placeholder="أدخل عنوان العميل" autocomplete="off" />
+            <button id="startCustomerNavBtn" class="driver-address-go-btn">بدء التوجيه</button>
+        </div>
+    </div>
+
+    <!-- شريط علوي يطفو فوق الخريطة -->
+    <div class="driver-top-bar">
+
+    <div class="driver-top-right">
+        <!-- زر القائمة الجانبية في أقصى اليمين -->
+        <button id="driverMenuBtn" class="driver-icon-btn">☰</button>
+    </div>
+
+    <div class="driver-top-center">
+        <!-- زر الحالة في منتصف الشريط -->
+        <button id="toggleOnlineBtn" class="driver-toggle-btn">الحالة: أوفلاين</button>
+    </div>
+
+    <div class="driver-top-left">
+        <!-- صندوق الأرباح مدمج في الشريط من اليسار -->
+        <div id="driverEarningsFloating" class="driver-earnings-floating">
+            الأرباح<br><strong>0</strong>
+        </div>
+    </div>
+</div>
+
+    <!-- كرت الطلب النشط (إدارة من الواجهة الأساسية) -->
+    <div id="driverCurrentOrder" class="driver-current-order hidden"></div>
+
+    <!-- كبسولة حالة في الأسفل -->
+    <div class="driver-bottom-status" id="driverBottomStatus">
+        <span id="driverStatusText">أنت أوفلاين حالياً — اضغط لتفعيل الحالة</span>
+    </div>
+
+    <!-- القائمة الجانبية -->
+    <div id="driverSidePanel" class="driver-side-panel">
+        <div class="driver-side-header">
+    <div class="driver-side-header-main">
+        <div class="driver-side-title">القائمة</div>
+        <div id="driverName" class="driver-side-driver-name">اسم السائق</div>
+
+        <!-- ✅ اختيار اللغة تحت اسم السائق -->
+        <div class="driver-lang-controls">
+            <select id="langSelect">
+                <option value="en">English</option>
+                <option value="de">Deutsch</option>
+                <option value="ar">العربية</option>
+            </select>
+        </div>
+    </div>
+    <button id="driverSideCloseBtn" class="driver-icon-btn">✕</button>
+</div>
+
+        <!-- ملخص اليوم -->
+        <div class="driver-side-section">
+            <button class="driver-side-link driver-section-toggle open" data-target="driverSummaryPane">
+                <span>ملخص الطلبات</span>
+            </button>
+            <div id="driverSummaryPane" class="driver-side-pane open">
+                <div class="driver-side-stats">
+                    <div class="stat" id="driverActiveCount">الطلبات الحالية<br><strong>0</strong></div>
+                    <div class="stat" id="driverCompletedCount">الطلبات السابقة<br><strong>0</strong></div>
+                    <div class="stat" id="driverEarnings">الأرباح<br><strong>0</strong></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- الطلبات الحالية -->
+        <div class="driver-side-section">
+            <button class="driver-side-link driver-section-toggle" data-target="driverActivePane">
+                <span>الطلبات الحالية</span>
+            </button>
+            <div id="driverActivePane" class="driver-side-pane">
+                <div class="card driver-side-card">
+                    <div id="driverActiveOrders" class="orders-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- الطلبات السابقة -->
+        <div class="driver-side-section">
+            <button class="driver-side-link driver-section-toggle" data-target="driverCompletedPane">
+                <span>الطلبات السابقة</span>
+            </button>
+            <div id="driverCompletedPane" class="driver-side-pane">
+                <div class="card driver-side-card">
+                    <div id="driverCompletedOrders" class="orders-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- إعدادات التسعير -->
+        <div class="driver-side-section">
+            <button id="pricingSettingsBtn" class="driver-side-link driver-section-toggle" data-target="driverPricingPane">
+                <span>ضبط تكاليف التوصيل</span>
+            </button>
+            <div id="driverPricingPane" class="driver-side-pane">
+    <div class="card driver-side-card">
+        <div id="pricingIntroText" class="small" style="margin-bottom:6px;">
+            قم بضبط تسعيرة التوصيل ليتم احتساب تكلفة كل رحلة تلقائياً.
+        </div>
+
+        <label id="pricingDeliveryLabel" class="small">
+            سعر الكيلومتر من التاجر إلى نقطة التسليم (€)
+        </label>
+        <input id="pricePerKmDelivery" type="number" step="0.01" min="0" />
+
+        <label style="display:flex; align-items:center; gap:6px; margin-top:8px;">
+            <input id="includeToMerchantSegment" type="checkbox" />
+            <span id="pricingIncludeLabel" class="small">
+                احتساب المسافة من موقعي إلى التاجر
+            </span>
+        </label>
+
+        <div style="margin-right:4px; margin-top:6px;">
+            <label class="small" style="display:flex; align-items:center; gap:6px;">
+                <input id="useSamePriceForBoth" type="checkbox" />
+                <span id="pricingSamePriceLabel" class="small">
+                    استخدام نفس السعر للمسارين
+                </span>
+            </label>
+        </div>
+
+        <div id="toMerchantRow" style="margin-top:6px;">
+            <label id="pricingToMerchantLabel" class="small">
+                سعر الكيلومتر من موقعي إلى التاجر (€)
+            </label>
+            <input id="pricePerKmToMerchant" type="number" step="0.01" min="0" />
+        </div>
+
+        <label id="pricingFreeKmLabel" class="small" style="margin-top:8px;">
+            عدد الكيلومترات المجانية الأولى
+        </label>
+        <input id="freeKmInput" type="number" step="0.1" min="0" />
+
+        <div class="btn-row">
+            <button id="savePricingBtn">حفظ</button>
+        </div>
+
+        <div class="small" id="pricingBaseFeeHint" style="margin-top:4px;"></div>
+    </div>
+</div>
+
+            <button id="driverLogoutBtn" class="driver-side-link driver-side-danger">
+                <span>تسجيل خروج</span>
+            </button>
+        </div>
+    </div>
+    <div id="driverSidePanelBackdrop" class="driver-side-backdrop"></div>
+</div>
+
+<!-- تفاصيل الطلب (مودال مشترك) -->
+<div id="orderModal" class="hidden">
+    <div class="modal-backdrop" id="modalBackdrop" style="display:none;">
+        <div class="modal">
+            <div class="flex-between">
+                <h3>تفاصيل الطلب</h3>
+                <button id="closeModal" class="secondary">إغلاق</button>
+            </div>
+            <div id="modalContent" style="margin-top:12px;"></div>
+        </div>
+    </div>
+</div>
+
+<footer>واجهة السائق — مربوطة مع Firebase & Google Maps (لحساب المسافة)</footer>
+
+<!-- Google Maps API -->
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCUMgXQwwe7afBlRpp6zrXunbTVSCXfSqQ&libraries=geometry,places&language=ar"></script>
+
+
+<script>
+/* ========== إعداد Firebase ========== */
+const firebaseConfig = {
+  apiKey: "AIzaSyBhiKPw7M3NMCOhzoBJJyI9enOa6qZQnHc",
+  authDomain: "delivera-7pq7jc.firebaseapp.com",
+  projectId: "delivera-7pq7jc",
+  storageBucket: "delivera-7pq7jc.appspot.com",
+  messagingSenderId: "186649231022",
+  appId: "1:186649231022:web:18e76b00018fbb5d68773f"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const BASE_DELIVERY_FEE = 3.5; // EUR
+
+// أيقونة العميل (نقطة التسليم) من نفس مجلد الملف
+const CUSTOMER_MARKER_ICON_PATH = "kunde.png";
+
+function getCustomerMarkerIcon() {
+  if (typeof google === "undefined" || !google.maps) return null;
+  return {
+    url: CUSTOMER_MARKER_ICON_PATH,              // نفس المجلد
+    scaledSize: new google.maps.Size(50, 50),    // حجم الأيقونة على الخريطة
+    origin: new google.maps.Point(0, 0),
+    anchor: new google.maps.Point(20, 40)        // نقطة الارتكاز أسفل الأيقونة
+  };
+}
+/* ========== تعدد اللغات (EN / DE / AR) ========== */
+let currentLang = "en";
+
+const translations = {
+  en: {
+    // العنوان الأساسي و التبويبات
+    mainHeader: "Delivery System — Driver Interface",
+    tab_register: "Register",
+    tab_login: "Log in",
+
+    // تسجيل سائق
+    driver_register_title: "Driver registration",
+    firstName_placeholder: "First name",
+    lastName_placeholder: "Last name",
+    address_placeholder: "Address",
+    city_placeholder: "City",
+    driverEmail_placeholder: "Email",
+    driverPhone_placeholder: "Phone number",
+    driverPassword_placeholder: "Password (6+ characters)",
+    register_submit: "Register driver",
+
+    // تسجيل الدخول
+    driver_login_title: "Driver login",
+    loginEmail_placeholder: "Email",
+    loginPassword_placeholder: "Password",
+    login_submit: "Log in",
+
+    // عنوان العميل
+    customerAddress_placeholder: "Enter customer address",
+    start_customer_nav: "Start navigation",
+
+    // زر الحالة والكبسولة السفلية
+    online_btn_online: "Status: Online",
+    online_btn_offline: "Status: Offline",
+    status_hint_online: "You are online and ready to receive orders",
+    status_hint_offline: "You are currently offline — tap to go online",
+    status_active_one: "You have 1 active order",
+    status_active_many: "You have {count} active orders",
+
+    // القائمة الجانبية
+    side_menu_title: "Menu",
+    side_summary_title: "Orders summary",
+    active_section_btn: "Active orders",
+    completed_section_btn: "Previous orders",
+    pricing_section_btn: "Delivery pricing",
+    logout: "Log out",
+
+    // الإحصاءات
+    summary_active_orders: "Active orders",
+    summary_completed_orders: "Previous orders",
+    summary_earnings: "Earnings",
+    // --- Pricing (delivery settings) ---
+    pricing_intro: "Set your delivery pricing so each trip is calculated automatically.",
+    pricing_label_delivery: "Price per km from merchant to drop-off (€)",
+    pricing_include_to_merchant: "Include distance from my location to merchant",
+    pricing_use_same_for_both: "Use the same price for both segments",
+    pricing_label_to_merchant: "Price per km from my location to merchant (€)",
+    pricing_free_km: "Number of free first kilometers",
+    pricing_save_btn: "Save",
+    pricing_base_fee_hint: "Fixed base fee per delivered order: {fee} €",
+    pricing_error_delivery_price:
+      "Please enter a valid price per kilometer from merchant to drop-off.",
+    pricing_error_to_merchant_price:
+      "Please enter a valid price per kilometer from your location to the merchant.",
+    pricing_saved_success: "Pricing settings saved successfully.",
+
+    // الفوتر
+    footer_text: "Driver interface — connected to Firebase & Google Maps (distance calculation)"
+  },
+
+  de: {
+    mainHeader: "Liefersystem — Fahreroberfläche",
+    tab_register: "Registrieren",
+    tab_login: "Anmelden",
+
+    driver_register_title: "Fahrer registrieren",
+    firstName_placeholder: "Vorname",
+    lastName_placeholder: "Nachname",
+    address_placeholder: "Adresse",
+    city_placeholder: "Stadt",
+    driverEmail_placeholder: "E-Mail",
+    driverPhone_placeholder: "Telefonnummer",
+    driverPassword_placeholder: "Passwort (mind. 6 Zeichen)",
+    register_submit: "Fahrer registrieren",
+
+    driver_login_title: "Fahrer-Login",
+    loginEmail_placeholder: "E-Mail",
+    loginPassword_placeholder: "Passwort",
+    login_submit: "Anmelden",
+
+    customerAddress_placeholder: "Kundenadresse eingeben",
+    start_customer_nav: "Navigation starten",
+
+    online_btn_online: "Status: Online",
+    online_btn_offline: "Status: Offline",
+    status_hint_online: "Du bist online und kannst Aufträge erhalten",
+    status_hint_offline: "Du bist derzeit offline – tippe, um online zu gehen",
+    status_active_one: "Du hast eine aktive Bestellung",
+    status_active_many: "Du hast {count} aktive Bestellungen",
+
+    side_menu_title: "Menü",
+    side_summary_title: "Bestellübersicht",
+    active_section_btn: "Aktive Bestellungen",
+    completed_section_btn: "Frühere Bestellungen",
+    pricing_section_btn: "Lieferpreis-Einstellungen",
+    logout: "Abmelden",
+
+    summary_active_orders: "Aktive Bestellungen",
+    summary_completed_orders: "Frühere Bestellungen",
+    summary_earnings: "Einnahmen",
+    // --- Pricing (delivery settings) ---
+    pricing_intro: "Lege deine Lieferpreise fest, damit jede Fahrt automatisch berechnet wird.",
+    pricing_label_delivery: "Preis pro km vom Händler zur Lieferadresse (€)",
+    pricing_include_to_merchant: "Distanz von meinem Standort zum Händler berücksichtigen",
+    pricing_use_same_for_both: "Gleichen Preis für beide Strecken verwenden",
+    pricing_label_to_merchant: "Preis pro km von meinem Standort zum Händler (€)",
+    pricing_free_km: "Anzahl der ersten kostenlosen Kilometer",
+    pricing_save_btn: "Speichern",
+    pricing_base_fee_hint:
+      "Feste Grundgebühr pro ausgelieferter Bestellung: {fee} €",
+    pricing_error_delivery_price:
+      "Bitte gib einen gültigen Preis pro Kilometer vom Händler zur Lieferadresse ein.",
+    pricing_error_to_merchant_price:
+      "Bitte gib einen gültigen Preis pro Kilometer von deinem Standort zum Händler ein.",
+    pricing_saved_success: "Preis-Einstellungen wurden erfolgreich gespeichert.",
+
+    footer_text: "Fahreroberfläche – verbunden mit Firebase & Google Maps (Distanzberechnung)"
+  },
+
+  ar: {
+    mainHeader: "نظام التوصيل — واجهة السائق",
+    tab_register: "تسجيل",
+    tab_login: "تسجيل الدخول",
+
+    driver_register_title: "تسجيل سائق",
+    firstName_placeholder: "الاسم الأول",
+    lastName_placeholder: "الاسم الثاني",
+    address_placeholder: "العنوان",
+    city_placeholder: "المدينة",
+    driverEmail_placeholder: "البريد الإلكتروني",
+    driverPhone_placeholder: "رقم الهاتف",
+    driverPassword_placeholder: "كلمة السر (6+ حروف)",
+    register_submit: "تسجيل السائق",
+
+    driver_login_title: "تسجيل الدخول (سائق)",
+    loginEmail_placeholder: "البريد الإلكتروني",
+    loginPassword_placeholder: "كلمة السر",
+    login_submit: "تسجيل الدخول",
+
+    customerAddress_placeholder: "أدخل عنوان العميل",
+    start_customer_nav: "بدء التوجيه",
+
+    online_btn_online: "الحالة: أونلاين",
+    online_btn_offline: "الحالة: أوفلاين",
+    status_hint_online: "أنت متصل الآن ومستعد لاستقبال الطلبات",
+    status_hint_offline: "أنت أوفلاين حالياً — اضغط لتفعيل الحالة",
+    status_active_one: "لديك طلب واحد قيد التنفيذ",
+    status_active_many: "لديك {count} طلبات قيد التنفيذ",
+
+    side_menu_title: "القائمة",
+    side_summary_title: "ملخص الطلبات",
+    active_section_btn: "الطلبات الحالية",
+    completed_section_btn: "الطلبات السابقة",
+    pricing_section_btn: "ضبط تكاليف التوصيل",
+    logout: "تسجيل خروج",
+
+    summary_active_orders: "الطلبات الحالية",
+    summary_completed_orders: "الطلبات السابقة",
+    summary_earnings: "الأرباح",
+    // --- Pricing (delivery settings) ---
+    pricing_intro: "قم بضبط تسعيرة التوصيل ليتم احتساب تكلفة كل رحلة تلقائياً.",
+    pricing_label_delivery: "سعر الكيلومتر من التاجر إلى نقطة التسليم (€)",
+    pricing_include_to_merchant: "احتساب المسافة من موقعي إلى التاجر",
+    pricing_use_same_for_both: "استخدام نفس السعر للمسارين",
+    pricing_label_to_merchant: "سعر الكيلومتر من موقعي إلى التاجر (€)",
+    pricing_free_km: "عدد الكيلومترات المجانية الأولى",
+    pricing_save_btn: "حفظ",
+    pricing_base_fee_hint:
+      "الرسم الأساسي الثابت لكل طلب يتم تسليمه: {fee} €",
+    pricing_error_delivery_price:
+      "رجاءً أدخل سعرًا صالحًا لكل كيلومتر من التاجر إلى نقطة التسليم.",
+    pricing_error_to_merchant_price:
+      "رجاءً أدخل سعرًا صالحًا لكل كيلومتر من موقعك إلى التاجر.",
+    pricing_saved_success: "تم حفظ إعدادات التسعير بنجاح.",
+
+    footer_text: "واجهة السائق — مربوطة مع Firebase & Google Maps (لحساب المسافة)"
+  }
+};
+
+function t(key) {
+  const dict = translations[currentLang] || translations.en;
+  if (dict && key in dict) return dict[key];
+  if (translations.en && key in translations.en) return translations.en[key];
+  return key;
+}
+
+function applyTranslations(lang) {
+  currentLang = ["en", "de", "ar"].includes(lang) ? lang : "en";
+  const dict = translations[currentLang] || translations.en;
+
+  // لغة و اتجاه الصفحة
+  if (document.documentElement) {
+    document.documentElement.lang = currentLang;
+  }
+  if (document.body) {
+    document.body.style.direction = currentLang === "ar" ? "rtl" : "ltr";
+  }
+
+  if (mainHeader && dict.mainHeader) {
+    mainHeader.textContent = dict.mainHeader;
+  }
+
+  if (registerTab && dict.tab_register) {
+    registerTab.textContent = dict.tab_register;
+  }
+  if (loginTab && dict.tab_login) {
+    loginTab.textContent = dict.tab_login;
+  }
+
+  // عناوين و حقول نموذج تسجيل السائق
+  const driverFormTitle = document.querySelector("#driverForm h3");
+  if (driverFormTitle && dict.driver_register_title) {
+    driverFormTitle.textContent = dict.driver_register_title;
+  }
+
+  const firstNameInput = document.getElementById("firstName");
+  if (firstNameInput && dict.firstName_placeholder) {
+    firstNameInput.placeholder = dict.firstName_placeholder;
+  }
+  const lastNameInput = document.getElementById("lastName");
+  if (lastNameInput && dict.lastName_placeholder) {
+    lastNameInput.placeholder = dict.lastName_placeholder;
+  }
+  const addressInput = document.getElementById("address");
+  if (addressInput && dict.address_placeholder) {
+    addressInput.placeholder = dict.address_placeholder;
+  }
+  const cityInput = document.getElementById("city");
+  if (cityInput && dict.city_placeholder) {
+    cityInput.placeholder = dict.city_placeholder;
+  }
+  const driverEmailInput = document.getElementById("driverEmail");
+  if (driverEmailInput && dict.driverEmail_placeholder) {
+    driverEmailInput.placeholder = dict.driverEmail_placeholder;
+  }
+  const driverPhoneInput = document.getElementById("driverPhone");
+  if (driverPhoneInput && dict.driverPhone_placeholder) {
+    driverPhoneInput.placeholder = dict.driverPhone_placeholder;
+  }
+  const driverPasswordInput = document.getElementById("driverPassword");
+  if (driverPasswordInput && dict.driverPassword_placeholder) {
+    driverPasswordInput.placeholder = dict.driverPassword_placeholder;
+  }
+  const registerSubmitBtn =
+    driverForm && driverForm.querySelector('button[type="submit"]');
+  if (registerSubmitBtn && dict.register_submit) {
+    registerSubmitBtn.textContent = dict.register_submit;
+  }
+
+  // نموذج تسجيل الدخول
+  const loginFormTitle = document.querySelector("#loginForm h3");
+  if (loginFormTitle && dict.driver_login_title) {
+    loginFormTitle.textContent = dict.driver_login_title;
+  }
+  const loginEmailInput = document.getElementById("loginEmail");
+  if (loginEmailInput && dict.loginEmail_placeholder) {
+    loginEmailInput.placeholder = dict.loginEmail_placeholder;
+  }
+  const loginPasswordInput = document.getElementById("loginPassword");
+  if (loginPasswordInput && dict.loginPassword_placeholder) {
+    loginPasswordInput.placeholder = dict.loginPassword_placeholder;
+  }
+  const loginSubmitBtn =
+    loginForm && loginForm.querySelector('button[type="submit"]');
+  if (loginSubmitBtn && dict.login_submit) {
+    loginSubmitBtn.textContent = dict.login_submit;
+  }
+
+  // عنوان العميل + زر بدء التوجيه
+  if (customerAddressInput && dict.customerAddress_placeholder) {
+    customerAddressInput.placeholder = dict.customerAddress_placeholder;
+  }
+  if (startCustomerNavBtn && dict.start_customer_nav) {
+    startCustomerNavBtn.textContent = dict.start_customer_nav;
+  }
+
+  // عناوين القائمة الجانبية
+  const sideTitle = document.querySelector(".driver-side-title");
+  if (sideTitle && dict.side_menu_title) {
+    sideTitle.textContent = dict.side_menu_title;
+  }
+
+  const summaryBtnSpan = document.querySelector(
+    'button.driver-section-toggle[data-target="driverSummaryPane"] span'
+  );
+  if (summaryBtnSpan && dict.side_summary_title) {
+    summaryBtnSpan.textContent = dict.side_summary_title;
+  }
+
+  const activeBtnSpan = document.querySelector(
+    'button.driver-section-toggle[data-target="driverActivePane"] span'
+  );
+  if (activeBtnSpan && dict.active_section_btn) {
+    activeBtnSpan.textContent = dict.active_section_btn;
+  }
+
+  const completedBtnSpan = document.querySelector(
+    'button.driver-section-toggle[data-target="driverCompletedPane"] span'
+  );
+  if (completedBtnSpan && dict.completed_section_btn) {
+    completedBtnSpan.textContent = dict.completed_section_btn;
+  }
+
+  const pricingBtnSpan = document.querySelector("#pricingSettingsBtn span");
+  if (pricingBtnSpan && dict.pricing_section_btn) {
+    pricingBtnSpan.textContent = dict.pricing_section_btn;
+  }
+  // --- Pricing texts inside the pane ---
+  const pricingIntroEl = document.getElementById("pricingIntroText");
+  if (pricingIntroEl && dict.pricing_intro) {
+    pricingIntroEl.textContent = dict.pricing_intro;
+  }
+
+  const pricingDeliveryLabel = document.getElementById("pricingDeliveryLabel");
+  if (pricingDeliveryLabel && dict.pricing_label_delivery) {
+    pricingDeliveryLabel.textContent = dict.pricing_label_delivery;
+  }
+
+  const pricingIncludeLabel = document.getElementById("pricingIncludeLabel");
+  if (pricingIncludeLabel && dict.pricing_include_to_merchant) {
+    pricingIncludeLabel.textContent = dict.pricing_include_to_merchant;
+  }
+
+  const pricingSamePriceLabel = document.getElementById("pricingSamePriceLabel");
+  if (pricingSamePriceLabel && dict.pricing_use_same_for_both) {
+    pricingSamePriceLabel.textContent = dict.pricing_use_same_for_both;
+  }
+
+  const pricingToMerchantLabel = document.getElementById("pricingToMerchantLabel");
+  if (pricingToMerchantLabel && dict.pricing_label_to_merchant) {
+    pricingToMerchantLabel.textContent = dict.pricing_label_to_merchant;
+  }
+
+  const pricingFreeKmLabel = document.getElementById("pricingFreeKmLabel");
+  if (pricingFreeKmLabel && dict.pricing_free_km) {
+    pricingFreeKmLabel.textContent = dict.pricing_free_km;
+  }
+
+  const savePricingBtnEl = document.getElementById("savePricingBtn");
+  if (savePricingBtnEl && dict.pricing_save_btn) {
+    savePricingBtnEl.textContent = dict.pricing_save_btn;
+  }
+
+  // ملاحظة: نص الـ base fee يتم توليده لاحقاً في populatePricingFormFromData
+
+  const logoutBtnSpan = document.querySelector("#driverLogoutBtn span");
+  if (logoutBtnSpan && dict.logout) {
+    logoutBtnSpan.textContent = dict.logout;
+  }
+
+  if (footerEl && dict.footer_text) {
+    footerEl.textContent = dict.footer_text;
+  }
+
+  // تحديث ملخص الطلبات (النصوص فقط، الأرقام من النداءات)
+  if (Array.isArray(lastDriverCalls) && typeof renderDriverOrders === "function") {
+    renderDriverOrders(lastDriverCalls);
+  } else {
+    if (driverActiveCountEl) {
+      driverActiveCountEl.innerHTML =
+        t("summary_active_orders") + "<br><strong>0</strong>";
+    }
+    if (driverCompletedCountEl) {
+      driverCompletedCountEl.innerHTML =
+        t("summary_completed_orders") + "<br><strong>0</strong>";
+    }
+    if (driverEarningsEl) {
+      const earningsText =
+        t("summary_earnings") + "<br><strong>0</strong>";
+      driverEarningsEl.innerHTML = earningsText;
+      if (driverEarningsFloatingEl) {
+        driverEarningsFloatingEl.innerHTML = earningsText;
+      }
+    }
+  }
+
+  // تحديث زر الحالة / الكبسولة السفلية
+  updateOnlineBtn();
+}
+
+/* ========== DOM ========== */
+const registerTab = document.getElementById("registerTab");
+const loginTab = document.getElementById("loginTab");
+const registerSection = document.getElementById("registerSection");
+const loginSection = document.getElementById("loginSection");
+
+const driverForm = document.getElementById("driverForm");
+const loginForm = document.getElementById("loginForm");
+
+const driverDashboard = document.getElementById("driverDashboard");
+const driverNameEl = document.getElementById("driverName");
+const driverActiveOrdersEl = document.getElementById("driverActiveOrders");
+const driverCompletedOrdersEl = document.getElementById("driverCompletedOrders");
+const driverActiveCountEl = document.getElementById("driverActiveCount");
+const driverCompletedCountEl = document.getElementById("driverCompletedCount");
+const driverEarningsEl = document.getElementById("driverEarnings");
+const driverLogoutBtn = document.getElementById("driverLogoutBtn");
+const pricingSettingsBtn = document.getElementById("pricingSettingsBtn");
+const toggleOnlineBtn = document.getElementById("toggleOnlineBtn");
+
+// خريطة + قائمة جانبية
+const driverMapContainer = document.getElementById("driverMap");
+const driverMenuBtn = document.getElementById("driverMenuBtn");
+const driverSidePanel = document.getElementById("driverSidePanel");
+const driverSidePanelBackdrop = document.getElementById("driverSidePanelBackdrop");
+const driverSideCloseBtn = document.getElementById("driverSideCloseBtn");
+const driverStatusTextEl = document.getElementById("driverStatusText");
+const driverBottomStatusEl = document.getElementById("driverBottomStatus");
+
+// زر التوجيه
+const driverNavBtn = document.getElementById("driverNavBtn");
+
+// زر عنوان العميل وحقل العنوان
+const customerSearchBtn = document.getElementById("customerSearchBtn");
+const customerAddressPanel = document.getElementById("customerAddressPanel");
+const customerAddressInput = document.getElementById("customerAddressInput");
+const startCustomerNavBtn = document.getElementById("startCustomerNavBtn");
+
+// كرت الطلب النشط + كرت الأرباح العائم
+const driverCurrentOrderEl = document.getElementById("driverCurrentOrder");
+
+const driverEarningsFloatingEl = document.getElementById("driverEarningsFloating");
+
+const modalBackdrop = document.getElementById("modalBackdrop");
+const modalContent = document.getElementById("modalContent");
+const closeModal = document.getElementById("closeModal");
+const orderModalEl = document.getElementById("orderModal");
+
+const mainHeader = document.getElementById("mainHeader");
+const authTabs = document.getElementById("authTabs");
+const footerEl = document.querySelector("footer");
+
+// حالة السائق
+let driverCurrentOnline = false;
+let driverUid = null;
+
+// بيانات/استماعات
+let driverMap;
+let currentDriverData = null;
+let driverOrdersListener = null;
+let driverCallsListener = null;
+let lastDriverCalls = [];
+let driverCallsCache = [];
+let directionsService = null;
+let directionsRenderer = null; // لعرض المسار على الخريطة
+let currentOrderCollapsed = false; // حالة طي/فتح بطاقة الطلب النشط
+
+// توجيه حي
+let navigationWatchId = null;
+let isGuidanceOn = false;
+let driverMarker = null;
+let navigationTarget = null;
+// نقاط المتجر والعميل
+let merchantMarker = null;
+let customerMarker = null;
+let customerDestination = null; // { lat, lng, address }
+let customerAutocomplete = null;
+
+/* ========== تبويبات التسجيل/الدخول ========== */
+registerTab.addEventListener("click", () => {
+  registerTab.classList.add("active");
+  loginTab.classList.remove("active");
+  registerSection.classList.remove("hidden");
+  loginSection.classList.add("hidden");
+});
+loginTab.addEventListener("click", () => {
+  loginTab.classList.add("active");
+  registerTab.classList.remove("active");
+  loginSection.classList.remove("hidden");
+  registerSection.classList.add("hidden");
+});
+
+/* ========== درور القائمة الجانبية ========== */
+function openDriverSidePanel() {
+  if (driverSidePanel) driverSidePanel.classList.add("open");
+  if (driverSidePanelBackdrop) driverSidePanelBackdrop.classList.add("show");
+}
+function closeDriverSidePanel() {
+  if (driverSidePanel) driverSidePanel.classList.remove("open");
+  if (driverSidePanelBackdrop) driverSidePanelBackdrop.classList.remove("show");
+}
+if (driverMenuBtn) {
+  driverMenuBtn.addEventListener("click", openDriverSidePanel);
+}
+if (driverSideCloseBtn) {
+  driverSideCloseBtn.addEventListener("click", closeDriverSidePanel);
+}
+if (driverSidePanelBackdrop) {
+  driverSidePanelBackdrop.addEventListener("click", (e) => {
+    if (e.target === driverSidePanelBackdrop) {
+      closeDriverSidePanel();
+    }
+  });
+}
+
+/* ========== تبويبات القائمة الجانبية (ملخص/طلبات/تسعير) ========== */
+const sectionToggleButtons = document.querySelectorAll(".driver-section-toggle");
+sectionToggleButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const targetId = btn.getAttribute("data-target");
+    if (!targetId) return;
+    const pane = document.getElementById(targetId);
+    if (!pane) return;
+    const willOpen = !pane.classList.contains("open");
+    pane.classList.toggle("open");
+    btn.classList.toggle("open", willOpen);
+  });
+});
+
+/* زر التوجيه (تشغيل/إيقاف) */
+if (driverNavBtn) {
+  driverNavBtn.addEventListener("click", () => {
+    if (isGuidanceOn) {
+      stopGuidance();
+      return;
+    }
+    const activeCall = getCurrentActiveCall();
+    if (!activeCall) {
+      alert("لا يوجد طلب نشط للتوجيه.");
+      return;
+    }
+    if (activeCall.merchantLat == null || activeCall.merchantLng == null) {
+      alert("لا توجد إحداثيات صحيحة للتاجر في هذا الطلب.");
+      return;
+    }
+    startGuidance(activeCall.merchantLat, activeCall.merchantLng);
+  });
+}
+/* زر عنوان العميل لفتح/إغلاق لوحة البحث */
+if (customerSearchBtn && customerAddressPanel && customerAddressInput) {
+  customerSearchBtn.addEventListener("click", () => {
+    customerAddressPanel.classList.toggle("hidden");
+
+    if (!customerAddressPanel.classList.contains("hidden")) {
+      const activeCall = getCurrentActiveCall();
+      if (activeCall) {
+        // لو تم حفظ العنوان سابقاً
+        if (!customerDestination && typeof activeCall.customerLat === "number" && typeof activeCall.customerLng === "number") {
+          setCustomerDestination(activeCall.customerLat, activeCall.customerLng, activeCall.deliveryAddress || "");
+        } else if (!customerAddressInput.value && activeCall.deliveryAddress) {
+          customerAddressInput.value = activeCall.deliveryAddress;
+        }
+      }
+      setTimeout(() => customerAddressInput.focus(), 0);
+    }
+  });
+}
+
+if (startCustomerNavBtn) {
+  startCustomerNavBtn.addEventListener("click", () => {
+    startCustomerNavigation();
+  });
+}
+
+// بدء التوجيه بالضغط على Enter داخل الحقل
+if (customerAddressInput) {
+  customerAddressInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      startCustomerNavigation();
+    }
+  });
+}
+
+/* ========== تسجيل السائق ========== */
+driverForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const firstName = document.getElementById("firstName").value.trim();
+  const lastName = document.getElementById("lastName").value.trim();
+  const address = document.getElementById("address").value.trim();
+  const city = document.getElementById("city").value.trim();
+  const email = document.getElementById("driverEmail").value.trim();
+  const phone = document.getElementById("driverPhone").value.trim();
+  const password = document.getElementById("driverPassword").value;
+  if (password.length < 6) return alert("كلمة السر يجب أن تكون 6 أحرف على الأقل.");
+  try {
+    const userCredential = await auth.createUserWithEmailAndPassword(
+      email,
+      password
+    );
+    const uid = userCredential.user.uid;
+    await db.collection("drivers").doc(uid).set({
+      firstName,
+      lastName,
+      address,
+      city,
+      email,
+      phone,
+      role: "driver",
+
+      online: false,
+      busy: false,
+      lat: null,
+      lng: null,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+
+      pricePerKmDelivery: null,
+      includeToMerchantSegment: false,
+      useSamePriceForBoth: true,
+      pricePerKmToMerchant: null,
+      freeKm: 0
+    });
+
+    alert("تم تسجيل السائق بنجاح!");
+    driverForm.reset();
+  } catch (err) {
+    alert("خطأ: " + err.message);
+  }
+});
+
+/* ========== تسجيل الدخول (سائق فقط) ========== */
+loginForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value;
+
+  try {
+    const userCredential = await auth.signInWithEmailAndPassword(
+      email,
+      password
+    );
+    const uid = userCredential.user.uid;
+
+    const driverDoc = await db.collection("drivers").doc(uid).get();
+
+    if (driverDoc.exists) {
+      await showDriverDashboard(uid);
+    } else {
+      await auth.signOut();
+      alert("هذه الواجهة مخصصة للسائقين فقط. إن كنت تاجرًا، يرجى استخدام رابط واجهة التاجر.");
+    }
+
+    loginForm.reset();
+  } catch (err) {
+    alert("خطأ: " + err.message);
+  }
+});
+
+/* ========== أونلاين / أوفلاين ========== */
+toggleOnlineBtn.addEventListener("click", async () => {
+  if (!driverUid) return;
+
+  try {
+    const driverRef = db.collection("drivers").doc(driverUid);
+    const snap = await driverRef.get();
+    const data = snap.exists ? snap.data() : {};
+    const isBusy = !!(data && data.busy);
+    const hasActiveJob = driverHasActiveJob();
+
+    if (driverCurrentOnline && (isBusy || hasActiveJob)) {
+      alert("لا يمكنك التحول إلى أوفلاين أو إغلاق الجلسة أثناء وجود طلب قيد التنفيذ. يرجى إنهاء الطلب أولاً.");
+      return;
+    }
+
+    driverCurrentOnline = !driverCurrentOnline;
+
+    const geoOptions = {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 5000
+    };
+
+    if (driverCurrentOnline) {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+
+            await driverRef.update({
+              online: true,
+              lat,
+              lng,
+              lastOnline: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            updateOnlineBtn();
+          },
+          async (err) => {
+            alert("تعذر الحصول على الموقع: " + err.message);
+            await driverRef.update({
+              online: true,
+              lastOnline: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            updateOnlineBtn();
+          },
+          geoOptions
+        );
+      } else {
+        alert("المتصفح لا يدعم الحصول على الموقع الجغرافي.");
+        await driverRef.update({
+          online: true,
+          lastOnline: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        updateOnlineBtn();
+      }
+    } else {
+      await driverRef.update({
+        online: false,
+        busy: false
+      });
+      updateOnlineBtn();
+    }
+  } catch (err) {
+    alert("خطأ في تحديث الحالة: " + err.message);
+  }
+});
+
+function updateOnlineBtn() {
+  if (!toggleOnlineBtn) return;
+
+  // نص الزر
+  toggleOnlineBtn.textContent = driverCurrentOnline
+    ? t("online_btn_online")
+    : t("online_btn_offline");
+  toggleOnlineBtn.style.backgroundColor = driverCurrentOnline
+    ? "#28a745"
+    : "#6c757d";
+
+  // نص الكبسولة السفلية فقط إذا ما في طلبات نشطة
+  if (driverStatusTextEl) {
+    const hasActive =
+      Array.isArray(lastDriverCalls) &&
+      lastDriverCalls.some((o) => {
+        const s = (o.status || "pending").toLowerCase();
+        return !(
+          s === "delivered" ||
+          s === "cancelled" ||
+          s === "rejected"
+        );
+      });
+
+    if (!hasActive) {
+      driverStatusTextEl.textContent = driverCurrentOnline
+        ? t("status_hint_online")
+        : t("status_hint_offline");
+    }
+  }
+}
+
+/* ========== تسجيل خروج السائق ========== */
+driverLogoutBtn.addEventListener("click", async () => {
+  if (!driverUid) return;
+
+  try {
+    const driverRef = db.collection("drivers").doc(driverUid);
+    const snap = await driverRef.get();
+    const data = snap.exists ? snap.data() : {};
+    const isBusy = !!(data && data.busy);
+    const hasActiveJob = driverHasActiveJob();
+
+    if (isBusy || hasActiveJob) {
+      alert("لا يمكنك تسجيل الخروج أثناء وجود طلب قيد التنفيذ أو نداء مقبول. يرجى إنهاء الطلب أولاً.");
+      return;
+    }
+
+    clearRouteAndNavigation();
+
+    await auth.signOut();
+
+    driverDashboard.classList.add("hidden");
+    registerSection.classList.remove("hidden");
+    loginSection.classList.remove("hidden");
+    if (mainHeader) mainHeader.classList.remove("hidden");
+    if (authTabs) authTabs.classList.remove("hidden");
+    if (footerEl) footerEl.classList.remove("hidden");
+    document.body.classList.remove("driver-mode");
+  } catch (err) {
+    alert("خطأ في تسجيل الخروج: " + err.message);
+  }
+});
+
+/* ========== فتح واجهة السائق بعد تسجيل الدخول ========== */
+async function showDriverDashboard(uid) {
+  const driverDoc = await db.collection("drivers").doc(uid).get();
+  if (!driverDoc.exists) return alert("حساب السائق غير موجود");
+  const driverData = driverDoc.data();
+
+  currentDriverData = driverData || {};
+  driverUid = uid;
+
+  driverCurrentOnline = !!driverData.online;
+  updateOnlineBtn();
+  driverNameEl.textContent =
+    (driverData.firstName || "") +
+    " " +
+    (driverData.lastName || "");
+
+  registerSection.classList.add("hidden");
+  loginSection.classList.add("hidden");
+
+  if (mainHeader) mainHeader.classList.add("hidden");
+  if (authTabs) authTabs.classList.add("hidden");
+  if (footerEl) footerEl.classList.add("hidden");
+
+  driverDashboard.classList.remove("hidden");
+  document.body.classList.add("driver-mode");
+
+  // تهيئة خريطة السائق
+  initDriverMap();
+
+  // تعبئة نموذج التسعير من بيانات السائق الحالية
+  populatePricingFormFromData();
+
+  listenDriverOrders(uid);
+  listenDriverCalls(uid);
+}
+
+/* ========== Utilities ========== */
+function formatDate(d) {
+  if (!d) return "";
+  return d.toLocaleString();
+}
+function escapeHtml(s) {
+  if (!s) return "";
+  return String(s).replace(/[&<>"]/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+  });
+}
+
+/* خريطة السائق */
+function initDriverMap() {
+  if (!driverMapContainer) return;
+
+  const defaultCenter = { lat: 25.276987, lng: 55.296249 };
+  let center = defaultCenter;
+
+  if (
+    currentDriverData &&
+    typeof currentDriverData.lat === "number" &&
+    typeof currentDriverData.lng === "number"
+  ) {
+    center = { lat: currentDriverData.lat, lng: currentDriverData.lng };
+  }
+
+  try {
+    if (!driverMap && typeof google !== "undefined" && google.maps && google.maps.Map) {
+      driverMap = new google.maps.Map(driverMapContainer, {
+  center,
+  zoom: 13,
+  disableDefaultUI: true,
+  zoomControl: false,      // 🔴 إيقاف زر + / −
+  styles: [
+    // أساس ألوان الخريطة الداكنة
+    { elementType: "geometry", stylers: [{ color: "#1f2933" }] },
+    { elementType: "labels.text.fill", stylers: [{ color: "#9fb3c8" }] },
+    { elementType: "labels.text.stroke", stylers: [{ color: "#1f2933" }] },
+
+    // إخفاء كل رموز الأماكن (مطاعم، محطات، الخ...)
+    { featureType: "poi", stylers: [{ visibility: "off" }] },
+    { featureType: "transit", stylers: [{ visibility: "off" }] },
+    { featureType: "road", elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+
+    // الطرق
+    { featureType: "road", elementType: "geometry", stylers: [{ color: "#323f4b" }] },
+    { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#1f2933" }] },
+
+    // الحدائق (لو حاب تبقيها أغمق فقط)
+    { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#173d3c" }] },
+
+    // الماء
+    { featureType: "water", elementType: "geometry", stylers: [{ color: "#102a43" }] },
+    { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#d9e2ec" }] }
+  ]
+});
+
+    } else if (driverMap) {
+      driverMap.setCenter(center);
+    }
+
+    // تهيئة خدمات المسار وعرضه على الخريطة
+    if (typeof google !== "undefined" && google.maps) {
+      if (!directionsService) {
+        directionsService = new google.maps.DirectionsService();
+      }
+      if (!directionsRenderer) {
+        directionsRenderer = new google.maps.DirectionsRenderer({
+          suppressMarkers: true,   // سنستخدم ماركرات مخصصة للمتجر والعميل
+          preserveViewport: false
+        });
+        directionsRenderer.setMap(driverMap);
+      }
+
+      // تهيئة حقل عنوان العميل مع Google Places Autocomplete
+      initCustomerAutocomplete();
+    }
+  } catch(e) {
+    console.error("تعذر تهيئة الخريطة:", e);
+  }
+}
+
+function showDriverRouteToMerchant(startLat, startLng, merchantLat, merchantLng) {
+  if (!driverMap || typeof google === "undefined" || !google.maps) return;
+  if (merchantLat == null || merchantLng == null) return;
+
+  if (!directionsService) {
+    directionsService = new google.maps.DirectionsService();
+  }
+  if (!directionsRenderer) {
+    directionsRenderer = new google.maps.DirectionsRenderer({
+      suppressMarkers: true,
+      preserveViewport: false
+    });
+    directionsRenderer.setMap(driverMap);
+  }
+
+  const origin = { lat: startLat, lng: startLng };
+  const destination = { lat: merchantLat, lng: merchantLng };
+
+  directionsService.route(
+    {
+      origin,
+      destination,
+      travelMode: google.maps.TravelMode.DRIVING
+    },
+    (result, status) => {
+      if (status === "OK") {
+        directionsRenderer.setDirections(result);
+
+        // ماركر المتجر
+        if (!merchantMarker) {
+          merchantMarker = new google.maps.Marker({
+            map: driverMap,
+            position: destination,
+            icon: getMerchantMarkerIcon()
+          });
+        } else {
+          merchantMarker.setPosition(destination);
+          merchantMarker.setMap(driverMap);
+        }
+      } else {
+        console.error("فشل رسم المسار على الخريطة:", status, result);
+        driverMap.setCenter(destination);
+      }
+    }
+  );
+}
+function showDriverRouteToCustomer(startLat, startLng, destLat, destLng) {
+  if (!driverMap || typeof google === "undefined" || !google.maps) return;
+  if (destLat == null || destLng == null) return;
+
+  if (!directionsService) {
+    directionsService = new google.maps.DirectionsService();
+  }
+  if (!directionsRenderer) {
+    directionsRenderer = new google.maps.DirectionsRenderer({
+      suppressMarkers: true,
+      preserveViewport: false
+    });
+    directionsRenderer.setMap(driverMap);
+  }
+
+  const origin = { lat: startLat, lng: startLng };
+  const destination = { lat: destLat, lng: destLng };
+
+  directionsService.route(
+    {
+      origin,
+      destination,
+      travelMode: google.maps.TravelMode.DRIVING
+    },
+    (result, status) => {
+      if (status === "OK") {
+        directionsRenderer.setDirections(result);
+      } else {
+        console.error("فشل رسم المسار على الخريطة:", status, result);
+        driverMap.setCenter(destination);
+      }
+    }
+  );
+}
+/* أيقونات المتجر والعميل للماركرات */
+function getMerchantMarkerIcon() {
+  if (typeof google === "undefined" || !google.maps) return null;
+  return {
+    path: "M -10 -10 H 10 V 10 H -10 Z",
+    fillColor: "#ff9800",
+    fillOpacity: 1,
+    strokeColor: "#ffffff",
+    strokeWeight: 2,
+    scale: 1.2
+  };
+}
+
+/* تهيئة Google Places Autocomplete لحقل عنوان العميل */
+function initCustomerAutocomplete() {
+  if (!customerAddressInput) return;
+  if (typeof google === "undefined" || !google.maps || !google.maps.places) return;
+
+  if (customerAutocomplete) return; // تم التهيئة سابقاً
+
+  customerAutocomplete = new google.maps.places.Autocomplete(customerAddressInput, {
+    fields: ["formatted_address", "geometry"],
+    types: ["geocode"]
+  });
+
+  customerAutocomplete.addListener("place_changed", () => {
+    const place = customerAutocomplete.getPlace();
+    if (!place || !place.geometry || !place.geometry.location) {
+      alert("تعذر الحصول على موقع هذا العنوان.");
+      return;
+    }
+    const lat = place.geometry.location.lat();
+    const lng = place.geometry.location.lng();
+    const address = place.formatted_address || customerAddressInput.value || "";
+    setCustomerDestination(lat, lng, address);
+  });
+}
+
+/* ضبط نقطة تسليم العميل على الخريطة + حفظها في الـ calls (السائق + التاجر) */
+async function setCustomerDestination(lat, lng, address) {
+  if (!driverMap) return;
+
+  customerDestination = { lat, lng, address };
+
+  // ماركر العميل (أيقونة مستخدم)
+  if (!customerMarker) {
+    customerMarker = new google.maps.Marker({
+      map: driverMap,
+      position: { lat, lng },
+      icon: getCustomerMarkerIcon()
+    });
+  } else {
+    customerMarker.setPosition({ lat, lng });
+    customerMarker.setMap(driverMap);
+  }
+
+  driverMap.panTo({ lat, lng });
+
+  const activeCall = getCurrentActiveCall();
+  if (activeCall) {
+    try {
+      await updateDriverCallAndMerchant(activeCall.id, {
+        deliveryAddress: address,
+        customerLat: lat,
+        customerLng: lng
+      });
+    } catch (err) {
+      console.error("خطأ أثناء حفظ عنوان العميل:", err);
+    }
+  }
+}
+
+/* بدء التوجيه إلى العميل من موقع السائق الحالي */
+function startCustomerNavigation() {
+  if (!customerDestination || customerDestination.lat == null || customerDestination.lng == null) {
+    alert("رجاءً اختر عنواناً صحيحاً للعميل أولاً.");
+    return;
+  }
+  if (!navigator.geolocation) {
+    alert("المتصفح لا يدعم تحديد الموقع الجغرافي.");
+    return;
+  }
+
+  const geoOptions = {
+    enableHighAccuracy: true,
+    timeout: 20000,
+    maximumAge: 5000
+  };
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const startLat = pos.coords.latitude;
+      const startLng = pos.coords.longitude;
+
+      // رسم مسار من موقع السائق إلى العميل
+      showDriverRouteToCustomer(
+        startLat,
+        startLng,
+        customerDestination.lat,
+        customerDestination.lng
+      );
+
+      // التوجيه الحي إلى العميل (أيقونة المستخدم)
+      stopGuidance(); // إعادة تشغيل التوجيه على الهدف الجديد
+      startGuidance(customerDestination.lat, customerDestination.lng);
+    },
+    (err) => {
+      alert("تعذر الحصول على الموقع: " + err.message);
+    },
+    geoOptions
+  );
+}
+
+/* تنظيف عنوان العميل وماركراته من الخريطة */
+function clearCustomerDestination() {
+  customerDestination = null;
+  if (customerMarker) {
+    customerMarker.setMap(null);
+    customerMarker = null;
+  }
+  if (customerAddressInput) {
+    customerAddressInput.value = "";
+  }
+  if (customerAddressPanel && !customerAddressPanel.classList.contains("hidden")) {
+    customerAddressPanel.classList.add("hidden");
+  }
+}
+
+/* بدء/إيقاف التوجيه الحي على نفس الخريطة مع تدوير حسب الاتجاه */
+function startGuidance(targetLat, targetLng) {
+  if (isGuidanceOn) return;
+  if (!navigator.geolocation) {
+    alert("المتصفح لا يدعم التوجيه الحي.");
+    return;
+  }
+  if (!driverMap) {
+    alert("الخريطة غير جاهزة بعد.");
+    return;
+  }
+
+  navigationTarget = { lat: targetLat, lng: targetLng };
+  isGuidanceOn = true;
+  if (driverNavBtn) {
+    driverNavBtn.dataset.active = "true";
+  }
+
+  const watchOptions = {
+    enableHighAccuracy: true,
+    maximumAge: 3000,
+    timeout: 20000
+  };
+
+  navigationWatchId = navigator.geolocation.watchPosition(
+    (pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      const heading = (typeof pos.coords.heading === "number" && !isNaN(pos.coords.heading))
+        ? pos.coords.heading
+        : null;
+
+      if (!driverMap) return;
+
+      const currentLatLng = new google.maps.LatLng(lat, lng);
+
+      // تحديث/إنشاء ماركر السائق
+      if (!driverMarker) {
+        const icon = {
+          path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+          scale: 5,
+          strokeColor: "#ffffff",
+          strokeWeight: 2,
+          fillColor: "#4285F4",
+          fillOpacity: 1,
+          rotation: heading || 0
+        };
+        driverMarker = new google.maps.Marker({
+          map: driverMap,
+          position: currentLatLng,
+          icon
+        });
+      } else {
+        driverMarker.setPosition(currentLatLng);
+        if (heading !== null) {
+          const icon = driverMarker.getIcon();
+          if (icon && typeof icon === "object") {
+            icon.rotation = heading;
+            driverMarker.setIcon(icon);
+          }
+        }
+      }
+
+      // مركز الخريطة على السائق
+      driverMap.setCenter(currentLatLng);
+
+      // تدوير الخريطة حسب اتجاه السائق (إن كان متوفراً)
+      if (heading !== null && typeof driverMap.setHeading === "function") {
+        driverMap.setHeading(heading);
+        if (typeof driverMap.setTilt === "function") {
+          driverMap.setTilt(45);
+        }
+      }
+    },
+    (err) => {
+      console.error("خطأ في التوجيه الحي:", err);
+    },
+    watchOptions
+  );
+}
+
+function stopGuidance() {
+  isGuidanceOn = false;
+  navigationTarget = null;
+
+  if (navigationWatchId !== null && navigator.geolocation) {
+    navigator.geolocation.clearWatch(navigationWatchId);
+    navigationWatchId = null;
+  }
+
+  if (driverMarker) {
+    driverMarker.setMap(null);
+    driverMarker = null;
+  }
+
+  if (driverMap && typeof driverMap.setHeading === "function") {
+    driverMap.setHeading(0);
+    if (typeof driverMap.setTilt === "function") {
+      driverMap.setTilt(0);
+    }
+  }
+
+  if (driverNavBtn) {
+    driverNavBtn.dataset.active = "false";
+  }
+}
+
+/* تنظيف الخريطة (المسار + التوجيه) */
+function clearRouteAndNavigation() {
+  if (directionsRenderer) {
+    directionsRenderer.setDirections({ routes: [] });
+  }
+  if (merchantMarker) {
+    merchantMarker.setMap(null);
+    merchantMarker = null;
+  }
+  // تنظيف عنوان/ماركر العميل
+  clearCustomerDestination();
+  // إيقاف التوجيه الحي (السهم)
+  stopGuidance();
+}
+
+/* مسافة المسار عبر Directions API (للحاسبة فقط) */
+function getRouteDistanceKm(origin, destination) {
+  return new Promise((resolve) => {
+    if (!directionsService) {
+      directionsService = new google.maps.DirectionsService();
+    }
+    directionsService.route(
+      {
+        origin: origin,
+        destination: destination,
+        travelMode: google.maps.TravelMode.DRIVING
+      },
+      (result, status) => {
+        if (
+          status === "OK" &&
+          result.routes &&
+          result.routes.length > 0 &&
+          result.routes[0].legs &&
+          result.routes[0].legs.length > 0 &&
+          result.routes[0].legs[0].distance
+        ) {
+          resolve(result.routes[0].legs[0].distance.value / 1000);
+        } else {
+          console.error("فشل حساب مسار Google Maps", status, result);
+          resolve(0);
+        }
+      }
+    );
+  });
+}
+
+/* هل لدى السائق طلب نشط؟ */
+function driverHasActiveJob() {
+  if (!lastDriverCalls || !lastDriverCalls.length) return false;
+  return lastDriverCalls.some((o) => {
+    const s = (o.status || "pending").toLowerCase();
+    return !(s === "delivered" || s === "cancelled" || s === "rejected");
+  });
+}
+
+/* اختيار الطلب النشط الحالي (مستخدم للتوجيه) */
+function getCurrentActiveCall() {
+  if (!lastDriverCalls || !lastDriverCalls.length) return null;
+  const active = lastDriverCalls.filter((o) => {
+    const s = (o.status || "pending").toLowerCase();
+    return !(s === "delivered" || s === "cancelled" || s === "rejected");
+  });
+  if (!active.length) return null;
+  const inProgress = active.find((c) => c.status === "in_progress");
+  return inProgress || active[0];
+}
+
+/* ========== إعدادات تسعير التوصيل (داخل القائمة الجانبية) ========== */
+function updatePricingFormUi() {
+  const includeCheckbox = document.getElementById("includeToMerchantSegment");
+  const useSameCheckbox = document.getElementById("useSamePriceForBoth");
+  const toMerchantRow = document.getElementById("toMerchantRow");
+  if (!includeCheckbox || !useSameCheckbox || !toMerchantRow) return;
+
+  if (!includeCheckbox.checked) {
+    useSameCheckbox.disabled = true;
+    toMerchantRow.style.display = "none";
+  } else {
+    useSameCheckbox.disabled = false;
+    toMerchantRow.style.display = useSameCheckbox.checked ? "none" : "block";
+  }
+}
+
+function populatePricingFormFromData() {
+  const d = currentDriverData || {};
+  const deliveryInput = document.getElementById("pricePerKmDelivery");
+  const includeCheckbox = document.getElementById("includeToMerchantSegment");
+  const useSameCheckbox = document.getElementById("useSamePriceForBoth");
+  const toMerchantInput = document.getElementById("pricePerKmToMerchant");
+  const freeKmInput = document.getElementById("freeKmInput");
+  const baseFeeHint = document.getElementById("pricingBaseFeeHint");
+
+  if (!deliveryInput || !includeCheckbox || !useSameCheckbox || !toMerchantInput || !freeKmInput) {
+    return;
+  }
+
+  deliveryInput.value =
+    d.pricePerKmDelivery != null ? d.pricePerKmDelivery : "";
+  includeCheckbox.checked = !!d.includeToMerchantSegment;
+  useSameCheckbox.checked = d.useSamePriceForBoth !== false;
+  toMerchantInput.value =
+    d.pricePerKmToMerchant != null ? d.pricePerKmToMerchant : "";
+  freeKmInput.value = d.freeKm != null ? d.freeKm : 0;
+
+    if (baseFeeHint) {
+    const template = t("pricing_base_fee_hint"); // فيها {fee}
+    const feeText = BASE_DELIVERY_FEE.toFixed(2);
+    baseFeeHint.textContent = template.replace("{fee}", feeText);
+  }
+
+  updatePricingFormUi();
+}
+
+async function savePricingSettings() {
+  const deliveryInput = document.getElementById("pricePerKmDelivery");
+  const includeCheckbox = document.getElementById("includeToMerchantSegment");
+  const useSameCheckbox = document.getElementById("useSamePriceForBoth");
+  const toMerchantInput = document.getElementById("pricePerKmToMerchant");
+  const freeKmInput = document.getElementById("freeKmInput");
+
+  let deliveryPrice = parseFloat(
+    (deliveryInput.value || "").replace(",", ".")
+  );
+  if (isNaN(deliveryPrice) || deliveryPrice <= 0) {
+alert(t("pricing_error_delivery_price"));
+    return;
+  }
+
+  const includeToMerchant = includeCheckbox.checked;
+  const useSameForBoth = includeToMerchant
+    ? useSameCheckbox.checked
+    : false;
+
+  let toMerchantPrice = null;
+  if (includeToMerchant) {
+    if (useSameForBoth) {
+      toMerchantPrice = deliveryPrice;
+    } else {
+      let raw = parseFloat(
+        (toMerchantInput.value || "").replace(",", ".")
+      );
+      if (isNaN(raw) || raw < 0) {
+        alert(t("pricing_error_to_merchant_price"));
+        return;
+      }
+      toMerchantPrice = raw;
+    }
+  }
+
+  let freeKm = parseFloat(
+    (freeKmInput.value || "").replace(",", ".")
+  );
+  if (isNaN(freeKm) || freeKm < 0) freeKm = 0;
+
+  const updateData = {
+    pricePerKmDelivery: deliveryPrice,
+    includeToMerchantSegment: includeToMerchant,
+    useSamePriceForBoth: useSameForBoth,
+    pricePerKmToMerchant: includeToMerchant ? toMerchantPrice : null,
+    freeKm: freeKm
+  };
+
+  try {
+    await db.collection("drivers").doc(driverUid).update(updateData);
+    currentDriverData = currentDriverData || {};
+    Object.assign(currentDriverData, updateData);
+    alert("تم حفظ إعدادات التسعير بنجاح.");
+    populatePricingFormFromData();
+  } catch (err) {
+    alert("خطأ أثناء حفظ إعدادات التسعير: " + err.message);
+  }
+}
+
+const savePricingBtn = document.getElementById("savePricingBtn");
+if (savePricingBtn) {
+  savePricingBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    savePricingSettings();
+  });
+}
+
+const includeCheckboxElm = document.getElementById("includeToMerchantSegment");
+const useSameCheckboxElm = document.getElementById("useSamePriceForBoth");
+if (includeCheckboxElm && useSameCheckboxElm) {
+  includeCheckboxElm.addEventListener("change", updatePricingFormUi);
+  useSameCheckboxElm.addEventListener("change", updatePricingFormUi);
+}
+
+/* ========== استماع لطلبات السائق من drivers/{driverId}/calls ========== */
+function listenDriverOrders(driverId) {
+  if (driverOrdersListener) driverOrdersListener();
+  driverOrdersListener = db
+    .collection("drivers")
+    .doc(driverId)
+    .collection("calls")
+    .onSnapshot((snapshot) => {
+      const allCalls = [];
+      snapshot.forEach((doc) => {
+        allCalls.push({ id: doc.id, ...doc.data(), _ref: doc.ref });
+      });
+      driverCallsCache = allCalls;
+      renderDriverOrders(allCalls);
+    });
+}
+
+/* استماع لنداءات جديدة (pending) من التجار (collectionGroup) */
+function listenDriverCalls(driverId) {
+  if (driverCallsListener) driverCallsListener();
+  driverCallsListener = db
+    .collectionGroup("calls")
+    .where("driverId", "==", driverId)
+    .where("status", "==", "pending")
+    .onSnapshot((snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          const data = change.doc.data();
+          const call = {
+            id: change.doc.id,
+            ref: change.doc.ref,
+            ...data
+          };
+          showCallModalForDriver(call);
+        }
+      });
+    });
+}
+
+/* ========== helper: تحديث نداء السائق + نداء التاجر معاً ========== */
+async function updateDriverCallAndMerchant(callId, dataPatch) {
+  if (!driverUid) return;
+  try {
+    const driverCallRef = db
+      .collection("drivers")
+      .doc(driverUid)
+      .collection("calls")
+      .doc(callId);
+
+    const snap = await driverCallRef.get();
+    if (!snap.exists) {
+      console.warn("لم يتم العثور على النداء في سجل السائق:", callId);
+      return;
+    }
+
+    const callData = snap.data();
+    const merchantCallPath = callData.merchantCallPath;
+
+    await driverCallRef.update(dataPatch);
+
+    if (merchantCallPath) {
+      await db.doc(merchantCallPath).update(dataPatch);
+    }
+  } catch (err) {
+    alert("خطأ أثناء تحديث حالة النداء: " + err.message);
+  }
+}
+
+/* ========== كرت الطلب النشط في الواجهة الأساسية (Bottom Sheet) ========== */
+function renderDriverCurrentOrder(call) {
+  if (!driverCurrentOrderEl) return;
+
+  if (!call) {
+    driverCurrentOrderEl.classList.add("hidden");
+    driverCurrentOrderEl.innerHTML = "";
+    driverCurrentOrderEl.classList.remove("collapsed");
+    currentOrderCollapsed = false;
+    return;
+  }
+
+  const statusLabel = escapeHtml(call.status || "مقبول");
+  const feeLabel =
+    call.cost && typeof call.cost.totalFee === "number"
+      ? call.cost.totalFee.toFixed(2) + " €"
+      : call.deliveryFee != null
+      ? escapeHtml(call.deliveryFee) + ""
+      : "—";
+
+  let buttonsHtml = "";
+  if (!call.status || call.status === "accepted") {
+    buttonsHtml = `
+      <button onclick="driverStartCall('${call.id}')">بدء التوجه إلى التاجر</button>
+      <button class="secondary" onclick="driverCompleteCall('${call.id}')">تم التسليم</button>
+    `;
+  } else if (call.status === "in_progress") {
+    buttonsHtml = `
+      <button onclick="driverCompleteCall('${call.id}')">تم التسليم</button>
+    `;
+  }
+  buttonsHtml += `
+      <button class="secondary" onclick="driverCancelCall('${call.id}')">إلغاء</button>
+  `;
+
+  driverCurrentOrderEl.innerHTML = `
+    <div class="driver-current-order-header">
+      <div class="driver-current-order-header-text">
+        <div><strong>#${call.id}</strong> — ${escapeHtml(call.merchantName || "")}</div>
+        <span class="small">${statusLabel}</span>
+      </div>
+      <button type="button" class="driver-current-order-toggle" onclick="toggleCurrentOrderPanel()">▼</button>
+    </div>
+    <div class="driver-current-order-body">
+      <div class="small">
+        ${escapeHtml(call.deliveryAddress || "-")}<br/>
+        التكلفة المتوقعة: ${feeLabel}
+      </div>
+      <div class="btn-row">
+        ${buttonsHtml}
+      </div>
+    </div>
+  `;
+  driverCurrentOrderEl.classList.remove("hidden");
+  driverCurrentOrderEl.classList.remove("collapsed");
+  currentOrderCollapsed = false;
+}
+// زر طيّ/إظهار بطاقة الطلب النشط (Bottom Sheet)
+window.toggleCurrentOrderPanel = function (forceCollapse) {
+  if (!driverCurrentOrderEl || driverCurrentOrderEl.classList.contains("hidden")) return;
+
+  if (typeof forceCollapse === "boolean") {
+    currentOrderCollapsed = forceCollapse;
+  } else {
+    currentOrderCollapsed = !currentOrderCollapsed;
+  }
+
+  if (currentOrderCollapsed) {
+    driverCurrentOrderEl.classList.add("collapsed");
+  } else {
+    driverCurrentOrderEl.classList.remove("collapsed");
+  }
+
+  const toggleBtn = driverCurrentOrderEl.querySelector(".driver-current-order-toggle");
+  if (toggleBtn) {
+    toggleBtn.textContent = currentOrderCollapsed ? "▲" : "▼";
+  }
+};
+
+/* ========== عرض طلبات السائق (من calls) + الإحصاءات ========== */
+function renderDriverOrders(allCalls) {
+  lastDriverCalls = allCalls || [];
+
+  const active = lastDriverCalls.filter((c) => {
+    const s = (c.status || "pending").toLowerCase();
+    return !(
+      s === "delivered" ||
+      s === "cancelled" ||
+      s === "rejected"
+    );
+  });
+
+  const completed = lastDriverCalls.filter((c) => {
+    const s = (c.status || "pending").toLowerCase();
+    return (
+      s === "delivered" ||
+      s === "cancelled" ||
+      s === "rejected"
+    );
+  });
+
+  // عناوين الإحصاءات (مترجمة) + الأرقام
+  if (driverActiveCountEl) {
+    driverActiveCountEl.innerHTML =
+      t("summary_active_orders") +
+      "<br><strong>" +
+      active.length +
+      "</strong>";
+  }
+  if (driverCompletedCountEl) {
+    driverCompletedCountEl.innerHTML =
+      t("summary_completed_orders") +
+      "<br><strong>" +
+      completed.length +
+      "</strong>";
+  }
+
+  const totalEarnings = completed.reduce((sum, c) => {
+    if (c.cost && typeof c.cost.totalFee === "number") {
+      return sum + c.cost.totalFee;
+    }
+    return sum + (c.deliveryFee || 0);
+  }, 0);
+
+  const earningsText =
+    t("summary_earnings") +
+    "<br><strong>" +
+    totalEarnings.toFixed(2) +
+    "</strong>";
+  if (driverEarningsEl) {
+    driverEarningsEl.innerHTML = earningsText;
+  }
+  if (driverEarningsFloatingEl) {
+    driverEarningsFloatingEl.innerHTML = earningsText;
+  }
+
+  // الطلب النشط في الكرت العائم
+  const currentActiveCall = getCurrentActiveCall();
+  renderDriverCurrentOrder(currentActiveCall);
+
+  // إظهار/إخفاء كبسولة الحالة السفلية حسب وجود طلبات
+  if (driverBottomStatusEl) {
+    if (active.length > 0) {
+      driverBottomStatusEl.classList.add("hidden");
+    } else {
+      driverBottomStatusEl.classList.remove("hidden");
+    }
+  }
+
+  if (driverActiveOrdersEl) driverActiveOrdersEl.innerHTML = "";
+  if (driverCompletedOrdersEl) driverCompletedOrdersEl.innerHTML = "";
+
+  // الطلبات الحالية (القائمة الجانبية) - نفس النصوص القديمة حالياً
+  active.forEach((c) => {
+    const card = document.createElement("div");
+    card.className = "order-card";
+
+    const statusLabel = escapeHtml(c.status || "accepted");
+    const feeLabel =
+      c.cost && typeof c.cost.totalFee === "number"
+        ? c.cost.totalFee.toFixed(2) + " €"
+        : c.deliveryFee != null
+        ? escapeHtml(c.deliveryFee) + ""
+        : "—";
+
+    card.innerHTML = `
+      <div>
+        <strong>#${c.id}</strong><br/>
+        <span class="small">الحالة: ${statusLabel}</span><br/>
+        العنوان: ${escapeHtml(c.deliveryAddress || "-")}<br/>
+        التكلفة المتوقعة: ${feeLabel}
+      </div>
+    `;
+    driverActiveOrdersEl.appendChild(card);
+
+    card.addEventListener("click", () => {
+      viewDriverCallDetails(c.id);
+    });
+  });
+
+  // الطلبات السابقة
+  completed.forEach((c) => {
+    const card = document.createElement("div");
+    card.className = "order-card";
+
+    const statusLabel = escapeHtml(c.status || "");
+    const totalKm =
+      c.distance && typeof c.distance.totalKm === "number"
+        ? c.distance.totalKm.toFixed(2) + " كم"
+        : "—";
+    const feeLabel =
+      c.cost && typeof c.cost.totalFee === "number"
+        ? c.cost.totalFee.toFixed(2) + " €"
+        : c.deliveryFee != null
+        ? escapeHtml(c.deliveryFee) + ""
+        : "—";
+
+    card.innerHTML = `
+      <div>
+        <strong>#${c.id}</strong><br/>
+        <span class="small">الحالة: ${statusLabel}</span><br/>
+        العنوان: ${escapeHtml(c.deliveryAddress || "-")}<br/>
+        المسافة الكلية: ${totalKm}<br/>
+        التكلفة النهائية: ${feeLabel}
+      </div>
+    `;
+    driverCompletedOrdersEl.appendChild(card);
+
+    card.addEventListener("click", () => {
+      viewDriverCallDetails(c.id);
+    });
+  });
+
+  // نص الكبسولة السفلية (مترجم)
+  if (driverStatusTextEl) {
+    if (active.length > 0) {
+      if (active.length === 1) {
+        driverStatusTextEl.textContent = t("status_active_one");
+      } else {
+        driverStatusTextEl.textContent = t("status_active_many").replace(
+          "{count}",
+          active.length
+        );
+      }
+    } else {
+      driverStatusTextEl.textContent = driverCurrentOnline
+        ? t("status_hint_online")
+        : t("status_hint_offline");
+    }
+  }
+}
+
+/* ========== تفاصيل الطلب (من calls) للسائق ========== */
+window.viewDriverCallDetails = async function (callId) {
+  if (!driverUid) {
+    alert("لم يتم تحديد السائق الحالي.");
+    return;
+  }
+
+  try {
+    const doc = await db
+      .collection("drivers")
+      .doc(driverUid)
+      .collection("calls")
+      .doc(callId)
+      .get();
+
+    if (!doc.exists) {
+      alert("الطلب غير موجود في سجل السائق.");
+      return;
+    }
+
+    const o = { id: doc.id, ...doc.data() };
+
+    let html = `<div><strong>تفاصيل الطلب #${escapeHtml(o.id)}</strong></div>`;
+    html += `<div class="small">الحالة: ${escapeHtml(o.status || "")}</div>`;
+
+    if (o.createdAt && o.createdAt.toDate) {
+      html += `<div class="small">وقت الطلب: ${formatDate(o.createdAt.toDate())}</div>`;
+    }
+    if (o.startedAt && o.startedAt.toDate) {
+      html += `<div class="small">بداية التوصيل: ${formatDate(o.startedAt.toDate())}</div>`;
+    }
+    if (o.deliveredAt && o.deliveredAt.toDate) {
+      html += `<div class="small">وقت التسليم: ${formatDate(o.deliveredAt.toDate())}</div>`;
+    }
+
+    const distanceLabel =
+      o.distance && typeof o.distance.totalKm === "number"
+        ? o.distance.totalKm.toFixed(2) + " كم"
+        : "—";
+
+    let feeLabel = "—";
+    if (o.cost && typeof o.cost.totalFee === "number") {
+      feeLabel = o.cost.totalFee.toFixed(2) + " €";
+    } else if (o.deliveryFee != null) {
+      feeLabel = escapeHtml(o.deliveryFee) + "";
+    }
+
+    html += `<div style="margin-top:8px;">`;
+    html += `<div>التاجر: ${escapeHtml(o.merchantName || "-")} (${escapeHtml(o.merchantCity || "-")})</div>`;
+    html += `<div>اسم العميل: ${escapeHtml(o.customerName || "-")}</div>`;
+    html += `<div>العنوان: ${escapeHtml(o.deliveryAddress || "-")}</div>`;
+    html += `<div>المسافة الكلية: ${distanceLabel}</div>`;
+    html += `<div>تكلفة التوصيل: ${feeLabel}</div>`;
+    html += `<div>ملاحظات: ${escapeHtml(o.notes || "-")}</div>`;
+    html += `</div>`;
+
+    html += `<div class="btn-row">`;
+    html += `<button class="secondary" onclick="closeOrderModal()">إغلاق</button>`;
+    html += `</div>`;
+
+    modalContent.innerHTML = html;
+    if (orderModalEl) orderModalEl.classList.remove("hidden");
+    modalBackdrop.style.display = "flex";
+    window.scrollTo(0, 0);
+  } catch (err) {
+    alert("خطأ أثناء قراءة تفاصيل الطلب: " + err.message);
+  }
+};
+
+/* ========== نداء جديد يصل للسائق ========== */
+function showCallModalForDriver(call) {
+  const when =
+    call.createdAt && call.createdAt.toDate
+      ? formatDate(call.createdAt.toDate())
+      : "";
+
+  let html = `
+    <div><strong>نداء جديد من التاجر</strong></div>
+    <div class="small">المتجر: ${escapeHtml(call.merchantName || "")}</div>
+    <div class="small">المدينة: ${escapeHtml(call.merchantCity || "")}</div>
+    <div class="small">الوقت: ${when}</div>
+    <div style="margin-top:10px;">هل ترغب في قبول هذا النداء؟</div>
+    <div class="btn-row">
+      <button id="acceptCallBtn">قبول</button>
+      <button id="rejectCallBtn" class="secondary">رفض</button>
+    </div>
+  `;
+
+  modalContent.innerHTML = html;
+  if (orderModalEl) orderModalEl.classList.remove("hidden");
+  modalBackdrop.style.display = "flex";
+  window.scrollTo(0, 0);
+
+  const acceptBtn = document.getElementById("acceptCallBtn");
+  const rejectBtn = document.getElementById("rejectCallBtn");
+
+  if (acceptBtn) {
+    acceptBtn.onclick = async () => {
+      try {
+        const driverId = driverUid || call.driverId;
+        if (!driverId) {
+          alert("لا يمكن قبول النداء: لم يتم تحديد السائق.");
+          return;
+        }
+
+        const driverRef = db.collection("drivers").doc(driverId);
+        const driverCallRef = driverRef.collection("calls").doc(call.id);
+
+        const driverPricing = currentDriverData || {};
+        const pricing = {
+          baseFee: BASE_DELIVERY_FEE,
+          pricePerKmDelivery:
+            typeof driverPricing.pricePerKmDelivery === "number"
+              ? driverPricing.pricePerKmDelivery
+              : null,
+          includeToMerchantSegment:
+            !!driverPricing.includeToMerchantSegment,
+          useSamePriceForBoth:
+            driverPricing.useSamePriceForBoth !== false,
+          pricePerKmToMerchant:
+            typeof driverPricing.pricePerKmToMerchant === "number"
+              ? driverPricing.pricePerKmToMerchant
+              : null,
+          freeKm:
+            typeof driverPricing.freeKm === "number"
+              ? driverPricing.freeKm
+              : 0
+        };
+
+        const driverCallData = {
+          merchantId: call.merchantId,
+          merchantName: call.merchantName || "",
+          merchantCity: call.merchantCity || "",
+          merchantLat: call.merchantLat || null,
+          merchantLng: call.merchantLng || null,
+          driverId: driverId,
+          driverFirstName: call.driverFirstName || "",
+          driverLastName: call.driverLastName || "",
+          driverPhone: call.driverPhone || "",
+          status: "accepted",
+          createdAt:
+            call.createdAt ||
+            firebase.firestore.FieldValue.serverTimestamp(),
+          respondedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          merchantCallPath: call.ref.path,
+          deliveryFee: call.deliveryFee || 0,
+          customerName: call.customerName || "",
+          deliveryAddress: call.deliveryAddress || "",
+          notes: call.notes || "",
+          pricing: pricing
+        };
+
+        await driverCallRef.set(driverCallData, { merge: true });
+
+        await call.ref.update({
+          status: "accepted",
+          respondedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          pricing: pricing
+        });
+
+        await driverRef.update({
+          busy: true
+        });
+
+        closeOrderModal();
+      } catch (err) {
+        alert("خطأ أثناء قبول النداء: " + err.message);
+      }
+    };
+  }
+
+  if (rejectBtn) {
+    rejectBtn.onclick = async () => {
+      try {
+        await call.ref.update({
+          status: "rejected",
+          respondedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        if (driverUid) {
+          await db.collection("drivers").doc(driverUid).update({
+            busy: false
+          });
+        }
+
+        closeOrderModal();
+      } catch (err) {
+        alert("خطأ أثناء رفض النداء: " + err.message);
+      }
+    };
+  }
+}
+
+/* ========== أزرار أكشن السائق (start / complete / cancel) ========== */
+window.driverStartCall = function (callId) {
+  const call = driverCallsCache.find(function (c) {
+    return c.id === callId;
+  });
+  if (!call) {
+    alert("لم يتم العثور على هذا الطلب.");
+    return;
+  }
+
+  if (!navigator.geolocation) {
+    alert("المتصفح لا يدعم تحديد الموقع الجغرافي.");
+    return;
+  }
+
+  const geoOptions = {
+    enableHighAccuracy: true,
+    timeout: 20000,
+    maximumAge: 5000
+  };
+
+  navigator.geolocation.getCurrentPosition(
+    async function (position) {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+
+      try {
+        // تحديث حالة الطلب كبداية رحلة
+        await updateDriverCallAndMerchant(callId, {
+          status: "in_progress",
+          driverStartLat: lat,
+          driverStartLng: lng,
+          startedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        if (driverUid) {
+          await db.collection("drivers").doc(driverUid).update({
+            busy: true
+          });
+        }
+
+        // رسم المسار + بدء التوجيه الحي إلى التاجر
+        if (call.merchantLat != null && call.merchantLng != null) {
+          showDriverRouteToMerchant(
+            lat,
+            lng,
+            call.merchantLat,
+            call.merchantLng
+          );
+          startGuidance(call.merchantLat, call.merchantLng);
+        }
+        // طيّ بطاقة الطلب بعد بدء الرحلة (يبقى زر السهم فقط)
+        if (window.toggleCurrentOrderPanel) {
+          toggleCurrentOrderPanel(true);
+        }
+
+        alert("تم تسجيل بداية الرحلة نحو التاجر وتم توجيه الخريطة.");
+      } catch (err) {
+        alert("خطأ أثناء تسجيل بداية الرحلة: " + err.message);
+      }
+    },
+    function (err) {
+      alert("تعذر الحصول على الموقع: " + err.message);
+    },
+    geoOptions
+  );
+};
+
+window.driverCompleteCall = function (callId) {
+  const call = driverCallsCache.find(function (c) {
+    return c.id === callId;
+  });
+  if (!call) {
+    alert("لم يتم العثور على هذا الطلب.");
+    return;
+  }
+
+  if (!navigator.geolocation) {
+    alert("المتصفح لا يدعم تحديد الموقع الجغرافي.");
+    return;
+  }
+
+  const geoOptions = {
+    enableHighAccuracy: true,
+    timeout: 20000,
+    maximumAge: 5000
+  };
+
+  navigator.geolocation.getCurrentPosition(
+    async function (position) {
+      const dropLat = position.coords.latitude;
+      const dropLng = position.coords.longitude;
+
+      try {
+        const driverPricing = call.pricing || currentDriverData || {};
+        const baseFee =
+          typeof driverPricing.baseFee === "number"
+            ? driverPricing.baseFee
+            : BASE_DELIVERY_FEE;
+
+        const pricePerKmDelivery =
+          typeof driverPricing.pricePerKmDelivery === "number"
+            ? driverPricing.pricePerKmDelivery
+            : 0;
+
+        const includeToMerchantSegment =
+          !!driverPricing.includeToMerchantSegment;
+        const useSamePriceForBoth =
+          driverPricing.useSamePriceForBoth !== false;
+
+        let pricePerKmToMerchant =
+          typeof driverPricing.pricePerKmToMerchant === "number"
+            ? driverPricing.pricePerKmToMerchant
+            : null;
+
+        if (
+          includeToMerchantSegment &&
+          (pricePerKmToMerchant == null || useSamePriceForBoth)
+        ) {
+          pricePerKmToMerchant = pricePerKmDelivery;
+        }
+
+        const freeKm =
+          typeof driverPricing.freeKm === "number"
+            ? driverPricing.freeKm
+            : 0;
+
+        let d1 = 0; // السائق -> التاجر
+        let d2 = 0; // التاجر -> نقطة التسليم
+
+        if (
+          includeToMerchantSegment &&
+          call.driverStartLat != null &&
+          call.driverStartLng != null &&
+          call.merchantLat != null &&
+          call.merchantLng != null &&
+          pricePerKmToMerchant > 0
+        ) {
+          d1 = await getRouteDistanceKm(
+            { lat: call.driverStartLat, lng: call.driverStartLng },
+            { lat: call.merchantLat, lng: call.merchantLng }
+          );
+        }
+
+        if (
+          call.merchantLat != null &&
+          call.merchantLng != null &&
+          pricePerKmDelivery > 0
+        ) {
+          d2 = await getRouteDistanceKm(
+            { lat: call.merchantLat, lng: call.merchantLng },
+            { lat: dropLat, lng: dropLng }
+          );
+        }
+
+        const totalKm = d1 + d2;
+        const rawDistanceFee =
+          d1 * (pricePerKmToMerchant || 0) +
+          d2 * pricePerKmDelivery;
+
+        let distanceFee = rawDistanceFee;
+        let freeKmUsed = 0;
+
+        if (freeKm > 0 && totalKm > 0 && rawDistanceFee > 0) {
+          freeKmUsed = Math.min(freeKm, totalKm);
+          const avgPerKm = rawDistanceFee / totalKm;
+          const discount = freeKmUsed * avgPerKm;
+          distanceFee = Math.max(rawDistanceFee - discount, 0);
+        }
+
+        const totalFee = baseFee + distanceFee;
+
+        const patch = {
+          status: "delivered",
+          dropoffLat: dropLat,
+          dropoffLng: dropLng,
+          deliveredAt: firebase.firestore.FieldValue.serverTimestamp(),
+          deliveryFee: totalFee,
+          distance: {
+            driverToMerchantKm: d1,
+            merchantToDropoffKm: d2,
+            totalKm: totalKm,
+            freeKmUsed: freeKmUsed
+          },
+          cost: {
+            baseFee: baseFee,
+            distanceFee: distanceFee,
+            totalFee: totalFee,
+            perKmDriverToMerchant: pricePerKmToMerchant || 0,
+            perKmMerchantToDropoff: pricePerKmDelivery,
+            freeKm: freeKm
+          }
+        };
+
+                await updateDriverCallAndMerchant(callId, patch);
+
+        if (driverUid) {
+          await db.collection("drivers").doc(driverUid).update({
+            busy: false
+          });
+        }
+
+        // تنظيف كامل لمسار التوجيه وماركر المتجر/العميل بعد التسليم
+        clearRouteAndNavigation();
+        // طيّ بطاقة الطلب النشط (يبقى زر السهم فقط للحظات حتى يتحدث الـ snapshot)
+        if (window.toggleCurrentOrderPanel) {
+          toggleCurrentOrderPanel(true);
+        }
+
+        alert("تم حساب مسافة وتكلفة التوصيل وتحديث حالة الطلب.");
+
+      } catch (err) {
+        alert("خطأ أثناء إكمال التوصيل: " + err.message);
+      }
+    },
+    function (err) {
+      alert("تعذر الحصول على الموقع: " + err.message);
+    },
+    geoOptions
+  );
+};
+
+window.driverCancelCall = async function (callId) {
+  if (!confirm("هل أنت متأكد من إلغاء هذا الطلب؟")) return;
+
+    try {
+    await updateDriverCallAndMerchant(callId, {
+      status: "cancelled",
+      cancelledAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    if (driverUid) {
+      await db.collection("drivers").doc(driverUid).update({
+        busy: false
+      });
+    }
+
+        // تنظيف كامل لمسار التوجيه وأي نقاط عميل/تاجر
+    clearRouteAndNavigation();
+
+    // طيّ بطاقة الطلب (سيتم إخفاؤها بعد تحديث snapshot)
+    if (window.toggleCurrentOrderPanel) {
+      toggleCurrentOrderPanel(true);
+    }
+
+  } catch (err) {
+    alert("خطأ أثناء إلغاء الطلب: " + err.message);
+  }
+};
+
+/* ========== إغلاق المودال ========== */
+function closeOrderModal() {
+  modalBackdrop.style.display = "none";
+  modalContent.innerHTML = "";
+  if (orderModalEl) orderModalEl.classList.add("hidden");
+}
+closeModal.addEventListener("click", closeOrderModal);
+modalBackdrop.addEventListener("click", (e) => {
+  if (e.target === modalBackdrop) closeOrderModal();
+});
+// ========== اختيار اللغة من القائمة الجانبية ==========
+const langSelect = document.getElementById("langSelect");
+
+if (langSelect) {
+  langSelect.addEventListener("change", (e) => {
+    const lang = e.target.value || "en";
+    try {
+      localStorage.setItem("driverLang", lang);
+    } catch (err) {}
+    applyTranslations(lang);
+  });
+}
+
+// تشغيل اللغة عند فتح الصفحة
+(function initLanguage() {
+  let saved = null;
+  try {
+    saved = localStorage.getItem("driverLang");
+  } catch (err) {}
+
+  if (!saved) {
+    const browserLang = (navigator.language || "en")
+      .slice(0, 2)
+      .toLowerCase();
+    saved = ["en", "de", "ar"].includes(browserLang) ? browserLang : "en";
+  }
+
+  if (langSelect) {
+    langSelect.value = saved;
+  }
+
+  // الافتراضي: EN إذا ما كان في شيء محفوظ
+  applyTranslations(saved || "en");
+})();
+
+/* ========== Clean up when leave ========== */
+window.addEventListener("beforeunload", () => {
+  if (driverOrdersListener) driverOrdersListener();
+  if (driverCallsListener) driverCallsListener();
+  clearRouteAndNavigation();
+});
+</script>
+</body>
+</html>
