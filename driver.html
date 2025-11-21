@@ -88,37 +88,41 @@
     }
 
     /* زر التوجيه (أسفل يمين) */
-    .driver-nav-btn {
-        position: fixed;
-        bottom: 90px;
-        right: 12px;
-        z-index: 3;
-        width: 46px;
-        height: 46px;
-        border-radius: 50%;
-        border: none;
-        background: rgba(0,0,0,0.8);
-        color:#fff;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.35);
-        cursor:pointer;
-    }
-        .driver-nav-btn .driver-nav-icon {
-        width: 22px;
-        height: 22px;
-        border-radius: 6px;
-        background: #fff;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        font-size:16px;
-    }
-    .driver-nav-btn .driver-nav-icon::before {
-        content: "🏬"; /* متجر */
-    }
+    /* أزرار المتجر + العميل: بدون دائرة سوداء */
+.driver-nav-btn,
+.driver-search-btn {
+    position: fixed;
+    right: 12px;
+    z-index: 3;
+    border: none;
+    background: transparent;   /* 🔴 لا خلفية */
+    box-shadow: none;          /* 🔴 بدون ظل */
+    padding: 0;
+    width: auto;
+    height: auto;
+    cursor: pointer;
+}
 
+/* مكان كل واحد فقط */
+.driver-nav-btn {
+    bottom: 90px;
+}
+
+.driver-search-btn {
+    bottom: 144px;
+}
+
+        /* أيقونة المتجر */
+.driver-nav-btn .driver-nav-icon {
+    width: 50px;                 /* تقدر تزبطها 28 / 30 حسب ذوقك */
+    height: 50px;
+    border-radius: 0;            /* لا دائرة داخلية */
+    background-color: transparent; /* 🔴 لا خلفية بيضا */
+    background-image: url("markt.png");  /* اسم ملف المتجر */
+    background-size: contain;    /* أو cover لو حاب تملاها أكثر */
+    background-position: center;
+    background-repeat: no-repeat;
+}
 
     /* الشريط العلوي */
     .driver-top-bar {
@@ -429,37 +433,41 @@
     font-size:13px;
 }
     /* زر عنوان العميل (أيقونة مستخدم) فوق زر المتجر مباشرة */
-    .driver-search-btn {
-        position: fixed;
-        bottom: 144px; /* فوق زر التوجيه (90px + 46px + شوية مسافة) */
-        right: 12px;
-        z-index: 3;
-        width: 46px;
-        height: 46px;
-        border-radius: 50%;
-        border: none;
-        background: rgba(0,0,0,0.8);
-        color:#fff;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.35);
-        cursor:pointer;
-    }
-    .driver-search-icon {
-        width: 22px;
-        height: 22px;
-        border-radius: 50%;
-        background:#fff;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        font-size:16px;
-    }
-    .driver-search-icon::before {
-        content:"👤"; /* مستخدم */
-    }
+    /* أزرار المتجر + العميل: بدون دائرة سوداء */
+.driver-nav-btn,
+.driver-search-btn {
+    position: fixed;
+    right: 12px;
+    z-index: 3;
+    border: none;
+    background: transparent;   /* 🔴 لا خلفية */
+    box-shadow: none;          /* 🔴 بدون ظل */
+    padding: 0;
+    width: auto;
+    height: auto;
+    cursor: pointer;
+}
 
+/* مكان كل واحد فقط */
+.driver-nav-btn {
+    bottom: 90px;
+}
+
+.driver-search-btn {
+    bottom: 165px;
+}
+
+    /* أيقونة المستخدم */
+.driver-search-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 0;
+    background-color: transparent; /* 🔴 لا خلفية بيضا */
+    background-image: url("kunde.png"); /* اسم ملف العميل */
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+}
     /* لوحة إدخال عنوان العميل */
     .driver-address-panel {
         position: fixed;
