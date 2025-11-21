@@ -217,6 +217,15 @@
     align-items: center;
     justify-content: center;
 }
+/* وميض زر الأونلاين أثناء محاولة الاتصال */
+.driver-toggle-btn.blink {
+    animation: driverOnlineBlink 0.8s linear infinite;
+}
+
+@keyframes driverOnlineBlink {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.4; }
+}
 
     /* كبسولة الحالة في الأسفل */
     .driver-bottom-status {
@@ -522,17 +531,7 @@
         white-space:nowrap;
     }
 
-    @media(max-width:600px) {
-        .driver-top-bar {
-            top: 8px;
-            right: 8px;
-            left: 8px;
-        }
-        .driver-bottom-status {
-            bottom: 12px;
-        }
-    }
-	
+    
 </style>
 </head>
 <body>
@@ -755,6 +754,13 @@
 <footer>واجهة السائق — مربوطة مع Firebase & Google Maps (لحساب المسافة)</footer>
 <!-- صوت نداء جديد -->
 <audio id="callSound" src="coin.wav" preload="auto"></audio>
+<footer>واجهة السائق — مربوطة مع Firebase & Google Maps (لحساب المسافة)</footer>
+
+<!-- 🔊 صوت الأونلاين (غيّر online-sound.mp3 لاسم الملف الذي تريده) -->
+<audio id="onlineSound" src="online1.mp3" preload="auto"></audio>
+
+<!-- Google Maps API -->
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCUMgXQwwe7afBlRpp6zrXunbTVSCXfSqQ&libraries=geometry,places&language=ar"></script>
 
 <!-- Google Maps API -->
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCUMgXQwwe7afBlRpp6zrXunbTVSCXfSqQ&libraries=geometry,places&language=ar"></script>
@@ -1541,6 +1547,10 @@ const orderModalEl = document.getElementById("orderModal");
 const mainHeader = document.getElementById("mainHeader");
 const authTabs = document.getElementById("authTabs");
 const footerEl = document.querySelector("footer");
+// 🔊 صوت الأونلاين + فلاج لتشغيله فقط عند ضغط الزر
+const onlineSoundEl = document.getElementById("onlineSound");
+let playOnlineSoundNext = false;
+
 // صوت النداء الجديد
 const callSoundEl = document.getElementById("callSound");
 
@@ -1757,7 +1767,7 @@ loginForm.addEventListener("submit", async (e) => {
   }
 });
 
-/* ========== أونلاين / أوفلاين ========== */
+/* ========== أونلاين / أوفلاين مع وميض وصوت عند الأونلاين ========== */
 toggleOnlineBtn.addEventListener("click", async () => {
   if (!driverUid) return;
 
@@ -1770,10 +1780,10 @@ toggleOnlineBtn.addEventListener("click", async () => {
 
     if (driverCurrentOnline && (isBusy || hasActiveJob)) {
       alert(t("alert_toggle_offline_with_active"));
-
       return;
     }
 
+    const goingOnline = !driverCurrentOnline;
     driverCurrentOnline = !driverCurrentOnline;
 
     const geoOptions = {
@@ -1782,7 +1792,13 @@ toggleOnlineBtn.addEventListener("click", async () => {
       maximumAge: 5000
     };
 
-    if (driverCurrentOnline) {
+    // ✅ لو نحنا رايحين أونلاين، فعّل الوميض وجهّز الصوت
+    if (goingOnline && toggleOnlineBtn) {
+      playOnlineSoundNext = true;
+      toggleOnlineBtn.classList.add("blink");
+    }
+
+    if (goingOnline) {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           async (position) => {
@@ -1796,6 +1812,18 @@ toggleOnlineBtn.addEventListener("click", async () => {
               lastOnline: firebase.firestore.FieldValue.serverTimestamp()
             });
 
+            // إيقاف الوميض وتشغيل الصوت داخل التحديث
+            toggleOnlineBtn.classList.remove("blink");
+            if (playOnlineSoundNext && onlineSoundEl) {
+              try {
+                onlineSoundEl.currentTime = 0;
+                await onlineSoundEl.play();
+              } catch (e) {
+                console.warn("تعذر تشغيل صوت الأونلاين:", e);
+              }
+            }
+            playOnlineSoundNext = false;
+
             updateOnlineBtn();
           },
           async (err) => {
@@ -1805,6 +1833,18 @@ toggleOnlineBtn.addEventListener("click", async () => {
               online: true,
               lastOnline: firebase.firestore.FieldValue.serverTimestamp()
             });
+
+            toggleOnlineBtn.classList.remove("blink");
+            if (playOnlineSoundNext && onlineSoundEl) {
+              try {
+                onlineSoundEl.currentTime = 0;
+                await onlineSoundEl.play();
+              } catch (e) {
+                console.warn("تعذر تشغيل صوت الأونلاين:", e);
+              }
+            }
+            playOnlineSoundNext = false;
+
             updateOnlineBtn();
           },
           geoOptions
@@ -1816,6 +1856,18 @@ toggleOnlineBtn.addEventListener("click", async () => {
           online: true,
           lastOnline: firebase.firestore.FieldValue.serverTimestamp()
         });
+
+        toggleOnlineBtn.classList.remove("blink");
+        if (playOnlineSoundNext && onlineSoundEl) {
+          try {
+            onlineSoundEl.currentTime = 0;
+            await onlineSoundEl.play();
+          } catch (e) {
+            console.warn("تعذر تشغيل صوت الأونلاين:", e);
+          }
+        }
+        playOnlineSoundNext = false;
+
         updateOnlineBtn();
       }
     } else {
@@ -1827,20 +1879,35 @@ toggleOnlineBtn.addEventListener("click", async () => {
     }
   } catch (err) {
     alert(t("alert_status_update_failed") + err.message);
-
   }
 });
 
 function updateOnlineBtn() {
   if (!toggleOnlineBtn) return;
 
-  // نص الزر
+  // نص الزر (مترجم)
   toggleOnlineBtn.textContent = driverCurrentOnline
     ? t("online_btn_online")
     : t("online_btn_offline");
   toggleOnlineBtn.style.backgroundColor = driverCurrentOnline
     ? "#28a745"
     : "#6c757d";
+
+  // إيقاف الوميض دائماً بعد انتهاء عملية التحديث
+  toggleOnlineBtn.classList.remove("blink");
+
+  // تشغيل صوت الأونلاين فقط عندما تم الضغط على الزر للانتقال إلى أونلاين
+  if (driverCurrentOnline && playOnlineSoundNext && onlineSoundEl) {
+    try {
+      onlineSoundEl.currentTime = 0;
+      onlineSoundEl.play();
+    } catch (e) {
+      // نتجاهل أي خطأ تشغيل (مثلاً المتصفح مانع التشغيل التلقائي)
+      console.warn("تعذر تشغيل صوت الأونلاين:", e);
+    }
+  }
+  // إعادة الفلاج للحالة الطبيعية
+  playOnlineSoundNext = false;
 
   // نص الكبسولة السفلية فقط إذا ما في طلبات نشطة
   if (driverStatusTextEl) {
