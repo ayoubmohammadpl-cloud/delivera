@@ -126,7 +126,7 @@
 
     .driver-top-bar {
     position: fixed;
-    top: 12px;
+    top: 25px;
     right: 12px;
     left: 12px;
     z-index: 2;
@@ -2707,7 +2707,7 @@ function renderDriverCurrentOrder(call) {
         <div><strong>#${call.id}</strong> — ${escapeHtml(call.merchantName || "")}</div>
         <span class="small">${statusLabel}</span>
       </div>
-      <button type="button" class="driver-current-order-toggle" onclick="toggleCurrentOrderPanel()">⏷</button>
+      <button type="button" class="driver-current-order-toggle" onclick="toggleCurrentOrderPanel()">▼</button>
     </div>
     <div class="driver-current-order-body">
       <div class="small">
@@ -2742,7 +2742,7 @@ window.toggleCurrentOrderPanel = function (forceCollapse) {
 
   const toggleBtn = driverCurrentOrderEl.querySelector(".driver-current-order-toggle");
   if (toggleBtn) {
-    toggleBtn.textContent = currentOrderCollapsed ? "⏶" : "⏷";
+    toggleBtn.textContent = currentOrderCollapsed ? "▲" : "▼";
   }
 };
 
