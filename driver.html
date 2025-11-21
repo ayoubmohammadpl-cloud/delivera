@@ -737,6 +737,8 @@
 </div>
 
 <footer>واجهة السائق — مربوطة مع Firebase & Google Maps (لحساب المسافة)</footer>
+<!-- صوت نداء جديد -->
+<audio id="callSound" src="coin.wav" preload="auto"></audio>
 
 <!-- Google Maps API -->
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCUMgXQwwe7afBlRpp6zrXunbTVSCXfSqQ&libraries=geometry,places&language=ar"></script>
@@ -1523,6 +1525,8 @@ const orderModalEl = document.getElementById("orderModal");
 const mainHeader = document.getElementById("mainHeader");
 const authTabs = document.getElementById("authTabs");
 const footerEl = document.querySelector("footer");
+// صوت النداء الجديد
+const callSoundEl = document.getElementById("callSound");
 
 // حالة السائق
 let driverCurrentOnline = false;
@@ -1549,6 +1553,9 @@ let merchantMarker = null;
 let customerMarker = null;
 let customerDestination = null; // { lat, lng, address }
 let customerAutocomplete = null;
+// صوت النداء المتكرر
+let newCallSoundTimer = null;
+let currentRingingCallId = null;
 
 /* ========== تبويبات التسجيل/الدخول ========== */
 registerTab.addEventListener("click", () => {
@@ -1921,6 +1928,54 @@ function escapeHtml(s) {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
   });
 }
+// تشغيل صوت عند وصول نداء جديد
+function playNewCallSound() {
+  if (!callSoundEl) return;
+
+  try {
+    callSoundEl.currentTime = 0;   // من البداية كل مرة
+    callSoundEl.volume = 1.0;      // تقدر تنقصها مثلاً 0.6 لو صوت عالي
+
+    const p = callSoundEl.play();
+    if (p && typeof p.catch === "function") {
+      p.catch((err) => {
+        console.warn("لم يتم تشغيل الصوت (قد يمنعه المتصفح حتى ينقر المستخدم):", err);
+      });
+    }
+  } catch (e) {
+    console.warn("خطأ أثناء تشغيل صوت النداء:", e);
+  }
+}
+// بدء تكرار صوت النداء كل 5 ثوانٍ
+function startNewCallSoundLoop(callId) {
+  // أوقف أي تايمر قديم
+  stopNewCallSoundLoop();
+
+  currentRingingCallId = callId || null;
+
+  // تشغيل الصوت فوراً أول مرة
+  playNewCallSound();
+
+  // ثم تكرار كل 5 ثوانٍ
+  newCallSoundTimer = setInterval(() => {
+    playNewCallSound();
+  }, 5000);
+}
+
+// إيقاف تكرار الصوت (اختياريًا مقيّد بنداء معيّن)
+function stopNewCallSoundLoop(callId) {
+  // لو مرّرنا callId تأكد إنه نفس النداء الذي يرن حالياً
+  if (callId && currentRingingCallId && callId !== currentRingingCallId) {
+    return;
+  }
+
+  if (newCallSoundTimer) {
+    clearInterval(newCallSoundTimer);
+    newCallSoundTimer = null;
+  }
+  currentRingingCallId = null;
+}
+
 // ترجمة حالة الطلب حسب الـ status code
 function getStatusLabel(status) {
   const s = (status || "accepted").toLowerCase();
@@ -2550,7 +2605,16 @@ function listenDriverCalls(driverId) {
             ref: change.doc.ref,
             ...data
           };
+
+          // 🔔 بدء تكرار صوت النداء كل 5 ثوانٍ لهذا النداء
+          startNewCallSoundLoop(call.id);
+
+          // فتح نافذة النداء للسائق
           showCallModalForDriver(call);
+        } else if (change.type === "removed") {
+          // لو خرج النداء من حالة pending (مثلاً تم قبوله/رفضه في السحاب)
+          const removedId = change.doc.id;
+          stopNewCallSoundLoop(removedId);
         }
       });
     });
@@ -2991,9 +3055,13 @@ function showCallModalForDriver(call) {
           pricing: pricing
         });
 
-        await driverRef.update({
+                await driverRef.update({
           busy: true
         });
+
+        // ✅ تم التفاعل مع النداء (قبول) -> أوقف تكرار الصوت
+        stopNewCallSoundLoop(call.id);
+
 
         closeOrderModal();
       } catch (err) {
@@ -3010,13 +3078,17 @@ function showCallModalForDriver(call) {
           respondedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        if (driverUid) {
+                if (driverUid) {
           await db.collection("drivers").doc(driverUid).update({
             busy: false
           });
         }
 
+        // ✅ تم التفاعل مع النداء (رفض) -> أوقف تكرار الصوت
+        stopNewCallSoundLoop(call.id);
+
         closeOrderModal();
+
       } catch (err) {
         alert(t("alert_rejectCallError") + err.message);
       }
@@ -3336,7 +3408,9 @@ window.addEventListener("beforeunload", () => {
   if (driverOrdersListener) driverOrdersListener();
   if (driverCallsListener) driverCallsListener();
   clearRouteAndNavigation();
+  stopNewCallSoundLoop(); // لإيقاف أي تايمر شغّال
 });
+
 </script>
 </body>
 </html>
