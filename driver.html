@@ -2133,7 +2133,10 @@ function initDriverMap() {
   center,
   zoom: 13,
   disableDefaultUI: true,
-  zoomControl: false,      // 🔴 إيقاف زر + / −
+  zoomControl: false,       // إيقاف +/-
+  gestureHandling: "greedy",// يسمح للماب تلتقط حركات الأصابع (سحب/تكبير/تدوير)
+  tilt: 0,
+  heading: 0,
   styles: [
     // أساس ألوان الخريطة الداكنة
     { elementType: "geometry", stylers: [{ color: "#1f2933" }] },
@@ -2462,13 +2465,7 @@ function startGuidance(targetLat, targetLng) {
       // مركز الخريطة على السائق
       driverMap.setCenter(currentLatLng);
 
-      // تدوير الخريطة حسب اتجاه السائق (إن كان متوفراً)
-      if (heading !== null && typeof driverMap.setHeading === "function") {
-        driverMap.setHeading(heading);
-        if (typeof driverMap.setTilt === "function") {
-          driverMap.setTilt(45);
-        }
-      }
+      
     },
     (err) => {
       console.error("خطأ في التوجيه الحي:", err);
