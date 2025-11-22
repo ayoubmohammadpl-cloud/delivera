@@ -3180,19 +3180,25 @@ function renderDriverCurrentOrder(call) {
       : "—";
 
   let buttonsHtml = "";
+
+  // 🟢 حالة الطلب قبل البدء (accepted / أو بدون status) → فقط "بدء التوجه للتاجر"
   if (!call.status || call.status === "accepted") {
     buttonsHtml = `
-      <button onclick="driverStartCall('${call.id}')">${t("currentOrder_btn_startToMerchant")}</button>
-      <button class="secondary" onclick="driverCompleteCall('${call.id}')">${t("currentOrder_btn_delivered")}</button>
-    `;
-  } else if (call.status === "in_progress") {
-    buttonsHtml = `
-      <button onclick="driverCompleteCall('${call.id}')">${t("currentOrder_btn_delivered")}</button>
+      <button onclick="driverStartCall('${call.id}')">
+        ${t("currentOrder_btn_startToMerchant")}
+      </button>
     `;
   }
-  buttonsHtml += `
-      <button class="secondary" onclick="driverCancelCall('${call.id}')">${t("currentOrder_btn_cancel")}</button>
-  `;
+  // 🟡 بعد البدء (in_progress) → يظهر فقط زر "تسليم"
+  else if (call.status === "in_progress") {
+    buttonsHtml = `
+      <button onclick="driverCompleteCall('${call.id}')">
+        ${t("currentOrder_btn_delivered")}
+      </button>
+    `;
+  }
+
+  // ❌ لا نضيف أي زر إلغاء/حذف هنا نهائياً
 
   driverCurrentOrderEl.innerHTML = `
     <div class="driver-current-order-header">
@@ -3212,6 +3218,7 @@ function renderDriverCurrentOrder(call) {
       </div>
     </div>
   `;
+
   driverCurrentOrderEl.classList.remove("hidden");
   driverCurrentOrderEl.classList.remove("collapsed");
   currentOrderCollapsed = false;
