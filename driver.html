@@ -1591,6 +1591,7 @@ const callSoundEl = document.getElementById("callSound");
 // حالة السائق
 let driverCurrentOnline = false;
 let driverUid = null;
+let activeDriverSessionId = null;
 
 // بيانات/استماعات
 let driverMap;
@@ -1907,25 +1908,32 @@ toggleOnlineBtn.addEventListener("click", async () => {
 
         updateOnlineBtn();
       }
-        } else {
+            } else {
       await driverRef.update({
         online: false,
         busy: false
       });
+
+      driverCurrentOnline = false; // تأكيد الحالة
       updateOnlineBtn();
 
-      // إخفاء ماركر السائق والهالة عند الخروج أوفلاين
+      // أوقف أي توجيه حي (لو شغّال) → هذا سيعيد الخريطة للوضع العادي
+      if (typeof stopGuidance === "function") {
+        stopGuidance();
+      }
+
+      // احتياط: امسح ماركر السائق (لو موجود)
       if (driverMarker) {
         driverMarker.setMap(null);
         driverMarker = null;
       }
-      if (driverGlowCircle) {
-        driverGlowCircle.setMap(null);
-        driverGlowCircle = null;
-      }
-    
 
+      // 🧽 مسح الهالة بالكامل (الداخلية + الخارجية + الأنيميشن)
+      if (typeof stopDriverGlow === "function") {
+        stopDriverGlow();
+      }
     }
+
   } catch (err) {
     alert(t("alert_status_update_failed") + err.message);
   }
@@ -1996,6 +2004,9 @@ driverLogoutBtn.addEventListener("click", async () => {
       return;
     }
 
+    // 🔓 تنظيف جلسة السائق في Firestore
+    await releaseDriverSession();
+
     clearRouteAndNavigation();
 
     await auth.signOut();
@@ -2013,8 +2024,95 @@ driverLogoutBtn.addEventListener("click", async () => {
   }
 });
 
+// توليد id عشوائي للجلسة
+function generateSessionId() {
+  return (
+    Date.now().toString(36) +
+    "_" +
+    Math.random().toString(36).substr(2, 9)
+  );
+}
+
+// محاولة حجز جلسة حصرية لهذا السائق
+async function claimSingleDriverSession(uid) {
+  const driverRef = db.collection("drivers").doc(uid);
+  const snap = await driverRef.get();
+
+  if (!snap.exists) {
+    alert("حساب السائق غير موجود");
+    return null;
+  }
+
+  const data = snap.data() || {};
+
+  // نحاول نقرأ session مخزّنة محلياً (نفس المتصفح)
+  let localSessionId = null;
+  try {
+    localSessionId = localStorage.getItem("driverSessionId") || null;
+  } catch (e) {}
+
+  // في جلسة مفعّلة أصلاً
+  if (data.activeSessionId) {
+    // لو نفس الـ sessionId الموجود عندنا محلياً → نفس الجهاز/المتصفح → نسمح
+    if (localSessionId && localSessionId === data.activeSessionId) {
+      activeDriverSessionId = localSessionId;
+      return localSessionId;
+    }
+
+    // غير كذا → جهاز ثاني
+    alert("هذا الحساب مستخدم حالياً على جهاز آخر. الرجاء تسجيل الخروج من الجهاز الآخر أولاً.");
+    return null;
+  }
+
+  // ما في جلسة → ننشئ واحدة جديدة
+  const sessionId = generateSessionId();
+
+  await driverRef.update({
+    activeSessionId: sessionId,
+    activeSessionStartedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  try {
+    localStorage.setItem("driverSessionId", sessionId);
+  } catch (e) {}
+
+  activeDriverSessionId = sessionId;
+  return sessionId;
+}
+
+// تنظيف جلسة السائق عند الخروج/اللوج أوت
+async function releaseDriverSession() {
+  if (!driverUid || !activeDriverSessionId) return;
+
+  const driverRef = db.collection("drivers").doc(driverUid);
+
+  try {
+    await driverRef.update({
+      activeSessionId: firebase.firestore.FieldValue.delete()
+    });
+  } catch (e) {
+    console.warn("تعذر تنظيف جلسة السائق:", e);
+  }
+
+  try {
+    const saved = localStorage.getItem("driverSessionId");
+    if (saved && saved === activeDriverSessionId) {
+      localStorage.removeItem("driverSessionId");
+    }
+  } catch (e) {}
+
+  activeDriverSessionId = null;
+}
+
 /* ========== فتح واجهة السائق بعد تسجيل الدخول ========== */
 async function showDriverDashboard(uid) {
+  // 🔒 أولاً: نحجز جلسة حصرية لهذا السائق
+  const sessionId = await claimSingleDriverSession(uid);
+  if (!sessionId) {
+    // لم نستطع حجز الجلسة (نشطة على جهاز آخر)
+    return;
+  }
+
   const driverDoc = await db.collection("drivers").doc(uid).get();
   if (!driverDoc.exists) return alert("حساب السائق غير موجود");
   const driverData = driverDoc.data();
@@ -2778,15 +2876,15 @@ function stopGuidance() {
     driverNavBtn.dataset.active = "false";
   }
 
-  // لو السائق حالياً أوفلاين فقط وقتها نمسح الماركر والهالة
+    // لو السائق حالياً أوفلاين فقط وقتها نمسح الماركر والهالة
   if (!driverCurrentOnline) {
     if (driverMarker) {
       driverMarker.setMap(null);
       driverMarker = null;
     }
-    if (driverGlowCircle) {
-      driverGlowCircle.setMap(null);
-      driverGlowCircle = null;
+    // الهالة الجديدة (inner + outer + interval)
+    if (typeof stopDriverGlow === "function") {
+      stopDriverGlow();
     }
   }
 }
@@ -3831,7 +3929,10 @@ window.addEventListener("beforeunload", () => {
   if (driverCallsListener) driverCallsListener();
   clearRouteAndNavigation();
   stopNewCallSoundLoop(); // لإيقاف أي تايمر شغّال
+  // نحاول تنظيف الجلسة (قد لا تكتمل دائماً، بس تساعد)
+  releaseDriverSession();
 });
+
 
 </script>
 </body>
