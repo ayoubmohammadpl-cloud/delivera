@@ -92,7 +92,7 @@
 .driver-nav-btn,
 .driver-search-btn {
     position: fixed;
-    right: 12px;
+    right: 15px;
     z-index: 3;
     border: none;
     background: transparent;   /* 🔴 لا خلفية */
@@ -462,7 +462,7 @@
 .driver-nav-btn,
 .driver-search-btn {
     position: fixed;
-    right: 12px;
+    right: 15px;
     z-index: 3;
     border: none;
     background: transparent;   /* 🔴 لا خلفية */
@@ -794,10 +794,6 @@
 
 <!-- 🔊 صوت الأونلاين (غيّر online-sound.mp3 لاسم الملف الذي تريده) -->
 <audio id="onlineSound" src="online1.mp3" preload="auto"></audio>
-
-<!-- Google Maps API -->
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCUMgXQwwe7afBlRpp6zrXunbTVSCXfSqQ&libraries=geometry,places&language=ar"></script>
-
 <!-- Google Maps API -->
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCUMgXQwwe7afBlRpp6zrXunbTVSCXfSqQ&libraries=geometry,places&language=ar"></script>
 
@@ -1606,17 +1602,27 @@ let driverCallsCache = [];
 let directionsService = null;
 let directionsRenderer = null; // لعرض المسار على الخريطة
 let currentOrderCollapsed = false; // حالة طي/فتح بطاقة الطلب النشط
+// مسار الطريق الحالي (من Google Directions)
+let routePath = [];
+let remainingRoutePolyline = null;
 
 // توجيه حي
 let navigationWatchId = null;
 let isGuidanceOn = false;
 let driverMarker = null;
+let driverGlowCircle = null;
+let driverGlowInner = null;
+let driverGlowOuter = null;
+let driverGlowPulseInterval = null;
 let navigationTarget = null;
+let navigationMode = null; // "merchant" أو "customer" حسب الهدف الحالي
+
 // نقاط المتجر والعميل
 let merchantMarker = null;
 let customerMarker = null;
 let customerDestination = null; // { lat, lng, address }
 let customerAutocomplete = null;
+
 // صوت النداء المتكرر
 let newCallSoundTimer = null;
 let currentRingingCallId = null;
@@ -1672,25 +1678,13 @@ sectionToggleButtons.forEach((btn) => {
   });
 });
 
-/* زر التوجيه (تشغيل/إيقاف) */
+/* زر المتجر أسفل اليمين: ملاحة خارجية حسب الهدف الحالي (متجر أو عميل) */
 if (driverNavBtn) {
   driverNavBtn.addEventListener("click", () => {
-    if (isGuidanceOn) {
-      stopGuidance();
-      return;
-    }
-    const activeCall = getCurrentActiveCall();
-    if (!activeCall) {
-      alert("لا يوجد طلب نشط للتوجيه.");
-      return;
-    }
-    if (activeCall.merchantLat == null || activeCall.merchantLng == null) {
-      alert("لا توجد إحداثيات صحيحة للتاجر في هذا الطلب.");
-      return;
-    }
-    startGuidance(activeCall.merchantLat, activeCall.merchantLng);
+    openExternalNavigationToCurrentTarget();
   });
 }
+
 /* زر عنوان العميل لفتح/إغلاق لوحة البحث */
 if (customerSearchBtn && customerAddressPanel && customerAddressInput) {
   customerSearchBtn.addEventListener("click", () => {
@@ -1863,6 +1857,11 @@ toggleOnlineBtn.addEventListener("click", async () => {
             playOnlineSoundNext = false;
 
             updateOnlineBtn();
+			        // بعد أن يصبح أونلاين، أظهر موقعه على الخريطة مع الهالة
+        if (driverMap) {
+          ensureDriverMarker(lat, lng, null);
+        }
+
           },
           async (err) => {
             alert(t("alert_geo_failed_prefix") + err.message);
@@ -1908,12 +1907,24 @@ toggleOnlineBtn.addEventListener("click", async () => {
 
         updateOnlineBtn();
       }
-    } else {
+        } else {
       await driverRef.update({
         online: false,
         busy: false
       });
       updateOnlineBtn();
+
+      // إخفاء ماركر السائق والهالة عند الخروج أوفلاين
+      if (driverMarker) {
+        driverMarker.setMap(null);
+        driverMarker = null;
+      }
+      if (driverGlowCircle) {
+        driverGlowCircle.setMap(null);
+        driverGlowCircle = null;
+      }
+    
+
     }
   } catch (err) {
     alert(t("alert_status_update_failed") + err.message);
@@ -2172,10 +2183,14 @@ function initDriverMap() {
       }
       if (!directionsRenderer) {
         directionsRenderer = new google.maps.DirectionsRenderer({
-          suppressMarkers: true,   // سنستخدم ماركرات مخصصة للمتجر والعميل
-          preserveViewport: false
-        });
-        directionsRenderer.setMap(driverMap);
+  suppressMarkers: true,
+  preserveViewport: false,
+  polylineOptions: {
+    strokeOpacity: 0 // نخفي خط Google الأزرق الافتراضي
+  }
+});
+directionsRenderer.setMap(driverMap);
+
       }
 
       // تهيئة حقل عنوان العميل مع Google Places Autocomplete
@@ -2193,13 +2208,6 @@ function showDriverRouteToMerchant(startLat, startLng, merchantLat, merchantLng)
   if (!directionsService) {
     directionsService = new google.maps.DirectionsService();
   }
-  if (!directionsRenderer) {
-    directionsRenderer = new google.maps.DirectionsRenderer({
-      suppressMarkers: true,
-      preserveViewport: false
-    });
-    directionsRenderer.setMap(driverMap);
-  }
 
   const origin = { lat: startLat, lng: startLng };
   const destination = { lat: merchantLat, lng: merchantLng };
@@ -2212,17 +2220,45 @@ function showDriverRouteToMerchant(startLat, startLng, merchantLat, merchantLng)
     },
     (result, status) => {
       if (status === "OK") {
-        directionsRenderer.setDirections(result);
+        // نبقي استخدام DirectionsRenderer لو حاب لملائمة الـ viewport
+        if (directionsRenderer) {
+          directionsRenderer.setDirections(result);
+        }
+
+        // بناء مسار مخصص من نقاط الحركات (steps.path)
+        const route = result.routes[0];
+        const path = [];
+        route.legs.forEach((leg) => {
+          leg.steps.forEach((step) => {
+            step.path.forEach((p) => path.push(p));
+          });
+        });
+
+        routePath = path;
+
+        // تنظيف أي بوليلاين سابق
+        if (remainingRoutePolyline) {
+          remainingRoutePolyline.setMap(null);
+        }
+
+        remainingRoutePolyline = new google.maps.Polyline({
+          path: routePath,
+          strokeColor: "#4285F4",
+          strokeOpacity: 0.9,
+          strokeWeight: 5,
+          map: driverMap
+        });
 
         // ماركر المتجر
+        const destinationLatLng = { lat: merchantLat, lng: merchantLng };
         if (!merchantMarker) {
           merchantMarker = new google.maps.Marker({
             map: driverMap,
-            position: destination,
+            position: destinationLatLng,
             icon: getMerchantMarkerIcon()
           });
         } else {
-          merchantMarker.setPosition(destination);
+          merchantMarker.setPosition(destinationLatLng);
           merchantMarker.setMap(driverMap);
         }
       } else {
@@ -2232,19 +2268,13 @@ function showDriverRouteToMerchant(startLat, startLng, merchantLat, merchantLng)
     }
   );
 }
+
 function showDriverRouteToCustomer(startLat, startLng, destLat, destLng) {
   if (!driverMap || typeof google === "undefined" || !google.maps) return;
   if (destLat == null || destLng == null) return;
 
   if (!directionsService) {
     directionsService = new google.maps.DirectionsService();
-  }
-  if (!directionsRenderer) {
-    directionsRenderer = new google.maps.DirectionsRenderer({
-      suppressMarkers: true,
-      preserveViewport: false
-    });
-    directionsRenderer.setMap(driverMap);
   }
 
   const origin = { lat: startLat, lng: startLng };
@@ -2258,7 +2288,31 @@ function showDriverRouteToCustomer(startLat, startLng, destLat, destLng) {
     },
     (result, status) => {
       if (status === "OK") {
-        directionsRenderer.setDirections(result);
+        if (directionsRenderer) {
+          directionsRenderer.setDirections(result);
+        }
+
+        const route = result.routes[0];
+        const path = [];
+        route.legs.forEach((leg) => {
+          leg.steps.forEach((step) => {
+            step.path.forEach((p) => path.push(p));
+          });
+        });
+
+        routePath = path;
+
+        if (remainingRoutePolyline) {
+          remainingRoutePolyline.setMap(null);
+        }
+
+        remainingRoutePolyline = new google.maps.Polyline({
+          path: routePath,
+          strokeColor: "#4285F4",
+          strokeOpacity: 0.9,
+          strokeWeight: 5,
+          map: driverMap
+        });
       } else {
         console.error("فشل رسم المسار على الخريطة:", status, result);
         driverMap.setCenter(destination);
@@ -2266,6 +2320,7 @@ function showDriverRouteToCustomer(startLat, startLng, destLat, destLng) {
     }
   );
 }
+
 /* أيقونات المتجر والعميل للماركرات */
 function getMerchantMarkerIcon() {
   if (typeof google === "undefined" || !google.maps) return null;
@@ -2362,7 +2417,7 @@ function startCustomerNavigation() {
       const startLat = pos.coords.latitude;
       const startLng = pos.coords.longitude;
 
-      // رسم مسار من موقع السائق إلى العميل
+            // رسم مسار من موقع السائق إلى العميل
       showDriverRouteToCustomer(
         startLat,
         startLng,
@@ -2372,7 +2427,9 @@ function startCustomerNavigation() {
 
       // التوجيه الحي إلى العميل (أيقونة المستخدم)
       stopGuidance(); // إعادة تشغيل التوجيه على الهدف الجديد
+      navigationMode = "customer"; // ✅ الهدف الحالي: العميل
       startGuidance(customerDestination.lat, customerDestination.lng);
+
     },
     (err) => {
       alert(t("alert_geo_failed_prefix") + err.message);
@@ -2380,6 +2437,68 @@ function startCustomerNavigation() {
     },
     geoOptions
   );
+}
+// فتح الملاحة الخارجية حسب الهدف الحالي على خريطة السائق
+function openExternalNavigationToCurrentTarget() {
+  let destLat = null;
+  let destLng = null;
+
+  // 1) لو حاليًا نمشي باتجاه العميل
+  if (
+    navigationMode === "customer" &&
+    customerDestination &&
+    typeof customerDestination.lat === "number" &&
+    typeof customerDestination.lng === "number"
+  ) {
+    destLat = customerDestination.lat;
+    destLng = customerDestination.lng;
+  }
+  // 2) لو حاليًا نمشي باتجاه المتجر
+  else if (navigationMode === "merchant") {
+    const activeCall = getCurrentActiveCall();
+    if (
+      activeCall &&
+      typeof activeCall.merchantLat === "number" &&
+      typeof activeCall.merchantLng === "number"
+    ) {
+      destLat = activeCall.merchantLat;
+      destLng = activeCall.merchantLng;
+    }
+  }
+
+  // 3) احتياطي: لو ما عندنا navigationMode واضح
+  if (destLat == null || destLng == null) {
+    // أولوية: عنوان العميل لو موجود
+    if (
+      customerDestination &&
+      typeof customerDestination.lat === "number" &&
+      typeof customerDestination.lng === "number"
+    ) {
+      destLat = customerDestination.lat;
+      destLng = customerDestination.lng;
+    } else {
+      // بديل: المتجر من الطلب النشط
+      const activeCall = getCurrentActiveCall();
+      if (
+        activeCall &&
+        typeof activeCall.merchantLat === "number" &&
+        typeof activeCall.merchantLng === "number"
+      ) {
+        destLat = activeCall.merchantLat;
+        destLng = activeCall.merchantLng;
+      }
+    }
+  }
+
+  // 4) لو لا عميل ولا متجر → ما في هدف
+  if (destLat == null || destLng == null) {
+    alert("لا يوجد هدف نشط حالياً على الخريطة. رجاءً ابدأ التوجه إلى المتجر أو اختر عنوان العميل أولاً.");
+    return;
+  }
+
+  // 5) فتح Google Maps (أو التطبيق الافتراضي) على الهدف
+  const url = `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}&travelmode=driving`;
+  window.open(url, "_blank"); // تبويب / تطبيق جديد
 }
 
 /* تنظيف عنوان العميل وماركراته من الخريطة */
@@ -2395,6 +2514,185 @@ function clearCustomerDestination() {
   if (customerAddressPanel && !customerAddressPanel.classList.contains("hidden")) {
     customerAddressPanel.classList.add("hidden");
   }
+}
+function clearOrderRoute() {
+  // إزالة الخط الأزرق المرسوم على الخريطة
+  if (remainingRoutePolyline) {
+    remainingRoutePolyline.setMap(null);
+    remainingRoutePolyline = null;
+  }
+
+  // إعادة تعيين مصفوفة نقاط المسار
+  routePath = [];
+
+  // تأكد أيضاً من مسح أي مسار من الـ DirectionsRenderer
+  if (directionsRenderer) {
+    directionsRenderer.setDirections({ routes: [] });
+  }
+}
+
+function updateRouteProgress(currentLatLng) {
+  if (!remainingRoutePolyline || !routePath || routePath.length === 0) return;
+  if (!google.maps || !google.maps.geometry || !google.maps.geometry.spherical) return;
+
+  let closestIndex = 0;
+  let minDist = Infinity;
+
+  for (let i = 0; i < routePath.length; i++) {
+    const p = routePath[i];
+    const d = google.maps.geometry.spherical.computeDistanceBetween(
+      currentLatLng,
+      p
+    );
+    if (d < minDist) {
+      minDist = d;
+      closestIndex = i;
+    }
+  }
+
+  // لو السائق بعيد جداً عن المسار (مثلاً أكثر من 80م) لا نقصّ شيء
+  if (minDist > 80) return;
+
+  const remaining = routePath.slice(closestIndex);
+  remainingRoutePolyline.setPath(remaining);
+}
+// هالة متوهجة (شادو أزرق) حول ماركر السائق
+function updateDriverGlow(currentLatLng) {
+  if (!driverMap || typeof google === "undefined" || !google.maps) return;
+  if (!currentLatLng) return;
+
+  // إنشاء الدوائر إن لم تكن موجودة
+  if (!driverGlowInner) {
+    driverGlowInner = new google.maps.Circle({
+      map: driverMap,
+      center: currentLatLng,
+      radius: 10,               // سيتم ضبطه ديناميكياً
+      strokeColor: "#89d9ee",
+      strokeOpacity: 0,
+      strokeWeight: 0,
+      fillColor: "#89d9ee",
+      fillOpacity: 5.55         // مركز قوي (شادو مركّز)
+    });
+  } else {
+    driverGlowInner.setCenter(currentLatLng);
+  }
+
+  if (!driverGlowOuter) {
+    driverGlowOuter = new google.maps.Circle({
+      map: driverMap,
+      center: currentLatLng,
+      radius: 20,
+      strokeColor: "#89d9ee",
+      strokeOpacity: 0.4,
+      strokeWeight: 1,
+      fillColor: "#89d9ee",
+      fillOpacity: 0.30
+    });
+  } else {
+    driverGlowOuter.setCenter(currentLatLng);
+  }
+
+  // بدء أنيميشن النبض
+  startDriverGlowAnimation();
+}
+
+function startDriverGlowAnimation() {
+  if (driverGlowPulseInterval) return; // شغّال أصلاً
+
+  let t = 0; // من 0 → 1
+
+  driverGlowPulseInterval = setInterval(() => {
+    if (!driverGlowInner || !driverGlowOuter || !driverMap) return;
+
+    const center = driverGlowInner.getCenter();
+    if (!center) return;
+
+    const zoom = driverMap.getZoom() || 16;
+    const latRad = (center.lat() * Math.PI) / 180;
+    const metersPerPixel =
+      156543.03392 * Math.cos(latRad) / Math.pow(2, zoom);
+
+    // 🟦 حجم الهالة بالنسبة للماركر (بالبكسل)
+    const baseRadiusPx = 10;     // يحيط بالمؤشر (الجزء الثابت)
+    const extraRadiusPx = 20;    // مدى النبضة (انتشار الشادو)
+
+    const baseRadiusM = baseRadiusPx * metersPerPixel;
+    const extraRadiusM = extraRadiusPx * metersPerPixel;
+
+    // t يتحرك من 0 → 1
+    t += 0.03;
+    if (t > 1) t = 0;
+
+    // الدائرة الداخلية: ثابتة تقريباً حول الماركر
+    driverGlowInner.setRadius(baseRadiusM);
+
+    // الدائرة الخارجية: تبدأ من inner وتنتشر
+    const outerRadius = baseRadiusM + extraRadiusM * t;
+    driverGlowOuter.setRadius(outerRadius);
+
+    // شفافية الشادو الخارجي تقل مع الانتشار
+    const outerFillOpacity = 0.32 - 0.25 * t;
+    const outerStrokeOpacity = 0.45 - 0.35 * t;
+
+    driverGlowOuter.setOptions({
+      fillOpacity: Math.max(0, outerFillOpacity),
+      strokeOpacity: Math.max(0, outerStrokeOpacity)
+    });
+  }, 50); // كل 50ms → نبضة ناعمة
+}
+
+function stopDriverGlow() {
+  if (driverGlowPulseInterval) {
+    clearInterval(driverGlowPulseInterval);
+    driverGlowPulseInterval = null;
+  }
+  if (driverGlowInner) {
+    driverGlowInner.setMap(null);
+    driverGlowInner = null;
+  }
+  if (driverGlowOuter) {
+    driverGlowOuter.setMap(null);
+    driverGlowOuter = null;
+  }
+}
+
+// إنشاء/تحديث ماركر السائق + إبقائه في وسط الخريطة
+function ensureDriverMarker(lat, lng, heading) {
+  if (!driverMap || typeof google === "undefined" || !google.maps) return;
+
+  const currentLatLng = new google.maps.LatLng(lat, lng);
+
+  if (!driverMarker) {
+    const icon = {
+      path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+      scale: 5,
+      strokeColor: "#ffffff",
+      strokeWeight: 2,
+      fillColor: "#4285F4",
+      fillOpacity: 1,
+      rotation: typeof heading === "number" ? heading : 0
+    };
+    driverMarker = new google.maps.Marker({
+      map: driverMap,
+      position: currentLatLng,
+      icon
+    });
+  } else {
+    driverMarker.setPosition(currentLatLng);
+    if (typeof heading === "number") {
+      const icon = driverMarker.getIcon();
+      if (icon && typeof icon === "object") {
+        icon.rotation = heading;
+        driverMarker.setIcon(icon);
+      }
+    }
+  }
+
+  // نخلي الخريطة متمركزة على السائق
+  driverMap.setCenter(currentLatLng);
+
+  // الهالة المتوهجة
+  updateDriverGlow(currentLatLng);
 }
 
 /* بدء/إيقاف التوجيه الحي على نفس الخريطة مع تدوير حسب الاتجاه */
@@ -2433,38 +2731,22 @@ function startGuidance(targetLat, targetLng) {
 
       if (!driverMap) return;
 
-      const currentLatLng = new google.maps.LatLng(lat, lng);
+            const currentLatLng = new google.maps.LatLng(lat, lng);
 
-      // تحديث/إنشاء ماركر السائق
-      if (!driverMarker) {
-        const icon = {
-          path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-          scale: 5,
-          strokeColor: "#ffffff",
-          strokeWeight: 2,
-          fillColor: "#4285F4",
-          fillOpacity: 1,
-          rotation: heading || 0
-        };
-        driverMarker = new google.maps.Marker({
-          map: driverMap,
-          position: currentLatLng,
-          icon
-        });
-      } else {
-        driverMarker.setPosition(currentLatLng);
-        if (heading !== null) {
-          const icon = driverMarker.getIcon();
-          if (icon && typeof icon === "object") {
-            icon.rotation = heading;
-            driverMarker.setIcon(icon);
-          }
-        }
+      // ماركر السائق + الهالة + تمركز الخريطة
+      ensureDriverMarker(lat, lng, heading);
+
+      // تحديث المسار المتبقي: مسح الجزء الذي تم قطعه
+      updateRouteProgress(currentLatLng);
+// 🟦 هالة شادو أزرق حول السائق
+updateDriverGlow(currentLatLng);
+// تدوير الخريطة حسب اتجاه السائق (إن كان متوفراً)
+    if (heading !== null && typeof driverMap.setHeading === "function") {
+      driverMap.setHeading(heading);
+      if (typeof driverMap.setTilt === "function") {
+        driverMap.setTilt(45);
       }
-
-      // مركز الخريطة على السائق
-      driverMap.setCenter(currentLatLng);
-
+    }
       
     },
     (err) => {
@@ -2477,17 +2759,14 @@ function startGuidance(targetLat, targetLng) {
 function stopGuidance() {
   isGuidanceOn = false;
   navigationTarget = null;
+  navigationMode = null; // ✅ ما عاد في هدف حالي
 
   if (navigationWatchId !== null && navigator.geolocation) {
     navigator.geolocation.clearWatch(navigationWatchId);
     navigationWatchId = null;
   }
 
-  if (driverMarker) {
-    driverMarker.setMap(null);
-    driverMarker = null;
-  }
-
+  // نرجع الخريطة لوضع عادي بدون tilt أو heading
   if (driverMap && typeof driverMap.setHeading === "function") {
     driverMap.setHeading(0);
     if (typeof driverMap.setTilt === "function") {
@@ -2498,20 +2777,35 @@ function stopGuidance() {
   if (driverNavBtn) {
     driverNavBtn.dataset.active = "false";
   }
+
+  // لو السائق حالياً أوفلاين فقط وقتها نمسح الماركر والهالة
+  if (!driverCurrentOnline) {
+    if (driverMarker) {
+      driverMarker.setMap(null);
+      driverMarker = null;
+    }
+    if (driverGlowCircle) {
+      driverGlowCircle.setMap(null);
+      driverGlowCircle = null;
+    }
+  }
 }
 
 /* تنظيف الخريطة (المسار + التوجيه) */
 function clearRouteAndNavigation() {
-  if (directionsRenderer) {
-    directionsRenderer.setDirections({ routes: [] });
-  }
+  // أولاً: مسح خط الطريق والمسار المتبقي
+  clearOrderRoute();
+
+  // ثانياً: إزالة ماركر المتجر
   if (merchantMarker) {
     merchantMarker.setMap(null);
     merchantMarker = null;
   }
-  // تنظيف عنوان/ماركر العميل
+
+  // ثالثاً: تنظيف عنوان/ماركر العميل
   clearCustomerDestination();
-  // إيقاف التوجيه الحي (السهم)
+
+  // رابعاً: إيقاف التوجيه الحي (ماركر السائق + heading)
   stopGuidance();
 }
 
@@ -3265,8 +3559,10 @@ window.driverStartCall = function (callId) {
           });
         }
 
-        // رسم المسار + بدء التوجيه الحي إلى التاجر
+                // رسم المسار + بدء التوجيه الحي إلى التاجر
         if (call.merchantLat != null && call.merchantLng != null) {
+          navigationMode = "merchant"; // ✅ الهدف الحالي: المطعم
+
           showDriverRouteToMerchant(
             lat,
             lng,
@@ -3275,6 +3571,7 @@ window.driverStartCall = function (callId) {
           );
           startGuidance(call.merchantLat, call.merchantLng);
         }
+
         // طيّ بطاقة الطلب بعد بدء الرحلة (يبقى زر السهم فقط)
         if (window.toggleCurrentOrderPanel) {
           toggleCurrentOrderPanel(true);
@@ -3430,6 +3727,8 @@ alert(t("alert_orderNotFound"));
             busy: false
           });
         }
+    // 🧹 تنظيف خط الطريق أيضاً في حالة الإلغاء
+    clearOrderRoute();
 
         // تنظيف كامل لمسار التوجيه وماركر المتجر/العميل بعد التسليم
         clearRouteAndNavigation();
