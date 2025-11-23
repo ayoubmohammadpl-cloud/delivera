@@ -2290,6 +2290,7 @@ function getStatusLabel(status) {
     pending: "status_pending",
     accepted: "status_accepted",
     in_progress: "status_inProgress",
+    heading_to_customer: "status_inProgress", // 👈 نفس ترجمة "قيد التنفيذ"
     delivered: "status_delivered",
     cancelled: "status_cancelled",
     rejected: "status_rejected"
@@ -3299,8 +3300,11 @@ function renderDriverCurrentOrder(call) {
       </button>
     `;
   }
-  // 🟡 بعد البدء (in_progress) → يظهر فقط زر "تسليم"
-  else if (call.status === "in_progress") {
+    // 🟡 بعد البدء (in_progress أو heading_to_customer) → يظهر زر "تسليم"
+  else if (
+    call.status === "in_progress" ||
+    call.status === "heading_to_customer"
+  ) {
     buttonsHtml = `
       <button onclick="driverCompleteCall('${call.id}')">
         ${t("currentOrder_btn_delivered")}
