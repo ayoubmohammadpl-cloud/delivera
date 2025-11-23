@@ -2568,18 +2568,29 @@ async function setCustomerDestination(lat, lng, address) {
   }
 }
 
-/* بدء التوجيه إلى العميل من موقع السائق الحالي */
+/* بدء التوجيه إلى العميل من موقع السائق الحالي (مع تحديث حالة الطلب → heading_to_customer) */
 function startCustomerNavigation() {
-  if (!customerDestination || customerDestination.lat == null || customerDestination.lng == null) {
+  if (
+    !customerDestination ||
+    customerDestination.lat == null ||
+    customerDestination.lng == null
+  ) {
     alert(t("alert_customer_address_required"));
-
     return;
   }
+
   if (!navigator.geolocation) {
     alert(t("alert_geo_not_supported"));
-
     return;
   }
+
+  // يجب أن يكون هناك طلب نشط لنربطه بهذه الرحلة
+  const activeCall = getCurrentActiveCall();
+  if (!activeCall) {
+    alert("لا يوجد طلب نشط مرتبط بهذا العنوان حالياً.");
+    return;
+  }
+  const callId = activeCall.id;
 
   const geoOptions = {
     enableHighAccuracy: true,
@@ -2592,7 +2603,7 @@ function startCustomerNavigation() {
       const startLat = pos.coords.latitude;
       const startLng = pos.coords.longitude;
 
-            // رسم مسار من موقع السائق إلى العميل
+      // رسم مسار من موقع السائق إلى العميل
       showDriverRouteToCustomer(
         startLat,
         startLng,
@@ -2605,14 +2616,26 @@ function startCustomerNavigation() {
       navigationMode = "customer"; // ✅ الهدف الحالي: العميل
       startGuidance(customerDestination.lat, customerDestination.lng);
 
+      // 🔄 تحديث حالة الطلب في drivers/{driverId}/calls + merchants/.../calls
+      updateDriverCallAndMerchant(callId, {
+        status: "heading_to_customer",
+        headingToCustomerStartedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).catch((err) => {
+        console.error("خطأ أثناء تحديث حالة التوجه للعميل:", err);
+      });
+
+      // (اختياري) إخفاء لوحة إدخال العنوان بعد بدء التوجيه
+      if (customerAddressPanel && !customerAddressPanel.classList.contains("hidden")) {
+        customerAddressPanel.classList.add("hidden");
+      }
     },
     (err) => {
       alert(t("alert_geo_failed_prefix") + err.message);
-
     },
     geoOptions
   );
 }
+
 // فتح الملاحة الخارجية حسب الهدف الحالي على خريطة السائق
 function openExternalNavigationToCurrentTarget() {
   let destLat = null;
