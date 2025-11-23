@@ -1617,6 +1617,10 @@ let driverGlowOuter = null;
 let driverGlowPulseInterval = null;
 let navigationTarget = null;
 let navigationMode = null; // "merchant" أو "customer" حسب الهدف الحالي
+// تتبع موقع السائق وتحديثه على Firestore (خلفية)
+let locationWatchId = null;
+let lastLocationUpdateAt = 0;
+const LOCATION_UPDATE_MIN_INTERVAL_MS = 7000; // كل ~7 ثواني كحد أدنى بين كل تحديث والتالي
 
 // نقاط المتجر والعميل
 let merchantMarker = null;
@@ -1858,11 +1862,14 @@ toggleOnlineBtn.addEventListener("click", async () => {
             playOnlineSoundNext = false;
 
             updateOnlineBtn();
-			        // بعد أن يصبح أونلاين، أظهر موقعه على الخريطة مع الهالة
-        if (driverMap) {
-          ensureDriverMarker(lat, lng, null);
-        }
 
+            // بعد أن يصبح أونلاين، أظهر موقعه على الخريطة مع الهالة
+            if (driverMap) {
+              ensureDriverMarker(lat, lng, null);
+            }
+
+            // ✅ بدء تتبع موقع السائق في الخلفية وتحديثه على Firestore
+            startDriverLocationTracking();
           },
           async (err) => {
             alert(t("alert_geo_failed_prefix") + err.message);
@@ -1908,7 +1915,7 @@ toggleOnlineBtn.addEventListener("click", async () => {
 
         updateOnlineBtn();
       }
-            } else {
+    } else {
       await driverRef.update({
         online: false,
         busy: false
@@ -1916,6 +1923,9 @@ toggleOnlineBtn.addEventListener("click", async () => {
 
       driverCurrentOnline = false; // تأكيد الحالة
       updateOnlineBtn();
+
+      // ⛔ إيقاف تتبع الموقع في الخلفية
+      stopDriverLocationTracking();
 
       // أوقف أي توجيه حي (لو شغّال) → هذا سيعيد الخريطة للوضع العادي
       if (typeof stopGuidance === "function") {
@@ -2007,7 +2017,10 @@ driverLogoutBtn.addEventListener("click", async () => {
     // 🔓 تنظيف جلسة السائق في Firestore
     await releaseDriverSession();
 
+        // إيقاف تتبع الموقع بالكامل
+    stopDriverLocationTracking();
     clearRouteAndNavigation();
+
 
     await auth.signOut();
 
@@ -2148,6 +2161,70 @@ async function showDriverDashboard(uid) {
 }
 
 /* ========== Utilities ========== */
+// تحديث حقل lat/lng في وثيقة السائق على Firestore مع Throttle
+function handleDriverLocationUpdate(lat, lng) {
+  if (!driverUid || !driverCurrentOnline) return;
+
+  const now = Date.now();
+  // من غير المعقول نكتب أكثر من مرة كل 7 ثواني
+  if (now - lastLocationUpdateAt < LOCATION_UPDATE_MIN_INTERVAL_MS) {
+    return;
+  }
+  lastLocationUpdateAt = now;
+
+  try {
+    const driverRef = db.collection("drivers").doc(driverUid);
+    driverRef
+      .update({
+        lat,
+        lng,
+        lastLocationAt: firebase.firestore.FieldValue.serverTimestamp()
+      })
+      .catch((err) => {
+        console.warn("تعذر تحديث موقع السائق في Firestore:", err);
+      });
+  } catch (e) {
+    console.warn("تعذر تحديث موقع السائق في Firestore:", e);
+  }
+}
+
+// تشغيل تتبع الموقع في الخلفية (watchPosition مستقل عن التوجيه)
+function startDriverLocationTracking() {
+  if (!driverCurrentOnline) return;
+  if (!navigator.geolocation) {
+    console.warn("المتصفح لا يدعم تحديد الموقع لتتبع السائق.");
+    return;
+  }
+  if (locationWatchId !== null) return; // شغال أصلاً
+
+  const watchOptions = {
+    enableHighAccuracy: true,
+    maximumAge: 5000,
+    timeout: 20000
+  };
+
+  locationWatchId = navigator.geolocation.watchPosition(
+    (pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      // هنا فقط نكتب في Firestore (مع Throttle داخلي)
+      handleDriverLocationUpdate(lat, lng);
+    },
+    (err) => {
+      console.warn("خطأ في تتبع موقع السائق في الخلفية:", err);
+    },
+    watchOptions
+  );
+}
+
+// إيقاف تتبع الموقع في الخلفية
+function stopDriverLocationTracking() {
+  if (locationWatchId !== null && navigator.geolocation) {
+    navigator.geolocation.clearWatch(locationWatchId);
+  }
+  locationWatchId = null;
+}
+
 function formatDate(d) {
   if (!d) return "";
   return d.toLocaleString();
@@ -2798,14 +2875,16 @@ function startGuidance(targetLat, targetLng) {
   if (isGuidanceOn) return;
   if (!navigator.geolocation) {
     alert(t("alert_live_nav_not_supported"));
-
     return;
   }
   if (!driverMap) {
     alert(t("alert_map_not_ready"));
-
     return;
   }
+
+  // أثناء التوجيه الحي نستخدم watch واحد فقط (خاص بالملاحة)
+  // لذلك نوقف تتبع الخلفية إن كان يعمل
+  stopDriverLocationTracking();
 
   navigationTarget = { lat: targetLat, lng: targetLng };
   isGuidanceOn = true;
@@ -2823,30 +2902,36 @@ function startGuidance(targetLat, targetLng) {
     (pos) => {
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
-      const heading = (typeof pos.coords.heading === "number" && !isNaN(pos.coords.heading))
-        ? pos.coords.heading
-        : null;
+      const heading =
+        typeof pos.coords.heading === "number" && !isNaN(pos.coords.heading)
+          ? pos.coords.heading
+          : null;
 
       if (!driverMap) return;
 
-            const currentLatLng = new google.maps.LatLng(lat, lng);
+      const currentLatLng = new google.maps.LatLng(lat, lng);
+
+      // ✅ تحديث موقع السائق في Firestore أيضاً (نفس الـ Throttle السابق)
+      handleDriverLocationUpdate(lat, lng);
 
       // ماركر السائق + الهالة + تمركز الخريطة
       ensureDriverMarker(lat, lng, heading);
 
       // تحديث المسار المتبقي: مسح الجزء الذي تم قطعه
       updateRouteProgress(currentLatLng);
-// 🟦 هالة شادو أزرق حول السائق
-updateDriverGlow(currentLatLng);
-// تدوير الخريطة حسب اتجاه السائق (إن كان متوفراً)
-    if (heading !== null && typeof driverMap.setHeading === "function") {
-      driverMap.setHeading(heading);
-      if (typeof driverMap.setTilt === "function") {
-        driverMap.setTilt(45);
+
+      // 🟦 هالة شادو أزرق حول السائق
+      updateDriverGlow(currentLatLng);
+
+      // تدوير الخريطة حسب اتجاه السائق (إن كان متوفراً)
+      if (heading !== null && typeof driverMap.setHeading === "function") {
+        driverMap.setHeading(heading);
+        if (typeof driverMap.setTilt === "function") {
+          driverMap.setTilt(45);
+        }
       }
-    }
-      
     },
+
     (err) => {
       console.error("خطأ في التوجيه الحي:", err);
     },
@@ -2876,16 +2961,18 @@ function stopGuidance() {
     driverNavBtn.dataset.active = "false";
   }
 
-    // لو السائق حالياً أوفلاين فقط وقتها نمسح الماركر والهالة
+  // لو السائق حالياً أوفلاين فقط وقتها نمسح الماركر والهالة
   if (!driverCurrentOnline) {
     if (driverMarker) {
       driverMarker.setMap(null);
       driverMarker = null;
     }
-    // الهالة الجديدة (inner + outer + interval)
     if (typeof stopDriverGlow === "function") {
       stopDriverGlow();
     }
+  } else {
+    // السائق ما زال أونلاين بعد انتهاء الملاحة → رجّع تتبع الخلفية
+    startDriverLocationTracking();
   }
 }
 
@@ -3934,12 +4021,15 @@ if (langSelect) {
 window.addEventListener("beforeunload", () => {
   if (driverOrdersListener) driverOrdersListener();
   if (driverCallsListener) driverCallsListener();
+
+  // إيقاف تتبع الموقع + تنظيف الخريطة
+  stopDriverLocationTracking();
   clearRouteAndNavigation();
+
   stopNewCallSoundLoop(); // لإيقاف أي تايمر شغّال
   // نحاول تنظيف الجلسة (قد لا تكتمل دائماً، بس تساعد)
   releaseDriverSession();
 });
-
 
 </script>
 </body>
