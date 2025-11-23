@@ -656,6 +656,8 @@ let currentCustomerName = "";
 
 // ✅ لكل رحلة نضمن أن Directions يُستدعى العدد المطلوب فقط
 let directionsRequestedForCurrentLeg = false;
+// ✅ نضمن أن fitBounds يُستدعى مرة واحدة لكل رحلة
+let mapFittedForCurrentLeg = false;
 
 // ✅ كاش آخر حالة للنداءات لاكتشاف تغيّر الحالة
 let lastCallsById = {};
@@ -1004,20 +1006,30 @@ function initMapAndData(merchantId) {
       center: { lat: 25.276987, lng: 55.296249 },
       zoom: 14,
       styles: [
-        { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
-        { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
-        { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] },
-        {
-          featureType: "road",
-          elementType: "geometry",
-          stylers: [{ color: "#e0e0e0" }]
-        },
-        {
-          featureType: "poi",
-          elementType: "geometry",
-          stylers: [{ color: "#eeeeee" }]
-        }
-      ],
+  // خلفية عامة و ألوان النصوص
+  { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] },
+
+  // إبقاء الطرق وأسماء الشوارع
+  {
+    featureType: "road",
+    elementType: "geometry",
+    stylers: [{ color: "#e0e0e0" }]
+  },
+  {
+    featureType: "road",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#4b5563" }]
+  },
+
+  // 🔴 إخفاء كل نقاط الاهتمام: سوبرماركت، مدارس، فنادق، ...
+  {
+    featureType: "poi",
+    stylers: [{ visibility: "off" }]
+  }
+],
+
       fullscreenControl: false,
       zoomControl: false,
       streetViewControl: false,
@@ -1487,6 +1499,7 @@ function startTrackingDriverToMerchant(driverId) {
   currentDestinationLng = merchantLocationLng;
   currentDestinationAddress = null;
   directionsRequestedForCurrentLeg = false;
+  mapFittedForCurrentLeg = false;
 
   // 🔁 إعادة تعيين عدّاد النداءات والسرعة المتوسطة للرحلة الحالية
   if (currentTrackedCallId) {
@@ -1530,6 +1543,7 @@ function startTrackingDriverToCustomer(callData) {
   currentDestinationAddress = callData.deliveryAddress || "";
   currentCustomerName = (callData.customerName || "").trim();
   directionsRequestedForCurrentLeg = false;
+  mapFittedForCurrentLeg = false;
 
   driverRouteAvgSpeedMps = null;
 
@@ -1711,11 +1725,15 @@ function startNearArrivalCountdown(driverId) {
 
   nearCountdownSeconds = 60; // نبدأ من 60 ثانية
 
-  if (!trackedEtaInfoWindow) {
+    if (!trackedEtaInfoWindow) {
     trackedEtaInfoWindow = new google.maps.InfoWindow({
       pixelOffset: new google.maps.Size(0, -40),
+      disableAutoPan: true
     });
+  } else {
+    trackedEtaInfoWindow.setOptions({ disableAutoPan: true });
   }
+
 
   // دالة إعادة رسم محتوى البالون
   const render = () => {
@@ -1997,6 +2015,22 @@ function updateDriverRouteAndEta() {
         currentDestinationLat = leg.end_location.lat();
         currentDestinationLng = leg.end_location.lng();
       }
+      // 📌 في أول مرة في هذه الرحلة نوسّط الخريطة بحيث تحتوي السائق + الوجهة معاً
+      if (!mapFittedForCurrentLeg && map && origin) {
+        const bounds = new google.maps.LatLngBounds();
+        bounds.extend(origin); // موقع السائق الحالي
+
+        if (currentDestinationLat != null && currentDestinationLng != null) {
+          bounds.extend(
+            new google.maps.LatLng(currentDestinationLat, currentDestinationLng)
+          );
+        } else if (leg.end_location) {
+          bounds.extend(leg.end_location);
+        }
+
+        map.fitBounds(bounds);
+        mapFittedForCurrentLeg = true;
+      }
 
       // رسم المسار (مشترك)
       const overviewPath = result.routes[0].overview_path;
@@ -2025,10 +2059,13 @@ function updateDriverRouteAndEta() {
         trackedEtaSeconds = durationSeconds;
         trackedEtaUpdatedAt = Date.now();
 
-        if (!trackedEtaInfoWindow) {
+                if (!trackedEtaInfoWindow) {
           trackedEtaInfoWindow = new google.maps.InfoWindow({
-            pixelOffset: new google.maps.Size(0, -40)
+            pixelOffset: new google.maps.Size(0, -40),
+            disableAutoPan: true
           });
+        } else {
+          trackedEtaInfoWindow.setOptions({ disableAutoPan: true });
         }
 
         updateEtaBubble();
@@ -2135,6 +2172,8 @@ function stopTrackingDriverForCall(callId) {
 
   currentTrackedCallId = null;
   currentTrackedDriverId = null;
+    mapFittedForCurrentLeg = false;
+
 }
 
 /* ========== Merchant CALLS rendering ========== */
