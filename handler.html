@@ -12,7 +12,25 @@
 
 <style>
     :root{--primary:#4285F4;--card-bg:#fff;--muted:#666;}
-    body { font-family: Arial, sans-serif; direction: rtl; padding: 20px; background: #f3f6fb; color:#222; }
+    body {
+  font-family: Arial, sans-serif;
+  padding: 20px;
+  background: #f3f6fb;
+  color:#222;
+}
+
+/* RTL للعربية */
+html[dir="rtl"] body {
+  direction: rtl;
+  text-align: right;
+}
+
+/* LTR للإنكليزي/الألماني/التركي */
+html[dir="ltr"] body {
+  direction: ltr;
+  text-align: left;
+}
+
     h2 { text-align: center; margin-bottom: 10px; }
 
     /* language switcher (فقط في شاشة التسجيل/الدخول) */
@@ -33,6 +51,9 @@
       border: 1px solid #ddd;
       background: #fff;
     }
+html[dir="ltr"] .lang-switcher {
+  justify-content: flex-start;
+}
 
     .tabs { display: flex; justify-content: center; gap:10px; margin-bottom: 20px; }
     .tab { padding: 10px 18px; border-radius: 8px; cursor: pointer; background: #e6eefc; color: #124; }
@@ -105,7 +126,6 @@ body.merchant-mode {
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  flex-direction: row-reverse; /* يخلي زر القائمة على اليمين والأرباح على اليسار */
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
@@ -116,10 +136,20 @@ body.merchant-mode {
   z-index: 10;
 }
 
-.merchant-topbar button,
-.merchant-topbar .topbar-earnings {
-  border: none;
-  outline: none;
+/* 
+  ترتيب ثابت:
+  - زر القائمة دائماً على اليمين
+  - زر الحالة في المنتصف
+  - الأرباح دائماً على اليسار
+*/
+html[dir="rtl"] .merchant-topbar {
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+html[dir="ltr"] .merchant-topbar {
+  flex-direction: row-reverse;
+  justify-content: space-between;
 }
 
 /* زر القائمة (الهامبرغر) */
@@ -174,7 +204,7 @@ body.merchant-mode {
 /* كرت عدد السائقين الأونلاين (منفصل عن الشريط العلوي) */
 .online-drivers-card {
   position: absolute;
-  top: 2px;
+  top: 6px;
   left: -150px;
   background: #ffffff;
   color: #111827;
@@ -189,20 +219,21 @@ body.merchant-mode {
   justify-content: center;
   gap: 2px;
   z-index: 11;
-  direction: rtl;
   text-align: center;
   overflow: visible;
 }
-
-.online-drivers-card .label {
-  color: #4b5563;
-  font-size: 14px;
+.online-drivers-card .count {
+  font-weight: 700;   /* خط أعرض */
+  font-size: 16px;    /* ممكن تكبير الرقم شوي */
+  color: #22c55e;     /* أخضر واضح */
 }
 
-.online-drivers-card .count {
-  font-weight: 700;
-  font-size: 18px;
-  color: #22c55e;
+html[dir="rtl"] .online-drivers-card {
+  direction: rtl;
+}
+
+html[dir="ltr"] .online-drivers-card {
+  direction: ltr;
 }
 
 /* القائمة الجانبية (يمين) */
@@ -346,7 +377,7 @@ body.merchant-mode {
   width: 100%;
   margin-top: 4px;
 }
-/* ==== Toast notifications ==== */
+/* Toast notifications */
 .toast-container {
   position: fixed;
   bottom: 18px;
@@ -371,9 +402,17 @@ body.merchant-mode {
   display: flex;
   align-items: center;
   gap: 8px;
-  direction: rtl;
   opacity: 1;
   transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+
+/* اتجاه التوست حسب لغة الصفحة */
+html[dir="rtl"] .toast {
+  direction: rtl;
+}
+
+html[dir="ltr"] .toast {
+  direction: ltr;
 }
 
 .toast-success {
@@ -392,6 +431,7 @@ body.merchant-mode {
   opacity: 0;
   transform: translateY(8px);
 }
+
 /* زر مناداة السائق داخل البالون */
 .call-btn {
   color: #fff !important;
@@ -674,6 +714,47 @@ const I18N = {
     alertMerchantNotSet: "لم يتم تحديد التاجر.",
     alertOrderNotFound: "طلب غير موجود",
     alertCancelOrderErrorPrefix: "خطأ أثناء إلغاء الطلب: ",
+printReportTitle: "تقرير التوصيل",
+printMerchantLabel: "التاجر:",
+printDriverLabel: "السائق:",
+printDateLabel: "التاريخ:",
+printDeliveryCostSummaryLabel: "التكلفة المحددة للتوصيل:",
+printPricingMultiDrivers: "متعدد السائقين — راجع تسعيرة كل سائق على حدة.",
+printPricingMissing: "لم يتم تحديد تسعيرة واضحة لهذا السائق في النظام.",
+printNoCompletedGlobal: "لا توجد طلبات سابقة للطباعة.",
+printNoCompletedForDriver: "لا توجد طلبات سابقة لهذا السائق للطباعة.",
+printTableMerchant: "اسم التاجر",
+printTableDriver: "اسم السائق",
+printTableId: "ID الطلب",
+printTableStatus: "الحالة",
+printTableCreatedAt: "تاريخ الإنشاء",
+printTableCustomerAddress: "عنوان العميل",
+printTableDistDriverMerchant: "المسافة من السائق إلى التاجر (كم)",
+printTableDistMerchantCustomer: "المسافة من التاجر إلى العميل (كم)",
+printTableFee: "تكلفة التوصيل (€)",
+// داخل I18N.ar = { ... }
+printTitleCalls: "تقرير النداءات السابقة",
+printMerchantLabel: "التاجر",
+printDriverLabel: "السائق",
+printDateGenerated: "تاريخ الطباعة (توقيت UTC)",
+printDriverPricingTitle: "تسعيرة التوصيل للسائق",
+printBaseFeeLabel: "الرسوم الأساسية",
+printPerKmToCustomerLabel: "لكل كيلومتر (من التاجر إلى العميل)",
+printPerKmToMerchantLabel: "لكل كيلومتر (من السائق إلى التاجر)",
+printFreeKmLabel: "أول {KM} كم مجاناً",
+printColMerchant: "اسم التاجر",
+printColDriver: "اسم السائق",
+printColOrderId: "رقم الطلب",
+printColStatus: "الحالة",
+printColCreatedAt: "تاريخ الإنشاء (UTC)",
+printColCustomerAddress: "عنوان العميل",
+printColDistDriverToMerchant: "المسافة: سائق → تاجر (كم)",
+printColDistMerchantToCustomer: "المسافة: تاجر → عميل (كم)",
+printColDeliveryFee: "تكلفة التوصيل (€)",
+printFooterTotalOrders: "مجموع الطلبات",
+printFooterTotalFees: "مجموع تكاليف التوصيل (€)",
+printNoOrders: "لا توجد طلبات سابقة للطباعة.",
+printNoOrdersForDriver: "لا توجد طلبات سابقة لهذا السائق للطباعة.",
 
   },
   en: {
@@ -774,6 +855,47 @@ const I18N = {
     alertMerchantNotSet: "Merchant is not set.",
     alertOrderNotFound: "Order not found.",
     alertCancelOrderErrorPrefix: "Error while cancelling the order: ",
+printReportTitle: "Delivery report",
+printMerchantLabel: "Merchant:",
+printDriverLabel: "Driver:",
+printDateLabel: "Date:",
+printDeliveryCostSummaryLabel: "Configured delivery pricing:",
+printPricingMultiDrivers: "Multiple drivers — please refer to each driver's pricing.",
+printPricingMissing: "No clear pricing configured for this driver.",
+printNoCompletedGlobal: "No past orders to print.",
+printNoCompletedForDriver: "No past orders for this driver to print.",
+printTableMerchant: "Merchant name",
+printTableDriver: "Driver name",
+printTableId: "Order ID",
+printTableStatus: "Status",
+printTableCreatedAt: "Created at",
+printTableCustomerAddress: "Customer address",
+printTableDistDriverMerchant: "Distance driver → merchant (km)",
+printTableDistMerchantCustomer: "Distance merchant → customer (km)",
+printTableFee: "Delivery fee (€)",
+// داخل I18N.en = { ... }
+printTitleCalls: "Delivery calls report",
+printMerchantLabel: "Merchant",
+printDriverLabel: "Driver",
+printDateGenerated: "Print date (UTC)",
+printDriverPricingTitle: "Driver delivery pricing",
+printBaseFeeLabel: "Base fee",
+printPerKmToCustomerLabel: "Per km (merchant → customer)",
+printPerKmToMerchantLabel: "Per km (driver → merchant)",
+printFreeKmLabel: "First {KM} km free",
+printColMerchant: "Merchant name",
+printColDriver: "Driver name",
+printColOrderId: "Order ID",
+printColStatus: "Status",
+printColCreatedAt: "Created at (UTC)",
+printColCustomerAddress: "Customer address",
+printColDistDriverToMerchant: "Distance: driver → merchant (km)",
+printColDistMerchantToCustomer: "Distance: merchant → customer (km)",
+printColDeliveryFee: "Delivery fee (€)",
+printFooterTotalOrders: "Total orders",
+printFooterTotalFees: "Total delivery fees (€)",
+printNoOrders: "No past orders to print.",
+printNoOrdersForDriver: "No past orders for this driver to print.",
 
   },
   de: {
@@ -873,6 +995,47 @@ const I18N = {
     alertMerchantNotSet: "Händler ist nicht gesetzt.",
     alertOrderNotFound: "Bestellung nicht gefunden.",
     alertCancelOrderErrorPrefix: "Fehler beim Stornieren der Bestellung: ",
+printReportTitle: "Lieferbericht",
+printMerchantLabel: "Händler:",
+printDriverLabel: "Fahrer:",
+printDateLabel: "Datum:",
+printDeliveryCostSummaryLabel: "Hinterlegte Lieferkosten:",
+printPricingMultiDrivers: "Mehrere Fahrer – bitte die Preise je Fahrer prüfen.",
+printPricingMissing: "Für diesen Fahrer ist kein eindeutiger Tarif hinterlegt.",
+printNoCompletedGlobal: "Keine vergangenen Aufträge zum Drucken.",
+printNoCompletedForDriver: "Keine vergangenen Aufträge für diesen Fahrer zum Drucken.",
+printTableMerchant: "Händlername",
+printTableDriver: "Fahrername",
+printTableId: "Bestell-ID",
+printTableStatus: "Status",
+printTableCreatedAt: "Erstellt am",
+printTableCustomerAddress: "Kundenadresse",
+printTableDistDriverMerchant: "Entfernung Fahrer → Händler (km)",
+printTableDistMerchantCustomer: "Entfernung Händler → Kunde (km)",
+printTableFee: "Liefergebühr (€)",
+// داخل I18N.de = { ... }
+printTitleCalls: "Lieferanfragen – Bericht",
+printMerchantLabel: "Händler",
+printDriverLabel: "Fahrer",
+printDateGenerated: "Druckdatum (UTC)",
+printDriverPricingTitle: "Fahrerpreis für Lieferungen",
+printBaseFeeLabel: "Grundgebühr",
+printPerKmToCustomerLabel: "pro km (Händler → Kunde)",
+printPerKmToMerchantLabel: "pro km (Fahrer → Händler)",
+printFreeKmLabel: "Die ersten {KM} km kostenlos",
+printColMerchant: "Name des Händlers",
+printColDriver: "Name des Fahrers",
+printColOrderId: "Bestell-ID",
+printColStatus: "Status",
+printColCreatedAt: "Erstellt am (UTC)",
+printColCustomerAddress: "Adresse des Kunden",
+printColDistDriverToMerchant: "Distanz: Fahrer → Händler (km)",
+printColDistMerchantToCustomer: "Distanz: Händler → Kunde (km)",
+printColDeliveryFee: "Lieferkosten (€)",
+printFooterTotalOrders: "Anzahl Bestellungen",
+printFooterTotalFees: "Summe Lieferkosten (€)",
+printNoOrders: "Es gibt keine vergangenen Bestellungen zum Drucken.",
+printNoOrdersForDriver: "Es gibt keine vergangenen Bestellungen für diesen Fahrer zum Drucken.",
 
   },
   tr: {
@@ -972,6 +1135,47 @@ const I18N = {
     alertMerchantNotSet: "İşletme tanımlı değil.",
     alertOrderNotFound: "Sipariş bulunamadı.",
     alertCancelOrderErrorPrefix: "Sipariş iptal edilirken hata oluştu: ",
+printReportTitle: "Teslimat raporu",
+printMerchantLabel: "İşletme:",
+printDriverLabel: "Sürücü:",
+printDateLabel: "Tarih:",
+printDeliveryCostSummaryLabel: "Tanımlı teslimat ücreti:",
+printPricingMultiDrivers: "Birden fazla sürücü — lütfen her sürücünün tarifesine ayrı bakın.",
+printPricingMissing: "Bu sürücü için sistemde net bir tarife yok.",
+printNoCompletedGlobal: "Yazdırılacak önceki sipariş yok.",
+printNoCompletedForDriver: "Bu sürücü için yazdırılacak önceki sipariş yok.",
+printTableMerchant: "İşletme adı",
+printTableDriver: "Sürücü adı",
+printTableId: "Sipariş ID",
+printTableStatus: "Durum",
+printTableCreatedAt: "Oluşturulma tarihi",
+printTableCustomerAddress: "Müşteri adresi",
+printTableDistDriverMerchant: "Sürücü → işletme mesafesi (km)",
+printTableDistMerchantCustomer: "İşletme → müşteri mesafesi (km)",
+printTableFee: "Teslimat ücreti (€)",
+// داخل I18N.tr = { ... }
+printTitleCalls: "Teslimat çağrıları raporu",
+printMerchantLabel: "İşletme",
+printDriverLabel: "Sürücü",
+printDateGenerated: "Yazdırma tarihi (UTC)",
+printDriverPricingTitle: "Sürücünün teslimat ücreti",
+printBaseFeeLabel: "Temel ücret",
+printPerKmToCustomerLabel: "km başına (işletme → müşteri)",
+printPerKmToMerchantLabel: "km başına (sürücü → işletme)",
+printFreeKmLabel: "İlk {KM} km ücretsiz",
+printColMerchant: "İşletme adı",
+printColDriver: "Sürücü adı",
+printColOrderId: "Sipariş ID",
+printColStatus: "Durum",
+printColCreatedAt: "Oluşturma zamanı (UTC)",
+printColCustomerAddress: "Müşteri adresi",
+printColDistDriverToMerchant: "Mesafe: sürücü → işletme (km)",
+printColDistMerchantToCustomer: "Mesafe: işletme → müşteri (km)",
+printColDeliveryFee: "Teslimat ücreti (€)",
+printFooterTotalOrders: "Toplam sipariş",
+printFooterTotalFees: "Toplam teslimat ücreti (€)",
+printNoOrders: "Yazdırılacak geçmiş sipariş yok.",
+printNoOrdersForDriver: "Bu sürücü için yazdırılacak geçmiş sipariş yok.",
 
   }
 };
@@ -1107,11 +1311,21 @@ function showToast(message, type = "success") {
   toast.appendChild(textSpan);
   toastContainer.appendChild(toast);
 
+  const removeToast = () => {
+    if (toast && toast.parentNode) {
+      toast.parentNode.removeChild(toast);
+    }
+  };
+
+  // بعد 2.5 ثانية نبدأ الإخفاء التدريجي
   setTimeout(() => {
     toast.classList.add("fade-out");
-    toast.addEventListener("transitionend", () => {
-      toast.remove();
-    });
+
+    // إزالة بعد انتهاء الـ transition
+    toast.addEventListener("transitionend", removeToast, { once: true });
+
+    // فالباك إضافي لو لأي سبب transitionend ما اشتغل
+    setTimeout(removeToast, 800);
   }, 2500);
 }
 
@@ -2360,9 +2574,10 @@ function buildDriverInfoContent(id, data) {
 
   const isRtl = lang === "ar";
 
+    const isLtrLang = ["en", "de", "tr"].includes(currentLang);
   const container = document.createElement("div");
-  container.style.direction = isRtl ? "rtl" : "ltr";
-  container.style.textAlign = isRtl ? "right" : "left";
+  container.style.direction = isLtrLang ? "ltr" : "rtl";
+  container.style.textAlign = isLtrLang ? "left" : "right";
 
   container.innerHTML = `
     <div style="min-width:220px">
@@ -3260,20 +3475,31 @@ function renderMerchantCalls(allCalls) {
   const sortC = sortCompleted.value;
   completedFiltered.sort((a, b) => compareCalls(a, b, sortC));
 
-  countActiveEl.innerHTML =
+    countActiveEl.innerHTML =
     `${t("statsActiveCalls")}<br><strong>${activeFiltered.length}</strong>`;
   countCompletedEl.innerHTML =
     `${t("statsPastCalls")}<br><strong>${completedFiltered.length}</strong>`;
 
-  const totalDeliveryFee = completed.reduce(
+  // إجمالي التوصيل لجميع السائقين (لشريط الأعلى)
+  const totalDeliveryFeeAll = completed.reduce(
     (sum, c) => sum + (c.deliveryFee || 0),
     0
   );
+
+  // إجمالي التوصيل حسب الفلتر (السائق المحدد فقط)
+  const totalDeliveryFeeFiltered = completedFiltered.reduce(
+    (sum, c) => sum + (c.deliveryFee || 0),
+    0
+  );
+
+  // صندوق "إجمالي التوصيل" داخل القائمة الجانبية يتبع الفلتر
   document.getElementById("totalDelivery").innerHTML =
-    `${t("statsTotalDelivery")}<br><strong>${totalDeliveryFee.toFixed(2)}</strong>`;
+    `${t("statsTotalDelivery")}<br><strong>${totalDeliveryFeeFiltered.toFixed(2)}</strong>`;
+
+  // شريط الأرباح العلوي يعرض الإجمالي الكلي لكل السائقين
   if (merchantEarningsTopEl) {
     merchantEarningsTopEl.innerHTML =
-      `${t("statsTotalDelivery")}<br><strong>${totalDeliveryFee.toFixed(2)} €</strong>`;
+      `${t("statsTotalDelivery")}<br><strong>${totalDeliveryFeeAll.toFixed(2)} €</strong>`;
   }
 
   activeOrdersEl.innerHTML = "";
@@ -3341,6 +3567,7 @@ function renderMerchantCalls(allCalls) {
       if (e.target.tagName.toLowerCase() === "button") return;
       viewOrderDetails(c.id);
     });
+	refreshDriverFilterOptions();
   });
 }
 
@@ -3683,6 +3910,7 @@ printBtn.addEventListener("click", () => {
     "delivered"
   ];
 
+  // الطلبات المكتملة
   let completed = lastCallsCache.filter((c) =>
     completedStatuses.includes((c.status || "").toLowerCase())
   );
@@ -3692,36 +3920,171 @@ printBtn.addEventListener("click", () => {
     completed = completed.filter((c) => c.driverId === driverFilterVal);
   }
 
+  const labels = {
+    title: t("printTitleCalls"),
+    merchantLabel: t("printMerchantLabel"),
+    driverLabel: t("printDriverLabel"),
+    dateGenerated: t("printDateGenerated"),
+    driverPricingTitle: t("printDriverPricingTitle"),
+    baseFeeLabel: t("printBaseFeeLabel"),
+    perKmToCustomerLabel: t("printPerKmToCustomerLabel"),
+    perKmToMerchantLabel: t("printPerKmToMerchantLabel"),
+    colMerchant: t("printColMerchant"),
+    colDriver: t("printColDriver"),
+    colOrderId: t("printColOrderId"),
+    colStatus: t("printColStatus"),
+    colCreatedAt: t("printColCreatedAt"),
+    colCustomerAddress: t("printColCustomerAddress"),
+    colDistDriverToMerchant: t("printColDistDriverToMerchant"),
+    colDistMerchantToCustomer: t("printColDistMerchantToCustomer"),
+    colDeliveryFee: t("printColDeliveryFee"),
+    footerTotalOrders: t("printFooterTotalOrders"),
+    footerTotalFees: t("printFooterTotalFees"),
+    noOrdersAll: t("printNoOrders"),
+    noOrdersDriver: t("printNoOrdersForDriver")
+  };
+
   if (!completed.length) {
-    if (driverFilterVal) {
-      alert(t("alertNoPrintForDriver"));
-    } else {
-      alert(t("alertNoPrintAll"));
-    }
+    const msg = driverFilterVal ? labels.noOrdersDriver : labels.noOrdersAll;
+    alert(msg);
     return;
   }
 
-  const docDir = currentLang === "ar" ? "rtl" : "ltr";
+  // اتجاه اللغة
+  const lang = currentLang || "ar";
+  const isRtl = lang === "ar";
+  const dirAttr = isRtl ? "rtl" : "ltr";
+  const align = isRtl ? "right" : "left";
+  const pageNumberPos = isRtl ? "left: 8px;" : "right: 8px;";
 
-  let html =
-    `<html dir="${docDir}"><head><meta charset="utf-8">` +
-    `<title>${t("printCallsTitle")}</title></head><body>`;
+  const merchantHeaderName = (merchantNameEl?.textContent || "").trim();
 
-  const nowStr = new Date().toLocaleString();
-
+  // السائق المختار (لو فيه فلتر)
+  let driverHeaderName = "";
+  let driverDoc = null;
   if (driverFilterVal) {
-    const d = cachedDrivers[driverFilterVal] || {};
-    const driverName =
-      ((d.firstName || "") + " " + (d.lastName || "")).trim() || "-";
-
-    const heading = t("printCallsHeadingForDriver").replace(
-      "{{driverName}}",
-      escapeHtml(driverName)
-    );
-    html += `<h3>${heading} — ${nowStr}</h3>`;
-  } else {
-    html += `<h3>${t("printCallsHeadingAll")} — ${nowStr}</h3>`;
+    driverDoc = cachedDrivers[driverFilterVal] || {};
+    driverHeaderName =
+      ((driverDoc.firstName || "") + " " + (driverDoc.lastName || "")).trim();
   }
+
+  // تاريخ الطباعة – UTC
+  const nowUtc = new Date();
+  const nowUtcLabel = nowUtc
+    .toISOString()
+    .replace("T", " ")
+    .replace("Z", " UTC");
+
+  // HTML + CSS (مع أرقام الصفحات)
+  let html = `
+<html dir="${dirAttr}">
+<head>
+<meta charset="utf-8">
+<title>${escapeHtml(labels.title)}</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    direction: ${dirAttr};
+    text-align: ${align};
+    font-size: 13px;
+    color: #111;
+    padding: 16px;
+  }
+  h2 { margin: 0 0 8px; }
+  h3 { margin: 6px 0; }
+  .meta { margin-bottom: 8px; }
+  .meta div { margin-bottom: 2px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+  }
+  th, td {
+    border: 1px solid #ddd;
+    padding: 6px 8px;
+    font-size: 12px;
+    vertical-align: top;
+  }
+  th {
+    background: #f3f4f6;
+    text-align: ${align};
+  }
+  .totals-box {
+    margin-top: 10px;
+    font-weight: bold;
+    page-break-inside: avoid;
+  }
+  
+  }
+</style>
+</head>
+<body>`;
+
+  // الهيدر: تاجر + سائق + تاريخ طباعة
+  html += `<h2>${escapeHtml(labels.title)}</h2>`;
+  html += `<div class="meta">`;
+  html += `<div><strong>${escapeHtml(labels.merchantLabel)}:</strong> ${escapeHtml(merchantHeaderName || "-")}</div>`;
+  if (driverHeaderName) {
+    html += `<div><strong>${escapeHtml(labels.driverLabel)}:</strong> ${escapeHtml(driverHeaderName)}</div>`;
+  }
+  html += `<div><strong>${escapeHtml(labels.dateGenerated)}:</strong> ${escapeHtml(nowUtcLabel)}</div>`;
+  html += `</div>`;
+
+  // تسعيرة السائق (إن وُجد فلتر سائق)
+  if (driverDoc) {
+    const hasDeliveryPrice =
+      typeof driverDoc.pricePerKmDelivery === "number" &&
+      driverDoc.pricePerKmDelivery > 0;
+
+    if (hasDeliveryPrice) {
+      const includeToMerchant = !!driverDoc.includeToMerchantSegment;
+      const useSameForBoth = driverDoc.useSamePriceForBoth !== false;
+      const freeKm =
+        typeof driverDoc.freeKm === "number" ? driverDoc.freeKm : 0;
+
+      const baseFee = BASE_DELIVERY_FEE.toFixed(2);
+      const deliveryP = driverDoc.pricePerKmDelivery.toFixed(2);
+
+      let toMerPrice = driverDoc.pricePerKmDelivery;
+      if (
+        includeToMerchant &&
+        !useSameForBoth &&
+        typeof driverDoc.pricePerKmToMerchant === "number"
+      ) {
+        toMerPrice = driverDoc.pricePerKmToMerchant;
+      }
+      const toMerStr = toMerPrice.toFixed(2);
+
+      html += `<div style="margin-bottom: 8px;">`;
+      html += `<strong>${escapeHtml(labels.driverPricingTitle)}:</strong><br/>`;
+      html += `${escapeHtml(labels.baseFeeLabel)}: ${baseFee} €<br/>`;
+      html += `${escapeHtml(labels.perKmToCustomerLabel)}: ${deliveryP} €/km`;
+      if (includeToMerchant) {
+        html += `<br/>${escapeHtml(labels.perKmToMerchantLabel)}: ${toMerStr} €/km`;
+      }
+      if (freeKm > 0) {
+        const freeLabel = t("printFreeKmLabel").replace("{KM}", String(freeKm));
+        html += `<br/>${escapeHtml(freeLabel)}`;
+      }
+      html += `</div>`;
+    }
+  }
+
+  // جدول الطلبات
+  html += `<table><thead><tr>
+    <th>${escapeHtml(labels.colMerchant)}</th>
+    <th>${escapeHtml(labels.colDriver)}</th>
+    <th>${escapeHtml(labels.colOrderId)}</th>
+    <th>${escapeHtml(labels.colStatus)}</th>
+    <th>${escapeHtml(labels.colCreatedAt)}</th>
+    <th>${escapeHtml(labels.colCustomerAddress)}</th>
+    <th>${escapeHtml(labels.colDistDriverToMerchant)}</th>
+    <th>${escapeHtml(labels.colDistMerchantToCustomer)}</th>
+    <th>${escapeHtml(labels.colDeliveryFee)}</th>
+  </tr></thead><tbody>`;
+
+  let totalOrders = completed.length;
+  let totalFees = 0;
 
   completed.forEach((c) => {
     const driverName =
@@ -3731,27 +4094,62 @@ printBtn.addEventListener("click", () => {
           (cachedDrivers[c.driverId].lastName || ""))) ||
       ((c.driverFirstName || "") + " " + (c.driverLastName || "")).trim();
 
-    const dateBase =
-      c.respondedAt && c.respondedAt.toDate
-        ? c.respondedAt.toDate()
-        : c.createdAt && c.createdAt.toDate
-        ? c.createdAt.toDate()
-        : new Date();
+    const merchantNameRow = c.merchantName || merchantHeaderName || "";
 
-    html += `
-  <div style="border-bottom:1px solid #ddd; padding:8px;">
-    <strong>#${getShortId(c.id)}</strong> — ${escapeHtml(
-      driverName
-    )} — ${formatDate(dateBase)}<br/>
-    ${t("callStatusLabel")}: ${escapeHtml(c.status || "")}<br/>
-    ${t("printMerchantLabel")}: ${escapeHtml(c.merchantName || "-")} (${escapeHtml(
-      c.merchantCity || "-"
-    )})
-  </div>
-`;
+    const createdDate =
+      c.createdAt && c.createdAt.toDate
+        ? c.createdAt.toDate()
+        : c._date || new Date();
+    const createdUtcLabel = createdDate
+      .toISOString()
+      .replace("T", " ")
+      .replace("Z", " UTC");
+
+    const dist = c.distance || c.dist || {};
+    const d1 =
+      typeof dist.driverToMerchantKm === "number"
+        ? dist.driverToMerchantKm.toFixed(2)
+        : "";
+    const d2 =
+      typeof dist.merchantToDropoffKm === "number"
+        ? dist.merchantToDropoffKm.toFixed(2)
+        : "";
+
+    let fee = 0;
+    if (c.cost && typeof c.cost.totalFee === "number") {
+      fee = c.cost.totalFee;
+    } else if (typeof c.deliveryFee === "number") {
+      fee = c.deliveryFee;
+    }
+    totalFees += fee;
+    const feeStr = fee ? fee.toFixed(2) : "";
+
+    // ID مختصر (6 خانات)
+    const shortId = getShortId(c.id);
+
+    html += `<tr>
+      <td>${escapeHtml(merchantNameRow || "")}</td>
+      <td>${escapeHtml(driverName || "")}</td>
+      <td>${escapeHtml(shortId || "")}</td>
+      <td>${escapeHtml(c.status || "")}</td>
+      <td>${escapeHtml(createdUtcLabel)}</td>
+      <td>${escapeHtml(c.deliveryAddress || "")}</td>
+      <td>${escapeHtml(d1)}</td>
+      <td>${escapeHtml(d2)}</td>
+      <td>${escapeHtml(feeStr)}</td>
+    </tr>`;
   });
 
+  html += `</tbody></table>`;
+
+  // التذييل (مرة واحدة بعد الجدول → يظهر في آخر التقرير)
+  html += `<div class="totals-box">
+    <div>${escapeHtml(labels.footerTotalOrders)}: ${totalOrders}</div>
+    <div>${escapeHtml(labels.footerTotalFees)}: ${totalFees.toFixed(2)} €</div>
+  </div>`;
+
   html += `</body></html>`;
+
   const w = window.open("", "_blank");
   w.document.write(html);
   w.document.close();
@@ -3760,17 +4158,53 @@ printBtn.addEventListener("click", () => {
 
 /* ========== فلتر السائقين ========== */
 function refreshDriverFilterOptions() {
-  const ids = Object.keys(cachedDrivers);
+  if (!filterDriver) return;
+
   const cur = filterDriver.value;
+
+  // 1) نجمع كل الـ driverId من:
+  //    - السائقين الأونلاين (cachedDrivers)
+  //    - النداءات (lastCallsCache) — تشمل الأوفلاين
+  const idsSet = new Set();
+
+  // من السائقين الأونلاين
+  Object.keys(cachedDrivers || {}).forEach((id) => idsSet.add(id));
+
+  // من النداءات (calls)
+  (lastCallsCache || []).forEach((c) => {
+    if (c.driverId) idsSet.add(c.driverId);
+  });
+
+  // إعادة بناء عناصر الفلتر
   filterDriver.innerHTML = `<option value="">${t("filterAllDrivers")}</option>`;
-  ids.forEach((id) => {
+
+  idsSet.forEach((id) => {
+    let name = "";
+
+    // لو عندنا بيانات في cachedDrivers (أونلاين أو تم تحميله مسبقاً)
     const d = cachedDrivers[id];
-    const name = (d.firstName || "") + " " + (d.lastName || "");
+    if (d) {
+      name = `${d.firstName || ""} ${d.lastName || ""}`.trim();
+    }
+
+    // لو ما عندنا بيانات في drivers collection، نأخذ الاسم من النداءات
+    if (!name) {
+      const call = (lastCallsCache || []).find((c) => c.driverId === id);
+      if (call) {
+        name = `${call.driverFirstName || ""} ${call.driverLastName || ""}`.trim();
+      }
+    }
+
+    // لو لسه بدون اسم، نستخدم الـ id كحل أخير
+    if (!name) name = id;
+
     const opt = document.createElement("option");
     opt.value = id;
     opt.textContent = name;
     filterDriver.appendChild(opt);
   });
+
+  // نحافظ على الاختيار السابق إن وجد
   if (cur) filterDriver.value = cur;
 }
 
@@ -3947,17 +4381,31 @@ function applyLanguageToStaticUI() {
 
   renderMerchantCalls(lastCallsCache || []);
 }
+const LTR_LANGS = ["en", "de", "tr"];
+
+function updateDirection() {
+  const isLtr = LTR_LANGS.includes(currentLang);
+  document.documentElement.dir = isLtr ? "ltr" : "rtl";
+  document.body.classList.toggle("ltr-layout", isLtr);
+  document.body.classList.toggle("rtl-layout", !isLtr);
+}
 
 function initLanguage() {
   const select = document.getElementById("langSelect");
   const saved = localStorage.getItem("merchantLang");
+
   if (saved && I18N[saved]) {
     currentLang = saved;
   } else {
     currentLang = "ar";
   }
+
   document.documentElement.lang = currentLang;
   if (select) select.value = currentLang;
+
+  // اضبط الاتجاه أول مرة
+  updateDirection();
+  applyLanguageToStaticUI();
 
   if (select) {
     select.addEventListener("change", () => {
@@ -3966,12 +4414,11 @@ function initLanguage() {
         currentLang = val;
         document.documentElement.lang = val;
         localStorage.setItem("merchantLang", val);
-        applyLanguageToStaticUI();
+        updateDirection();          // غيّر RTL/LTR
+        applyLanguageToStaticUI();  // حدّث النصوص
       }
     });
   }
-
-  applyLanguageToStaticUI();
 }
 
 /* ========== Clean up when leave ========== */
