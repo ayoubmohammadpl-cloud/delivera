@@ -38,6 +38,19 @@
     .hidden { display:none; }
     .small { font-size:13px; color:var(--muted); }
     .btn-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.auth-lang-switcher {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+
+.auth-lang-switcher select {
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid #ddd;
+    font-size: 12px;
+    background: #f5f7ff;
+}
 
     .orders-list {
         max-height: 260px;
@@ -56,6 +69,17 @@
 
     .order-card { border:1px solid #eef; padding:10px; margin-bottom:8px; border-radius:8px; cursor:pointer; }
     .order-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .order-card-current {
+        border-color: #22c55e;
+        box-shadow: 0 0 0 0 rgba(34,197,94,0.7);
+        animation: driverActiveOrderPulse 1.2s ease-out infinite;
+    }
+
+    @keyframes driverActiveOrderPulse {
+        0%   { box-shadow: 0 0 0 0   rgba(34,197,94,0.7); }
+        70%  { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
+        100% { box-shadow: 0 0 0 0   rgba(34,197,94,0); }
+    }
 
     /* modal */
     .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; z-index:9999; }
@@ -577,7 +601,15 @@
 <body>
 
 <h2 id="mainHeader">نظام التوصيل — واجهة السائق</h2>
-
+<!-- 🔤 سويتشر اللغة في واجهة التسجيل -->
+<div class="auth-lang-switcher">
+    <select id="authLangSelect">
+        <option value="en">English</option>
+    <option value="de">Deutsch</option>
+    <option value="tr">Türkçe</option>
+    <option value="ar">العربية</option>
+    </select>
+</div>
 <!-- التبويبات -->
 <div class="tabs" id="authTabs">
     <div class="tab active" id="registerTab">تسجيل</div>
@@ -671,10 +703,13 @@
         <!-- ✅ اختيار اللغة تحت اسم السائق -->
         <div class="driver-lang-controls">
             <select id="langSelect">
-                <option value="en">English</option>
-                <option value="de">Deutsch</option>
-                <option value="ar">العربية</option>
-            </select>
+    <option value="en">English</option>
+    <option value="de">Deutsch</option>
+    <option value="tr">Türkçe</option>
+    <option value="ar">العربية</option>
+</select>
+
+
         </div>
     </div>
     <button id="driverSideCloseBtn" class="driver-icon-btn">✕</button>
@@ -997,6 +1032,8 @@ const translations = {
     orderCancelledByMerchant_message:
       "This order was cancelled by the merchant. The distance you have already driven will be charged according to your configured prices.",
     orderCancelledByMerchant_confirmBtn: "I understand",
+    alert_no_active_target:
+      "There is no active destination on the map right now. Please start navigating to the merchant or choose the customer's address first.",
 
   },
 
@@ -1171,6 +1208,8 @@ const translations = {
     orderCancelledByMerchant_message:
       "Diese Bestellung wurde vom Händler storniert. Die bereits gefahrene Strecke wird gemäß deinen hinterlegten Preisen abgerechnet.",
     orderCancelledByMerchant_confirmBtn: "Ich verstehe",
+    alert_no_active_target:
+      "Derzeit gibt es kein aktives Ziel auf der Karte. Bitte starte zuerst die Fahrt zum Händler oder wähle zunächst die Adresse des Kunden.",
 
   },
 
@@ -1341,8 +1380,191 @@ const translations = {
     orderCancelledByMerchant_message:
       "تم حذف هذا الطلب من قبل التاجر. سيتم احتساب المسافة التي قطعتها بناءً على أسعارك المسجّلة.",
     orderCancelledByMerchant_confirmBtn: "أتفهم ذلك",
+    alert_no_active_target:
+      "لا يوجد هدف نشط حالياً على الخريطة. رجاءً ابدأ التوجه إلى المتجر أو اختر عنوان العميل أولاً.",
+
+  },
+    tr: {
+    // Main header and tabs
+    mainHeader: "Teslimat Sistemi — Sürücü Arayüzü",
+    tab_register: "Kayıt ol",
+    tab_login: "Giriş yap",
+
+    // Register driver
+    driver_register_title: "Sürücü kaydı",
+    firstName_placeholder: "Ad",
+    lastName_placeholder: "Soyad",
+    address_placeholder: "Adres",
+    city_placeholder: "Şehir",
+    driverEmail_placeholder: "E-posta",
+    driverPhone_placeholder: "Telefon numarası",
+    driverPassword_placeholder: "Şifre (en az 6 karakter)",
+    register_submit: "Sürücüyü kaydet",
+
+    // Login
+    driver_login_title: "Sürücü girişi",
+    loginEmail_placeholder: "E-posta",
+    loginPassword_placeholder: "Şifre",
+    login_submit: "Giriş yap",
+
+    // Customer address
+    customerAddress_placeholder: "Müşteri adresini girin",
+    start_customer_nav: "Navigasyonu başlat",
+
+    // Online/offline button + bottom capsule
+    online_btn_online: "Durum: Çevrimiçi",
+    online_btn_offline: "Durum: Çevrimdışı",
+    status_hint_online: "Çevrimiçisiniz ve sipariş almaya hazırsınız",
+    status_hint_offline: "Şu anda çevrimdışısınız — çevrimiçi olmak için dokunun",
+    status_active_one: "1 aktif siparişiniz var",
+    status_active_many: "{count} aktif siparişiniz var",
+
+    // Side panel
+    side_menu_title: "Menü",
+    side_summary_title: "Sipariş özeti",
+    active_section_btn: "Aktif siparişler",
+    completed_section_btn: "Geçmiş siparişler",
+    pricing_section_btn: "Teslimat fiyatı",
+    logout: "Çıkış yap",
+
+    // Stats
+    summary_active_orders: "Aktif siparişler",
+    summary_completed_orders: "Geçmiş siparişler",
+    summary_earnings: "Kazançlar",
+
+    // Pricing (delivery settings)
+    pricing_intro:
+      "Her yolculuğun otomatik hesaplanması için teslimat ücretini ayarlayın.",
+    pricing_label_delivery: "İşletmeden teslim noktasına km başı fiyat (€)",
+    pricing_include_to_merchant: "Konumumdan işletmeye olan mesafeyi dahil et",
+    pricing_use_same_for_both: "Her iki rota için aynı fiyatı kullan",
+    pricing_label_to_merchant:
+      "Konumumdan işletmeye km başı fiyat (€)",
+    pricing_free_km: "İlk ücretsiz kilometre sayısı",
+    pricing_save_btn: "Kaydet",
+    pricing_base_fee_hint:
+      "Teslim edilen her sipariş için sabit temel ücret: {fee} €",
+    pricing_error_delivery_price:
+      "Lütfen işletmeden teslim noktasına km başına geçerli bir fiyat girin.",
+    pricing_error_to_merchant_price:
+      "Lütfen konumunuzdan işletmeye km başına geçerli bir fiyat girin.",
+    pricing_saved_success: "Fiyatlandırma ayarları başarıyla kaydedildi.",
+
+    // Footer
+    footer_text:
+      "Sürücü arayüzü — mesafe hesaplama için Firebase & Google Maps ile bağlı",
+
+    // Status labels
+    status_pending: "Beklemede",
+    status_accepted: "Kabul edildi",
+    status_inProgress: "Devam ediyor",
+    status_delivered: "Teslim edildi",
+    status_cancelled: "İptal edildi",
+    status_rejected: "Reddedildi",
+    status_unknown: "Bilinmiyor",
+
+    // Bottom sheet (current order)
+    currentOrder_btn_startToMerchant: "İşletmeye gitmeye başla",
+    currentOrder_btn_delivered: "Teslim edildi olarak işaretle",
+    currentOrder_btn_cancel: "İptal et",
+    currentOrder_expectedCost: "Tahmini ücret",
+
+    // Order details modal
+    orderDetails_title: "Sipariş detayları",
+    orderDetails_status: "Durum",
+    orderDetails_createdAt: "Sipariş zamanı",
+    orderDetails_startedAt: "Teslimat başlangıcı",
+    orderDetails_deliveredAt: "Teslimat zamanı",
+    orderDetails_merchant: "İşletme",
+    orderDetails_customerName: "Müşteri adı",
+    orderDetails_address: "Adres",
+    orderDetails_totalDistance: "Toplam mesafe",
+    orderDetails_deliveryCost: "Teslimat ücreti",
+    orderDetails_notes: "Notlar",
+    orderDetails_closeBtn: "Kapat",
+
+    // New call modal
+    newCall_title: "İşletmeden yeni çağrı",
+    newCall_merchant: "İşletme",
+    newCall_city: "Şehir",
+    newCall_time: "Zaman",
+    newCall_question: "Bu çağrıyı kabul etmek istiyor musunuz?",
+    newCall_btn_accept: "Kabul et",
+    newCall_btn_reject: "Reddet",
+
+    // Distance / units
+    distance_km_short: "km",
+
+    // Side list order cards
+    orderCard_status: "Durum",
+    orderCard_address: "Adres",
+    orderCard_expectedCost: "Tahmini ücret",
+    orderCard_totalDistance: "Toplam mesafe",
+    orderCard_finalCost: "Nihai ücret",
+
+    // Alerts / confirmations
+    alert_password_too_short:
+      "Şifre en az 6 karakter olmalıdır.",
+    alert_driver_register_success: "Sürücü başarıyla kaydedildi!",
+    alert_generic_error_prefix: "Hata: ",
+    alert_login_driver_only:
+      "Bu arayüz yalnızca sürücüler içindir. İşletmeyseniz lütfen işletme arayüzünü kullanın.",
+    alert_toggle_offline_with_active:
+      "Aktif bir sipariş varken çevrimdışı olamaz veya oturumu kapatamazsınız. Lütfen önce siparişi tamamlayın.",
+    alert_geo_failed_prefix:
+      "Konum alınamadı: ",
+    alert_geo_not_supported:
+      "Tarayıcınız konum alma özelliğini desteklemiyor.",
+    alert_status_update_failed:
+      "Durum güncellenirken hata oluştu: ",
+    alert_logout_forbidden_while_busy:
+      "Aktif bir sipariş veya kabul edilmiş çağrı varken çıkış yapamazsınız. Lütfen önce siparişi tamamlayın.",
+    alert_logout_failed: "Çıkış yapılırken hata oluştu: ",
+    alert_address_geocode_failed:
+      "Bu adres için konum alınamadı.",
+    alert_customer_address_required:
+      "Lütfen önce geçerli bir müşteri adresi seçin.",
+    alert_live_nav_not_supported:
+      "Tarayıcınız canlı navigasyonu desteklemiyor.",
+    alert_map_not_ready: "Harita henüz hazır değil.",
+    alert_call_update_failed:
+      "Çağrı durumu güncellenirken hata oluştu: ",
+    alert_currentDriverNotSet:
+      "Mevcut sürücü ayarlanmamış.",
+    alert_orderNotInDriverLog:
+      "Sipariş sürücü kaydında bulunamadı.",
+    alert_readOrderDetailsError:
+      "Sipariş detayları okunurken hata oluştu: ",
+    alert_cannotAcceptCallNoDriver:
+      "Çağrı kabul edilemedi: sürücü ayarlanmamış.",
+    alert_acceptCallError:
+      "Çağrı kabul edilirken hata oluştu: ",
+    alert_rejectCallError:
+      "Çağrı reddedilirken hata oluştu: ",
+    alert_orderNotFound:
+      "Bu sipariş bulunamadı.",
+    alert_driverStartError:
+      "Yolculuk başlangıcı kaydedilirken hata oluştu: ",
+    alert_driverStartSuccess:
+      "İşletmeye doğru yolculuk kaydedildi ve harita navigasyonu başlatıldı.",
+    alert_completeDeliveryError:
+      "Teslimat tamamlanırken hata oluştu: ",
+    alert_completeDeliverySuccess:
+      "Mesafe ve teslimat ücreti hesaplandı, sipariş durumu güncellendi.",
+    confirm_cancel_order:
+      "Bu siparişi iptal etmek istediğinizden emin misiniz?",
+
+    orderCancelledByMerchant_title: "Sipariş işletme tarafından iptal edildi",
+    orderCancelledByMerchant_message:
+      "Bu sipariş işletme tarafından iptal edildi. Şu ana kadar katettiğiniz mesafe, kayıtlı fiyatlarınıza göre hesaplanacaktır.",
+    orderCancelledByMerchant_confirmBtn: "Anladım",
+
+    alert_no_active_target:
+      "Şu anda haritada aktif bir hedef yok. Lütfen önce işletmeye doğru gitmeyi başlatın veya müşterinin adresini seçin.",
+ 
 
   }
+
 };
 
 
@@ -1354,7 +1576,9 @@ function t(key) {
 }
 
 function applyTranslations(lang) {
-  currentLang = ["en", "de", "ar"].includes(lang) ? lang : "en";
+    currentLang = ["en", "de", "tr", "ar"].includes(lang) ? lang : "en";
+
+
   const dict = translations[currentLang] || translations.en;
 
   // لغة و اتجاه الصفحة
@@ -2713,7 +2937,8 @@ function openExternalNavigationToCurrentTarget() {
 
   // 4) لو لا عميل ولا متجر → ما في هدف
   if (destLat == null || destLng == null) {
-    alert("لا يوجد هدف نشط حالياً على الخريطة. رجاءً ابدأ التوجه إلى المتجر أو اختر عنوان العميل أولاً.");
+        alert(t("alert_no_active_target"));
+
     return;
   }
 
@@ -3145,8 +3370,12 @@ async function handleMerchantCancelDistanceCharge(call, currentLat, currentLng) 
   // ⚠️ هنا النقطة المهمة: لا نضيف الرسم الأساسي → baseFee = 0
   const totalFee = distanceFee;
 
-  const patch = {
+    const patch = {
     // status يبقى "cancelled" كما هو
+
+    // ⬅️ هذا ما تقرأه واجهة المطعم في صندوق تكاليف التوصيل
+    deliveryFee: totalFee,
+
     distance: {
       driverToMerchantKm: distanceKm,
       merchantToDropoffKm: 0,
@@ -3683,8 +3912,10 @@ if (driverEarningsFloatingEl) {
 
 
   // الطلب النشط في الكرت العائم
-  const currentActiveCall = getCurrentActiveCall();
+    const currentActiveCall = getCurrentActiveCall();
   renderDriverCurrentOrder(currentActiveCall);
+  const currentActiveId = currentActiveCall ? currentActiveCall.id : null;
+
 
   // إظهار/إخفاء كبسولة الحالة السفلية
   if (driverBottomStatusEl) {
@@ -3702,10 +3933,11 @@ if (driverEarningsFloatingEl) {
   const addressLabelTitle = t("orderCard_address");
   const expectedCostTitle = t("orderCard_expectedCost");
 
-  // الطلبات الحالية
+    // الطلبات الحالية
   active.forEach((c) => {
     const card = document.createElement("div");
-    card.className = "order-card";
+    const isCurrent = currentActiveId && c.id === currentActiveId;
+    card.className = "order-card" + (isCurrent ? " order-card-current" : "");
 
     const statusLabel = escapeHtml(getStatusLabel(c.status));
     const feeLabel =
@@ -4295,16 +4527,32 @@ function closeOrderModal() {
   if (orderModalEl) orderModalEl.classList.add("hidden");
 }
 
-// ========== اختيار اللغة من القائمة الجانبية ==========
-const langSelect = document.getElementById("langSelect");
+// ========== اختيار اللغة (واجهة التسجيل + القائمة الجانبية) ==========
+const langSelect = document.getElementById("langSelect");        // داخل القائمة الجانبية
+const authLangSelect = document.getElementById("authLangSelect"); // في واجهة التسجيل
+
+function handleLanguageChange(lang) {
+  const finalLang = ["en", "de", "ar","tr"].includes(lang) ? lang : "en";
+
+  try {
+    localStorage.setItem("driverLang", finalLang);
+  } catch (e) {}
+
+  if (langSelect) langSelect.value = finalLang;
+  if (authLangSelect) authLangSelect.value = finalLang;
+
+  applyTranslations(finalLang);
+}
 
 if (langSelect) {
   langSelect.addEventListener("change", (e) => {
-    const lang = e.target.value || "en";
-    try {
-      localStorage.setItem("driverLang", lang);
-    } catch (err) {}
-    applyTranslations(lang);
+    handleLanguageChange(e.target.value || "en");
+  });
+}
+
+if (authLangSelect) {
+  authLangSelect.addEventListener("change", (e) => {
+    handleLanguageChange(e.target.value || "en");
   });
 }
 
@@ -4319,15 +4567,10 @@ if (langSelect) {
     const browserLang = (navigator.language || "en")
       .slice(0, 2)
       .toLowerCase();
-    saved = ["en", "de", "ar"].includes(browserLang) ? browserLang : "en";
+    saved = ["en", "de", "ar","tr"].includes(browserLang) ? browserLang : "en";
   }
 
-  if (langSelect) {
-    langSelect.value = saved;
-  }
-
-  // الافتراضي: EN إذا ما كان في شيء محفوظ
-  applyTranslations(saved || "en");
+  handleLanguageChange(saved || "en");
 })();
 
 /* ========== Clean up when leave ========== */
