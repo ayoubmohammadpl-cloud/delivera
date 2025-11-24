@@ -373,6 +373,25 @@ html[dir="ltr"] .online-drivers-card {
   box-shadow: 0 0 0 rgba(0, 0, 0, 0);
   border-color: #1d4ed8;
 }
+@keyframes merchant-active-order-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+    border-color: #22c55e;
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+    border-color: #22c55e;
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+    border-color: #22c55e;
+  }
+}
+
+.merchant-side-panel .order-card.active-call {
+  border-color: #22c55e;
+  animation: merchant-active-order-pulse 1.2s ease-out infinite;
+}
 
 /* أزرار ثانوية داخل القائمة */
 .merchant-side-panel button.secondary {
@@ -3582,35 +3601,44 @@ function renderMerchantCalls(allCalls) {
   }
 
   activeOrdersEl.innerHTML = "";
-  activeFiltered.forEach((c) => {
-    const driverName =
-      (cachedDrivers[c.driverId] &&
-        ((cachedDrivers[c.driverId].firstName || "") +
-          " " +
-          (cachedDrivers[c.driverId].lastName || ""))) ||
-      c.driverFirstName ||
-      "سائق";
+activeFiltered.forEach((c) => {
+  const driverName =
+    (cachedDrivers[c.driverId] &&
+      ((cachedDrivers[c.driverId].firstName || "") +
+        " " +
+        (cachedDrivers[c.driverId].lastName || ""))) ||
+    c.driverFirstName ||
+    "سائق";
 
-    const card = document.createElement("div");
-    card.className = "order-card";
-    card.innerHTML = `
-      <div style="display:flex; justify-content:space-between; gap:8px; align-items:center;">
-        <div>
-          <div><strong>#${getShortId(c.id)}</strong> — ${escapeHtml(driverName)}</div>
-          <div class="small">${t("callStatusLabel")}: ${escapeHtml(
-            c.status || "pending"
-          )} — ${formatDate(c._date)}</div>
-        </div>
+  // الطلب النشط: السائق في الطريق للتاجر أو للعميل
+  const isLiveTrip =
+    isStatusHeadingToMerchant(c.status) ||
+    isStatusHeadingToCustomer(c.status);
+
+  const card = document.createElement("div");
+  card.className = "order-card";
+  if (isLiveTrip) {
+    card.classList.add("active-call"); // إطار أخضر نابض
+  }
+
+  card.innerHTML = `
+    <div style="display:flex; justify-content:space-between; gap:8px; align-items:center;">
+      <div>
+        <div><strong>#${getShortId(c.id)}</strong> — ${escapeHtml(driverName)}</div>
+        <div class="small">${t("callStatusLabel")}: ${escapeHtml(
+          c.status || "pending"
+        )} — ${formatDate(c._date)}</div>
       </div>
-    `;
+    </div>
+  `;
 
-    activeOrdersEl.appendChild(card);
+  activeOrdersEl.appendChild(card);
 
-    card.addEventListener("click", (e) => {
-      if (e.target.tagName.toLowerCase() === "button") return;
-      viewOrderDetails(c.id);
-    });
+  card.addEventListener("click", (e) => {
+    if (e.target.tagName.toLowerCase() === "button") return;
+    viewOrderDetails(c.id);
   });
+});
 
   completedOrdersEl.innerHTML = "";
   completedFiltered.forEach((c) => {
