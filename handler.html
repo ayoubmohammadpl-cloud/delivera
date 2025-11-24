@@ -14,6 +14,26 @@
     :root{--primary:#4285F4;--card-bg:#fff;--muted:#666;}
     body { font-family: Arial, sans-serif; direction: rtl; padding: 20px; background: #f3f6fb; color:#222; }
     h2 { text-align: center; margin-bottom: 10px; }
+
+    /* language switcher (فقط في شاشة التسجيل/الدخول) */
+    .lang-switcher {
+      max-width: 520px;
+      margin: 0 auto 10px;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+    .lang-switcher select {
+      width: auto;
+      min-width: 120px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      background: #fff;
+    }
+
     .tabs { display: flex; justify-content: center; gap:10px; margin-bottom: 20px; }
     .tab { padding: 10px 18px; border-radius: 8px; cursor: pointer; background: #e6eefc; color: #124; }
     .tab.active { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(66,133,244,0.3); }
@@ -151,13 +171,46 @@ body.merchant-mode {
 .topbar-earnings strong {
   font-size: 14px;
 }
+/* كرت عدد السائقين الأونلاين (منفصل عن الشريط العلوي) */
+.online-drivers-card {
+  position: absolute;
+  top: 2px;
+  left: -150px;
+  background: #ffffff;
+  color: #111827;
+  padding: 6px 12px;
+  border-radius: 16px;
+  box-shadow: 0 20px 25px rgba(15, 23, 42, 0.35);
+  font-size: 13px;
+  line-height: 1.4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  z-index: 11;
+  direction: rtl;
+  text-align: center;
+  overflow: visible;
+}
+
+.online-drivers-card .label {
+  color: #4b5563;
+  font-size: 14px;
+}
+
+.online-drivers-card .count {
+  font-weight: 700;
+  font-size: 18px;
+  color: #22c55e;
+}
 
 /* القائمة الجانبية (يمين) */
 .merchant-side-panel {
   position: fixed;
   top: 0;
   right: 0;
-  width: 320px;
+  width: 380px;
   max-width: 80%;
   height: 100vh;
   background: #020617;
@@ -296,7 +349,7 @@ body.merchant-mode {
 /* ==== Toast notifications ==== */
 .toast-container {
   position: fixed;
-  bottom: 18px;              /* 🔼 بدل top: 100px; */
+  bottom: 18px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 9999;
@@ -341,8 +394,8 @@ body.merchant-mode {
 }
 /* زر مناداة السائق داخل البالون */
 .call-btn {
-  color: #fff !important;    /* لون الخط أبيض */
-  font-weight: 700;          /* خط سميك */
+  color: #fff !important;
+  font-weight: 700;
 }
 
 </style>
@@ -350,6 +403,17 @@ body.merchant-mode {
 <body>
 
 <h2 id="mainHeader">نظام التوصيل — واجهة التاجر</h2>
+
+<!-- language switcher (فقط على شاشة التسجيل/الدخول) -->
+<div id="langSwitcher" class="lang-switcher">
+  <label id="langLabel" for="langSelect">اللغة:</label>
+  <select id="langSelect">
+    <option value="ar">العربية</option>
+    <option value="de">Deutsch</option>
+    <option value="en">English</option>
+    <option value="tr">Türkçe</option>
+  </select>
+</div>
 
 <!-- التبويبات -->
 <div class="tabs" id="authTabs">
@@ -398,6 +462,11 @@ body.merchant-mode {
       <div id="merchantEarnings" class="topbar-earnings">
         إجمالي التوصيل<br><strong>0 €</strong>
       </div>
+      <!-- صندوق عدد السائقين الأونلاين -->
+      <div id="onlineDriversBadge" class="online-drivers-card">
+        <span class="label">السائقون المتاحون</span>
+        <span class="count">0</span>
+      </div>
     </div>
 
     <!-- القائمة الجانبية -->
@@ -414,20 +483,20 @@ body.merchant-mode {
         <!-- الإحصاءات -->
         <div class="stat-row">
           <div class="stat" id="countActive">
-            النداءات النشطة<br /><strong>0</strong>
+            الأوامر النشطة<br /><strong>0</strong>
           </div>
           <div class="stat" id="countCompleted">
-            النداءات السابقة<br /><strong>0</strong>
+            الأوامر السابقة<br /><strong>0</strong>
           </div>
           <div class="stat" id="totalDelivery">
-            إجمالي التوصيل<br /><strong>0</strong>
+            تكاليف التوصيل<br /><strong>0</strong>
           </div>
         </div>
 
         <!-- الطلبات النشطة -->
         <div class="panel-section">
           <div class="flex-between">
-            <div><strong>الطلبات النشطة</strong></div>
+            <div><strong id="activeOrdersTitle">الطلبات النشطة</strong></div>
             <div class="controls">
               <select id="filterDriver">
                 <option value="">الجميع</option>
@@ -446,7 +515,7 @@ body.merchant-mode {
         <!-- الطلبات السابقة -->
         <div class="panel-section">
           <div class="flex-between">
-            <div><strong>الطلبات السابقة</strong></div>
+            <div><strong id="completedOrdersTitle">الطلبات السابقة</strong></div>
             <div class="controls">
               <button id="exportCsv" class="secondary">تصدير CSV</button>
               <button id="printBtn" class="secondary">طباعة</button>
@@ -477,7 +546,7 @@ body.merchant-mode {
         <div class="modal">
             <div class="flex-between">
                 <h3>تفاصيل الطلب</h3>
-                <button id="closeModal" class="secondary">إغلاق</button>
+                
             </div>
             <div id="modalContent" style="margin-top:12px;"></div>
         </div>
@@ -506,6 +575,469 @@ body.merchant-mode {
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCUMgXQwwe7afBlRpp6zrXunbTVSCXfSqQ&libraries=geometry"></script>
 
 <script>
+/* ========== الترجمة (i18n) الأساسية ========== */
+const I18N = {
+  ar: {
+    pageTitle: "نظام التوصيل — واجهة التاجر",
+    mainHeader: "نظام التوصيل — واجهة التاجر",
+    languageLabel: "اللغة:",
+    tabRegister: "تسجيل",
+    tabLogin: "تسجيل الدخول",
+    registerTitle: "تسجيل تاجر",
+    storeNamePlaceholder: "اسم المتجر",
+    storeAddressPlaceholder: "عنوان المتجر",
+    storeCityPlaceholder: "المدينة",
+    storePhonePlaceholder: "رقم هاتف المتجر",
+    contactNamePlaceholder: "اسم جهة الاتصال",
+    contactPhonePlaceholder: "رقم هاتف جهة الاتصال",
+    contactEmailPlaceholder: "ايميل جهة الاتصال",
+    merchantPasswordPlaceholder: "كلمة السر (6+ حروف)",
+    registerSubmit: "تسجيل التاجر",
+    loginTitle: "تسجيل الدخول (تاجر)",
+    loginEmailPlaceholder: "البريد الإلكتروني",
+    loginPasswordPlaceholder: "كلمة السر",
+    loginSubmit: "تسجيل الدخول",
+    topbarOnline: "متصل",
+    topbarOffline: "غير متصل",
+    topbarTotalDelivery: "تكاليف التوصيل",
+    onlineDriversLabel: "السائقون المتاحون",
+    statsActiveCalls: "الأوامر النشطة",
+    statsPastCalls: "الأوامر السابقة",
+    statsTotalDelivery: "تكاليف التوصيل",
+    activeOrdersTitle: "الأوامر النشطة",
+    completedOrdersTitle: "الأوامر السابقة",
+    filterAllDrivers: "الجميع",
+    sortDateDesc: "الأحدث أولاً",
+    sortDateAsc: "الأقدم أولاً",
+    sortDriverAsc: "السائق أ-ي",
+    sortDriverDesc: "السائق ي-أ",
+    exportCsv: "تصدير CSV",
+    print: "طباعة",
+    logout: "تسجيل خروج",
+        callStatusLabel: "حالة النداء",
+    toastNoMerchant: "لا يمكن إرسال نداء: لم يتم تحديد التاجر الحالي.",
+    toastOffline: "لا يمكنك إرسال نداءات وأنت في وضع أوفلاين. الرجاء التحويل إلى أونلاين أولاً.",
+    toastDriverBusy: "السائق مشغول حالياً ولا يمكن مناداته.",
+    toastCallSentPrefix: "تم إرسال نداء للسائق",
+    toastErrorSendCallPrefix: "خطأ أثناء إرسال النداء:",
+    toastDriverHeadingMerchantWithName: "السائق {{name}} في طريقه إليك",
+    toastDriverHeadingMerchantNoName: "السائق في طريقه إليك",
+    toastDriverHeadingCustomerWithName: "السائق {{name}} في طريقه للعميل",
+    toastDriverHeadingCustomerNoName: "السائق في طريقه للعميل",
+// === CSV / Print ===
+    csvHeaderId: "المعرّف",
+    csvHeaderDriverId: "معرّف السائق",
+    csvHeaderDriverName: "اسم السائق",
+    csvHeaderStatus: "الحالة",
+    csvHeaderRequestTime: "وقت الطلب",
+    csvHeaderResponseTime: "وقت الاستجابة",
+    csvHeaderMerchantName: "اسم التاجر",
+    csvHeaderMerchantCity: "مدينة التاجر",
+
+    alertNoExportForDriver: "لا توجد طلبات سابقة لهذا السائق للتصدير.",
+    alertNoExportAll: "لا توجد طلبات للتصدير.",
+    alertNoPrintForDriver: "لا توجد طلبات سابقة لهذا السائق للطباعة.",
+    alertNoPrintAll: "لا توجد طلبات سابقة للطباعة.",
+
+    printCallsTitle: "طباعة النداءات",
+    printCallsHeadingAll: "النداءات السابقة",
+    printCallsHeadingForDriver: "النداءات السابقة — {{driverName}}",
+    printMerchantLabel: "المتجر",
+
+    printSingleOrderTitlePrefix: "طلب",
+    printSingleOrderHeadingPrefix: "طلب",
+    printSingleOrderDriverLabel: "السائق",
+    printSingleOrderDriverPhoneLabel: "هاتف السائق",
+    printSingleOrderCustomerLabel: "العميل",
+    printSingleOrderAddressLabel: "العنوان",
+    printSingleOrderCostLabel: "التكلفة",
+	    // === Order details modal ===
+    orderDetailsModalTitle: "تفاصيل الطلب",
+    orderDetailsHeadingPrefix: "طلب / نداء",
+    orderDetailsStatusLabel: "الحالة",
+    orderDetailsDateLabel: "تاريخ",
+    orderDetailsDriverLabel: "السائق",
+    orderDetailsDriverPhoneLabel: "هاتف السائق",
+    orderDetailsCityLabel: "المدينة",
+    orderDetailsCustomerNameLabel: "اسم العميل",
+    orderDetailsAddressLabel: "العنوان",
+    orderDetailsTotalDistanceLabel: "المسافة الكلية المقطوعة",
+    orderDetailsSegmentDistancesLabel: "من السائق إلى التاجر: {{d1}} / من التاجر إلى نقطة التسليم: {{d2}}",
+    orderDetailsDeliveryCostLabel: "تكلفة التوصيل",
+    orderDetailsNotesLabel: "ملاحظات",
+    orderDetailsPrintBtn: "طباعة",
+    orderDetailsCancelBtn: "إلغاء",
+    orderDetailsCloseBtn: "إغلاق",
+
+    // Alerts / confirm
+    confirmCancelOrder: "هل ترغب فعلاً في إلغاء هذا الطلب؟",
+    alertMerchantNotSet: "لم يتم تحديد التاجر.",
+    alertOrderNotFound: "طلب غير موجود",
+    alertCancelOrderErrorPrefix: "خطأ أثناء إلغاء الطلب: ",
+
+  },
+  en: {
+    pageTitle: "Delivery System — Merchant Interface",
+    mainHeader: "Delivery System — Merchant Interface",
+    languageLabel: "Language:",
+    tabRegister: "Register",
+    tabLogin: "Login",
+    registerTitle: "Merchant registration",
+    storeNamePlaceholder: "Store name",
+    storeAddressPlaceholder: "Store address",
+    storeCityPlaceholder: "City",
+    storePhonePlaceholder: "Store phone number",
+    contactNamePlaceholder: "Contact person name",
+    contactPhonePlaceholder: "Contact person phone",
+    contactEmailPlaceholder: "Contact email",
+    merchantPasswordPlaceholder: "Password (6+ characters)",
+    registerSubmit: "Register merchant",
+    loginTitle: "Login (merchant)",
+    loginEmailPlaceholder: "Email",
+    loginPasswordPlaceholder: "Password",
+    loginSubmit: "Login",
+    topbarOnline: "Online",
+    topbarOffline: "Offline",
+    topbarTotalDelivery: "Total delivery",
+    onlineDriversLabel: "Available drivers",
+    statsActiveCalls: "Active calls",
+    statsPastCalls: "Past calls",
+    statsTotalDelivery: "Total delivery",
+    activeOrdersTitle: "Active orders",
+    completedOrdersTitle: "Past orders",
+    filterAllDrivers: "All",
+    sortDateDesc: "Newest first",
+    sortDateAsc: "Oldest first",
+    sortDriverAsc: "Driver A–Z",
+    sortDriverDesc: "Driver Z–A",
+    exportCsv: "Export CSV",
+    print: "Print",
+    logout: "Logout",
+    
+	    callStatusLabel: "Call status",
+    toastNoMerchant: "Cannot send a call: current merchant is not set.",
+    toastOffline: "You can't send calls while you are offline. Please switch to online first.",
+    toastDriverBusy: "The driver is currently busy and cannot be called.",
+    toastCallSentPrefix: "Call sent to driver",
+    toastErrorSendCallPrefix: "Error while sending the call:",
+    toastDriverHeadingMerchantWithName: "Driver {{name}} is on the way to you",
+    toastDriverHeadingMerchantNoName: "The driver is on the way to you",
+    toastDriverHeadingCustomerWithName: "Driver {{name}} is on the way to the customer",
+    toastDriverHeadingCustomerNoName: "The driver is on the way to the customer",
+// === CSV / Print ===
+    csvHeaderId: "ID",
+    csvHeaderDriverId: "Driver ID",
+    csvHeaderDriverName: "Driver name",
+    csvHeaderStatus: "Status",
+    csvHeaderRequestTime: "Request time",
+    csvHeaderResponseTime: "Response time",
+    csvHeaderMerchantName: "Merchant name",
+    csvHeaderMerchantCity: "Merchant city",
+
+    alertNoExportForDriver: "There are no past orders for this driver to export.",
+    alertNoExportAll: "There are no orders to export.",
+    alertNoPrintForDriver: "There are no past orders for this driver to print.",
+    alertNoPrintAll: "There are no past orders to print.",
+
+    printCallsTitle: "Print calls",
+    printCallsHeadingAll: "Past calls",
+    printCallsHeadingForDriver: "Past calls — {{driverName}}",
+    printMerchantLabel: "Merchant",
+
+    printSingleOrderTitlePrefix: "Order",
+    printSingleOrderHeadingPrefix: "Order",
+    printSingleOrderDriverLabel: "Driver",
+    printSingleOrderDriverPhoneLabel: "Driver phone",
+    printSingleOrderCustomerLabel: "Customer",
+    printSingleOrderAddressLabel: "Address",
+    printSingleOrderCostLabel: "Cost",
+	    // === Order details modal ===
+    orderDetailsModalTitle: "Order details",
+    orderDetailsHeadingPrefix: "Order / Call",
+    orderDetailsStatusLabel: "Status",
+    orderDetailsDateLabel: "Date",
+    orderDetailsDriverLabel: "Driver",
+    orderDetailsDriverPhoneLabel: "Driver phone",
+    orderDetailsCityLabel: "City",
+    orderDetailsCustomerNameLabel: "Customer name",
+    orderDetailsAddressLabel: "Address",
+    orderDetailsTotalDistanceLabel: "Total distance travelled",
+    orderDetailsSegmentDistancesLabel: "Driver → merchant: {{d1}} / Merchant → drop-off: {{d2}}",
+    orderDetailsDeliveryCostLabel: "Delivery cost",
+    orderDetailsNotesLabel: "Notes",
+    orderDetailsPrintBtn: "Print",
+    orderDetailsCancelBtn: "Cancel",
+    orderDetailsCloseBtn: "Close",
+
+    // Alerts / confirm
+    confirmCancelOrder: "Do you really want to cancel this order?",
+    alertMerchantNotSet: "Merchant is not set.",
+    alertOrderNotFound: "Order not found.",
+    alertCancelOrderErrorPrefix: "Error while cancelling the order: ",
+
+  },
+  de: {
+    pageTitle: "Liefersystem — Händleroberfläche",
+    mainHeader: "Liefersystem — Händleroberfläche",
+    languageLabel: "Sprache:",
+    tabRegister: "Registrieren",
+    tabLogin: "Anmelden",
+    registerTitle: "Händler registrieren",
+    storeNamePlaceholder: "Name des Geschäfts",
+    storeAddressPlaceholder: "Adresse des Geschäfts",
+    storeCityPlaceholder: "Stadt",
+    storePhonePlaceholder: "Telefon des Geschäfts",
+    contactNamePlaceholder: "Ansprechperson",
+    contactPhonePlaceholder: "Telefon der Ansprechperson",
+    contactEmailPlaceholder: "E-Mail der Ansprechperson",
+    merchantPasswordPlaceholder: "Passwort (mind. 6 Zeichen)",
+    registerSubmit: "Händler registrieren",
+    loginTitle: "Anmeldung (Händler)",
+    loginEmailPlaceholder: "E-Mail",
+    loginPasswordPlaceholder: "Passwort",
+    loginSubmit: "Anmelden",
+    topbarOnline: "Online",
+    topbarOffline: "Offline",
+    topbarTotalDelivery: "Lieferkosten",
+    onlineDriversLabel: "Verfügbare Fahrer",
+    statsActiveCalls: "Aktive Lieferung",
+    statsPastCalls: "Alte Lieferung",
+    statsTotalDelivery: "Lieferkosten",
+    activeOrdersTitle: "Aktive Lieferung",
+    completedOrdersTitle: "Alte Lieferungen",
+    filterAllDrivers: "Alle",
+    sortDateDesc: "Neueste zuerst",
+    sortDateAsc: "Älteste zuerst",
+    sortDriverAsc: "Fahrer A–Z",
+    sortDriverDesc: "Fahrer Z–A",
+    exportCsv: "CSV exportieren",
+    print: "Drucken",
+    logout: "Abmelden",
+        callStatusLabel: "Anfragestatus",
+    toastNoMerchant: "Anfrage kann nicht gesendet werden: aktueller Händler ist nicht festgelegt.",
+    toastOffline: "Sie können keine Anfragen senden, während Sie offline sind. Bitte gehen Sie zuerst online.",
+    toastDriverBusy: "Der Fahrer ist momentan beschäftigt und kann nicht angefragt werden.",
+    toastCallSentPrefix: "Anfrage an Fahrer gesendet",
+    toastErrorSendCallPrefix: "Fehler beim Senden der Anfrage:",
+    toastDriverHeadingMerchantWithName: "Fahrer {{name}} ist auf dem Weg zu Ihnen",
+    toastDriverHeadingMerchantNoName: "Der Fahrer ist auf dem Weg zu Ihnen",
+    toastDriverHeadingCustomerWithName: "Fahrer {{name}} ist auf dem Weg zum Kunden",
+    toastDriverHeadingCustomerNoName: "Der Fahrer ist auf dem Weg zum Kunden",
+// === CSV / Print ===
+    csvHeaderId: "ID",
+    csvHeaderDriverId: "Fahrer-ID",
+    csvHeaderDriverName: "Fahrername",
+    csvHeaderStatus: "Status",
+    csvHeaderRequestTime: "Anfragezeit",
+    csvHeaderResponseTime: "Antwortzeit",
+    csvHeaderMerchantName: "Händlername",
+    csvHeaderMerchantCity: "Händlerstadt",
+
+    alertNoExportForDriver: "Für diesen Fahrer gibt es keine früheren Bestellungen zum Exportieren.",
+    alertNoExportAll: "Es gibt keine Bestellungen zum Exportieren.",
+    alertNoPrintForDriver: "Für diesen Fahrer gibt es keine früheren Bestellungen zum Drucken.",
+    alertNoPrintAll: "Es gibt keine früheren Bestellungen zum Drucken.",
+
+    printCallsTitle: "Anfragen drucken",
+    printCallsHeadingAll: "Frühere Anfragen",
+    printCallsHeadingForDriver: "Frühere Anfragen — {{driverName}}",
+    printMerchantLabel: "Händler",
+
+    printSingleOrderTitlePrefix: "Bestellung",
+    printSingleOrderHeadingPrefix: "Bestellung",
+    printSingleOrderDriverLabel: "Fahrer",
+    printSingleOrderDriverPhoneLabel: "Fahrertelefon",
+    printSingleOrderCustomerLabel: "Kunde",
+    printSingleOrderAddressLabel: "Adresse",
+    printSingleOrderCostLabel: "Kosten",
+	    // === Order details modal ===
+    orderDetailsModalTitle: "Bestelldetails",
+    orderDetailsHeadingPrefix: "Bestellung / Anfrage",
+    orderDetailsStatusLabel: "Status",
+    orderDetailsDateLabel: "Datum",
+    orderDetailsDriverLabel: "Fahrer",
+    orderDetailsDriverPhoneLabel: "Fahrertelefon",
+    orderDetailsCityLabel: "Stadt",
+    orderDetailsCustomerNameLabel: "Kundenname",
+    orderDetailsAddressLabel: "Adresse",
+    orderDetailsTotalDistanceLabel: "Gesamt zurückgelegte Strecke",
+    orderDetailsSegmentDistancesLabel: "Vom Fahrer zum Händler: {{d1}} / Vom Händler zum Ziel: {{d2}}",
+    orderDetailsDeliveryCostLabel: "Lieferkosten",
+    orderDetailsNotesLabel: "Notizen",
+    orderDetailsPrintBtn: "Drucken",
+    orderDetailsCancelBtn: "Stornieren",
+    orderDetailsCloseBtn: "Schließen",
+
+    // Alerts / confirm
+    confirmCancelOrder: "Möchten Sie diese Bestellung wirklich stornieren?",
+    alertMerchantNotSet: "Händler ist nicht gesetzt.",
+    alertOrderNotFound: "Bestellung nicht gefunden.",
+    alertCancelOrderErrorPrefix: "Fehler beim Stornieren der Bestellung: ",
+
+  },
+  tr: {
+    pageTitle: "Teslimat Sistemi — İşletme Arayüzü",
+    mainHeader: "Teslimat Sistemi — İşletme Arayüzü",
+    languageLabel: "Dil:",
+    tabRegister: "Kayıt ol",
+    tabLogin: "Giriş yap",
+    registerTitle: "İşletme kaydı",
+    storeNamePlaceholder: "İşletme adı",
+    storeAddressPlaceholder: "İşletme adresi",
+    storeCityPlaceholder: "Şehir",
+    storePhonePlaceholder: "İşletme telefonu",
+    contactNamePlaceholder: "Yetkili kişi adı",
+    contactPhonePlaceholder: "Yetkili telefonu",
+    contactEmailPlaceholder: "Yetkili e-posta",
+    merchantPasswordPlaceholder: "Şifre (en az 6 karakter)",
+    registerSubmit: "İşletmeyi kaydet",
+    loginTitle: "Giriş (işletme)",
+    loginEmailPlaceholder: "E-posta",
+    loginPasswordPlaceholder: "Şifre",
+    loginSubmit: "Giriş yap",
+    topbarOnline: "Çevrimiçi",
+    topbarOffline: "Çevrimdışı",
+    topbarTotalDelivery: "Toplam teslimat",
+    onlineDriversLabel: "Müsait sürücüler",
+    statsActiveCalls: "Aktif çağrılar",
+    statsPastCalls: "Geçmiş çağrılar",
+    statsTotalDelivery: "Toplam teslimat",
+    activeOrdersTitle: "Aktif siparişler",
+    completedOrdersTitle: "Geçmiş siparişler",
+    filterAllDrivers: "Tümü",
+    sortDateDesc: "En yeni önce",
+    sortDateAsc: "En eski önce",
+    sortDriverAsc: "Sürücü A–Z",
+    sortDriverDesc: "Sürücü Z–A",
+    exportCsv: "CSV dışa aktar",
+    print: "Yazdır",
+    logout: "Çıkış yap",
+        callStatusLabel: "Çağrı durumu",
+    toastNoMerchant: "Çağrı gönderilemiyor: geçerli işletme tanımlı değil.",
+    toastOffline: "Çevrimdışıyken çağrı gönderemezsiniz. Lütfen önce çevrimiçi moda geçin.",
+    toastDriverBusy: "Sürücü şu anda meşgul, çağrı gönderilemez.",
+    toastCallSentPrefix: "Sürücüye çağrı gönderildi",
+    toastErrorSendCallPrefix: "Çağrı gönderilirken hata oluştu:",
+    toastDriverHeadingMerchantWithName: "Sürücü {{name}} size doğru yolda",
+    toastDriverHeadingMerchantNoName: "Sürücü size doğru yolda",
+    toastDriverHeadingCustomerWithName: "Sürücü {{name}} müşteriye doğru yolda",
+    toastDriverHeadingCustomerNoName: "Sürücü müşteriye doğru yolda",
+// === CSV / Print ===
+    csvHeaderId: "ID",
+    csvHeaderDriverId: "Sürücü ID",
+    csvHeaderDriverName: "Sürücü adı",
+    csvHeaderStatus: "Durum",
+    csvHeaderRequestTime: "Çağrı zamanı",
+    csvHeaderResponseTime: "Yanıt zamanı",
+    csvHeaderMerchantName: "İşletme adı",
+    csvHeaderMerchantCity: "İşletme şehri",
+
+    alertNoExportForDriver: "Bu sürücü için dışa aktarılacak geçmiş sipariş yok.",
+    alertNoExportAll: "Dışa aktarılacak sipariş yok.",
+    alertNoPrintForDriver: "Bu sürücü için yazdırılacak geçmiş sipariş yok.",
+    alertNoPrintAll: "Yazdırılacak geçmiş sipariş yok.",
+
+    printCallsTitle: "Çağrıları yazdır",
+    printCallsHeadingAll: "Geçmiş çağrılar",
+    printCallsHeadingForDriver: "Geçmiş çağrılar — {{driverName}}",
+    printMerchantLabel: "İşletme",
+
+    printSingleOrderTitlePrefix: "Sipariş",
+    printSingleOrderHeadingPrefix: "Sipariş",
+    printSingleOrderDriverLabel: "Sürücü",
+    printSingleOrderDriverPhoneLabel: "Sürücü telefonu",
+    printSingleOrderCustomerLabel: "Müşteri",
+    printSingleOrderAddressLabel: "Adres",
+    printSingleOrderCostLabel: "Ücret",
+	    // === Order details modal ===
+    orderDetailsModalTitle: "Sipariş detayları",
+    orderDetailsHeadingPrefix: "Sipariş / Çağrı",
+    orderDetailsStatusLabel: "Durum",
+    orderDetailsDateLabel: "Tarih",
+    orderDetailsDriverLabel: "Sürücü",
+    orderDetailsDriverPhoneLabel: "Sürücü telefonu",
+    orderDetailsCityLabel: "Şehir",
+    orderDetailsCustomerNameLabel: "Müşteri adı",
+    orderDetailsAddressLabel: "Adres",
+    orderDetailsTotalDistanceLabel: "Toplam gidilen mesafe",
+    orderDetailsSegmentDistancesLabel: "Sürücü → işletme: {{d1}} / İşletme → teslimat noktası: {{d2}}",
+    orderDetailsDeliveryCostLabel: "Teslimat ücreti",
+    orderDetailsNotesLabel: "Notlar",
+    orderDetailsPrintBtn: "Yazdır",
+    orderDetailsCancelBtn: "İptal et",
+    orderDetailsCloseBtn: "Kapat",
+
+    // Alerts / confirm
+    confirmCancelOrder: "Bu siparişi gerçekten iptal etmek istiyor musunuz?",
+    alertMerchantNotSet: "İşletme tanımlı değil.",
+    alertOrderNotFound: "Sipariş bulunamadı.",
+    alertCancelOrderErrorPrefix: "Sipariş iptal edilirken hata oluştu: ",
+
+  }
+};
+
+let currentLang = "ar";
+function t(key) {
+  const dict = I18N[currentLang] || I18N.ar;
+  if (dict && Object.prototype.hasOwnProperty.call(dict, key)) {
+    return dict[key];
+  }
+  if (I18N.ar && Object.prototype.hasOwnProperty.call(I18N.ar, key)) {
+    return I18N.ar[key];
+  }
+  return key;
+}
+// === ترجمة بالون الـ ETA حسب currentLang ===
+function getEtaArrivedText() {
+  const lang = currentLang || "ar";
+  switch (lang) {
+    case "en":
+      return "Arriving now";
+    case "de":
+      return "Kommt gleich an";
+    case "tr":
+      return "Neredeyse geldi";
+    default: // ar
+      return "وصل تقريباً";
+  }
+}
+
+function getEtaLabelText(remainingSeconds) {
+  const lang = currentLang || "ar";
+  const mins = Math.floor(remainingSeconds / 60);
+  const secs = remainingSeconds % 60;
+  const mmss = `${mins}:${String(secs).padStart(2, "0")}`;
+
+  switch (lang) {
+    case "en":
+      return `🕒 ETA in ${mmss} min`;
+    case "de":
+      return `🕒 Voraussichtliche Ankunft in ${mmss} Min`;
+    case "tr":
+      return `🕒 Tahmini varış ${mmss} dk içinde`;
+    default: // ar
+      return `🕒 متوقع خلال ${mmss} دقيقة`;
+  }
+}
+
+function getNearCountdownText(secondsLeft) {
+  const lang = currentLang || "ar";
+  const mins = Math.floor(secondsLeft / 60);
+  const secs = secondsLeft % 60;
+  const mmss = `${mins}:${String(secs).padStart(2, "0")}`;
+
+  switch (lang) {
+    case "en":
+      return `⏳ Arriving in ${mmss}`;
+    case "de":
+      return `⏳ Ankunft in ${mmss}`;
+    case "tr":
+      return `⏳ Yaklaşık ${mmss} içinde varır`;
+    default: // ar
+      return `⏳ يصل خلال ${mmss}`;
+  }
+}
+
 /* ========== إعداد Firebase ========== */
 const firebaseConfig = {
   apiKey: "AIzaSyBhiKPw7M3NMCOhzoBJJyI9enOa6qZQnHc",
@@ -553,7 +1085,7 @@ const printBtn = document.getElementById("printBtn");
 
 const modalBackdrop = document.getElementById("modalBackdrop");
 const modalContent = document.getElementById("modalContent");
-const closeModal = document.getElementById("closeModal");
+
 const orderModalEl = document.getElementById("orderModal");
 /* ========== Toast helper ========== */
 const toastContainer = document.getElementById("toastContainer");
@@ -575,7 +1107,6 @@ function showToast(message, type = "success") {
   toast.appendChild(textSpan);
   toastContainer.appendChild(toast);
 
-  // إزالة التوست بعد قليل
   setTimeout(() => {
     toast.classList.add("fade-out");
     toast.addEventListener("transitionend", () => {
@@ -588,6 +1119,8 @@ function showToast(message, type = "success") {
 const merchantMenuBtn = document.getElementById("merchantMenuBtn");
 const merchantOnlineToggle = document.getElementById("merchantOnlineToggle");
 const merchantEarningsTopEl = document.getElementById("merchantEarnings");
+const onlineDriversBadge = document.getElementById("onlineDriversBadge");
+
 const merchantSidePanel = document.getElementById("merchantSidePanel");
 const merchantSidePanelBackdrop = document.getElementById("merchantSidePanelBackdrop");
 const closeSidePanelBtn = document.getElementById("closeSidePanel");
@@ -605,25 +1138,40 @@ let playMerchantOnlineSoundNext = false;
 /* ========== متغيّرات الخريطة والسائقين ========== */
 let map;
 let driverMarkers = {};
-let merchantMarker = null;        // ✅ تعريف واحد فقط هنا
+let merchantMarker = null;
 let ordersListenerUnsub = null;
 let driversListenerUnsub = null;
 let merchantCallsListenerUnsub = null;
 let currentMerchantId = null;
 let cachedDrivers = {}; // id -> data
 let lastCallsCache = [];
+function hasActiveCallForDriver(driverId) {
+  const completedStatuses = [
+    "rejected",
+    "cancelled",
+    "completed",
+    "finished",
+    "delivered"
+  ];
+
+  return lastCallsCache.some((c) => {
+    if (c.driverId !== driverId) return false;
+    const st = (c.status || "pending").toLowerCase();
+    return !completedStatuses.includes(st);
+  });
+}
+
 let merchantLocationLat = null;
 let merchantLocationLng = null;
 let directionsService = null;
 
-// ✅ تتبع نداء/سائق معيّن لهذا التاجر
 let currentTrackedCallId = null;
 let currentTrackedDriverId = null;
 
-// ✅ هالة السائق (للمطعم صاحب النداء)
-const driverHaloState = {}; // driverId -> { circle, radius, growing, intervalId }
+const driverHaloState = {};
+const multiTrackingByDriver = {};
+const multiCustomerMarkers = {};
 
-// ✅ تتبّع المسار و الـ ETA
 let trackedDriverId = null;
 let trackedRoutePolyline = null;
 let trackedRouteFullPath = [];
@@ -633,34 +1181,28 @@ let trackedEtaSeconds = null;
 let trackedEtaUpdatedAt = null;
 let trackedNearAlertPlayed = false;
 let lastDriverRouteRequestAt = 0;
-// ✅ عدّاد الدقيقة عند 300 متر
 let nearCountdownTimerId = null;
 let nearCountdownSeconds = null;
 
-let trackedLastDistanceMeters = null; // آخر مسافة محسوبة بين السائق والتاجر
-// ✅ السرعة المتوسطة لمسار السائق → التاجر (متر/ثانية)
+let trackedLastDistanceMeters = null;
 let driverRouteAvgSpeedMps = null;
 
-// ✅ حد أقصى لنداءات Google Directions لكل نداء (call)
-const MAX_DRIVER_TO_MERCHANT_DIRECTIONS = 2; // سائق → تاجر
+const MAX_DRIVER_TO_MERCHANT_DIRECTIONS = 2;
 let driverToMerchantDirectionsCountByCall = {};
-// ✅ الوجهة الحالية التي نتابعها (تاجر أو عميل)
+
 let currentDestinationLat = null;
 let currentDestinationLng = null;
-let currentDestinationType = null; // "merchant" | "customer"
+let currentDestinationType = null;
 let currentDestinationAddress = null;
 
-// ✅ ماركر العميل + اسمه (في واجهة التاجر)
 let customerMarker = null;
 let currentCustomerName = "";
 
-// ✅ لكل رحلة نضمن أن Directions يُستدعى العدد المطلوب فقط
 let directionsRequestedForCurrentLeg = false;
-// ✅ نضمن أن fitBounds يُستدعى مرة واحدة لكل رحلة
 let mapFittedForCurrentLeg = false;
 
-// ✅ كاش آخر حالة للنداءات لاكتشاف تغيّر الحالة
 let lastCallsById = {};
+
 /* ========== فتح/إغلاق القائمة الجانبية في واجهة التاجر ========== */
 if (merchantMenuBtn && merchantSidePanel && merchantSidePanelBackdrop) {
   merchantMenuBtn.addEventListener("click", () => {
@@ -684,23 +1226,19 @@ if (merchantSidePanelBackdrop) {
 }
 
 /* ========== زر أونلاين / أوفلاين الخاص بالتاجر (مرتبط بـ Firestore + صوت) ========== */
-// تحديث مظهر الزر + تشغيل الصوت عند التحول لأونلاين
 function updateMerchantOnlineBtn() {
   if (!merchantOnlineToggle) return;
 
-  // نص الزر وحالته البصرية
   if (merchantCurrentOnline) {
-    merchantOnlineToggle.textContent = "أونلاين";
+    merchantOnlineToggle.textContent = t("topbarOnline");
     merchantOnlineToggle.dataset.state = "online";
   } else {
-    merchantOnlineToggle.textContent = "أوفلاين";
+    merchantOnlineToggle.textContent = t("topbarOffline");
     merchantOnlineToggle.dataset.state = "offline";
   }
 
-  // إيقاف الوميض دائماً بعد أي تحديث
   merchantOnlineToggle.classList.remove("blink");
 
-  // تشغيل صوت الأونلاين فقط عندما كنا مجهزين الفلاج
   if (merchantCurrentOnline && playMerchantOnlineSoundNext && merchantOnlineSoundEl) {
     try {
       merchantOnlineSoundEl.currentTime = 0;
@@ -710,10 +1248,8 @@ function updateMerchantOnlineBtn() {
     }
   }
 
-  // إعادة الفلاج لحالته الطبيعية
   playMerchantOnlineSoundNext = false;
 
-  // 🟦 إظهار/إخفاء ماركر التاجر حسب حالة الأونلاين
   if (merchantCurrentOnline) {
     ensureMerchantMarkerOnMap();
   } else {
@@ -721,7 +1257,6 @@ function updateMerchantOnlineBtn() {
   }
 }
 
-// مستمع كبسة زر الأونلاين/أوفلاين
 if (merchantOnlineToggle) {
   merchantOnlineToggle.addEventListener("click", async () => {
     if (!currentMerchantId) {
@@ -732,7 +1267,6 @@ if (merchantOnlineToggle) {
     const goingOnline = !merchantCurrentOnline;
     merchantCurrentOnline = goingOnline;
 
-    // عند الذهاب لأونلاين نفعّل الوميض ونجهّز الصوت
     if (goingOnline) {
       playMerchantOnlineSoundNext = true;
       merchantOnlineToggle.classList.add("blink");
@@ -750,10 +1284,8 @@ if (merchantOnlineToggle) {
 
       await db.collection("merchants").doc(currentMerchantId).update(updateData);
 
-      // بعد نجاح التحديث: نحدّث الزر + نشغّل الصوت لو لازم
       updateMerchantOnlineBtn();
     } catch (err) {
-      // في حال فشل التحديث نرجّع الحالة كما كانت
       merchantCurrentOnline = !goingOnline;
       playMerchantOnlineSoundNext = false;
       merchantOnlineToggle.classList.remove("blink");
@@ -761,7 +1293,6 @@ if (merchantOnlineToggle) {
     }
   });
 
-  // حالة ابتدائية (أوفلاين افتراضياً — تتحدّث بعد تسجيل الدخول)
   updateMerchantOnlineBtn();
 }
 
@@ -831,29 +1362,27 @@ loginForm.addEventListener("submit", async (e) => {
     const merchantDoc = await db.collection("merchants").doc(uid).get();
 
     if (merchantDoc.exists) {
-  const merchantData = merchantDoc.data();
-  merchantNameEl.textContent =
-    merchantData.storeName || merchantData.contactName || "تاجر";
+      const merchantData = merchantDoc.data();
+      merchantNameEl.textContent =
+        merchantData.storeName || merchantData.contactName || "تاجر";
 
-  // نعرض عنوان المتجر من storeAddress، ولو مو موجود نرجع للـ storeCity
-  merchantCityEl.textContent =
-    merchantData.storeAddress || merchantData.storeCity || "";
+      merchantCityEl.textContent =
+        merchantData.storeAddress || merchantData.storeCity || "";
 
-  // 🟢 تحميل حالة أونلاين من الوثيقة
-  merchantCurrentOnline = !!merchantData.online;
-  updateMerchantOnlineBtn();
+      merchantCurrentOnline = !!merchantData.online;
+      updateMerchantOnlineBtn();
 
-  registerSection.classList.add("hidden");
-  loginSection.classList.add("hidden");
-  merchantDashboard.classList.remove("hidden");
-  document.getElementById("mainHeader").classList.add("hidden");
-  document.getElementById("authTabs").classList.add("hidden");
+      registerSection.classList.add("hidden");
+      loginSection.classList.add("hidden");
+      merchantDashboard.classList.remove("hidden");
+      document.getElementById("mainHeader").classList.add("hidden");
+      document.getElementById("authTabs").classList.add("hidden");
+      const langSwitcher = document.getElementById("langSwitcher");
+      if (langSwitcher) langSwitcher.classList.add("hidden");
 
-  initMapAndData(uid);
-  document.body.classList.add("merchant-mode");
-
+      initMapAndData(uid);
+      document.body.classList.add("merchant-mode");
     } else {
-      // ليس تاجر — نفصل الجلسة ونبلغ المستخدم
       await auth.signOut();
       alert("هذه الواجهة مخصصة للتجار فقط. يرجى استخدام رابط واجهة السائق إن كنت سائقاً.");
     }
@@ -868,7 +1397,6 @@ loginForm.addEventListener("submit", async (e) => {
 logoutBtn.addEventListener("click", async () => {
   await auth.signOut();
 
-  // إعادة حالة الأونلاين محلياً
   merchantCurrentOnline = false;
   updateMerchantOnlineBtn();
 
@@ -877,6 +1405,8 @@ logoutBtn.addEventListener("click", async () => {
   loginSection.classList.remove("hidden");
   document.getElementById("mainHeader").classList.remove("hidden");
   document.getElementById("authTabs").classList.remove("hidden");
+  const langSwitcher = document.getElementById("langSwitcher");
+  if (langSwitcher) langSwitcher.classList.remove("hidden");
   document.body.classList.remove("merchant-mode");
 });
 
@@ -890,18 +1420,16 @@ function createCircleIcon(color, scale) {
     strokeWeight: 3
   };
 }
-// أيقونة ماركر التاجر (صورة مخصصة)
 function getMerchantMarkerIcon() {
   if (typeof google === "undefined" || !google.maps) return null;
   return {
     url: MERCHANT_MARKER_ICON_PATH,
-    scaledSize: new google.maps.Size(52, 52), // عدّل المقاس حسب تصميمك
+    scaledSize: new google.maps.Size(52, 52),
     origin: new google.maps.Point(0, 0),
-    anchor: new google.maps.Point(26, 46)     // نقطة الارتكاز أسفل الأيقونة تقريباً
+    anchor: new google.maps.Point(26, 46)
   };
 }
 
-// إظهار/تحديث ماركر التاجر حسب إحداثيات المتجر
 function ensureMerchantMarkerOnMap() {
   if (!map) return;
   if (merchantLocationLat == null || merchantLocationLng == null) return;
@@ -921,13 +1449,11 @@ function ensureMerchantMarkerOnMap() {
   }
 }
 
-// إخفاء ماركر التاجر
 function hideMerchantMarker() {
   if (merchantMarker) {
     merchantMarker.setMap(null);
   }
 }
-// أيقونة ماركر العميل (صورة مخصصة تختارها أنت)
 function getCustomerMarkerIcon() {
   if (typeof google === "undefined" || !google.maps) return null;
   return {
@@ -937,8 +1463,531 @@ function getCustomerMarkerIcon() {
     anchor: new google.maps.Point(23, 40)
   };
 }
+function mtEnsureCustomerMarker(driverId, lat, lng, label) {
+  if (!map || lat == null || lng == null) return;
+  const pos = { lat, lng };
+  let marker = multiCustomerMarkers[driverId];
 
-// إظهار/تحديث ماركر العميل
+  if (!marker) {
+    marker = new google.maps.Marker({
+      position: pos,
+      map,
+      title: label || "العميل",
+      icon: getCustomerMarkerIcon()
+    });
+    multiCustomerMarkers[driverId] = marker;
+  } else {
+    marker.setPosition(pos);
+    marker.setMap(map);
+  }
+}
+
+function mtHideCustomerMarkerForDriver(driverId) {
+  const m = multiCustomerMarkers[driverId];
+  if (m) {
+    m.setMap(null);
+    delete multiCustomerMarkers[driverId];
+  }
+}
+function mtStartTrackingToMerchant(driverId, callId) {
+  if (!driverMarkers[driverId] || !driverMarkers[driverId].marker) return;
+
+  const tr = multiTrackingByDriver[driverId] || {};
+  multiTrackingByDriver[driverId] = tr;
+
+  tr.callId = callId;
+  tr.leg = "merchant";
+  tr.destinationType = "merchant";
+  tr.destinationLat = merchantLocationLat;
+  tr.destinationLng = merchantLocationLng;
+  tr.destinationAddress = null;
+  tr.customerName = "";
+  tr.nearAlertPlayed = false;
+  tr.directionsRequestedForCurrentLeg = false;
+  tr.mapFittedForCurrentLeg = false;
+  tr.lastRouteRequestAt = 0;
+
+  if (tr.routePolyline) {
+    tr.routePolyline.setMap(null);
+    tr.routePolyline = null;
+  }
+  tr.routeFullPath = [];
+
+  if (tr.etaInfoWindow) {
+    tr.etaInfoWindow.close();
+    tr.etaInfoWindow = null;
+  }
+  if (tr.etaTimerId) {
+    clearInterval(tr.etaTimerId);
+    tr.etaTimerId = null;
+  }
+  if (tr.nearCountdownTimerId) {
+    clearInterval(tr.nearCountdownTimerId);
+    tr.nearCountdownTimerId = null;
+  }
+  tr.etaSeconds = null;
+  tr.etaUpdatedAt = null;
+  tr.nearCountdownSeconds = null;
+
+  mtUpdateRouteAndEta(driverId);
+}
+
+function mtStartTrackingToCustomer(driverId, callId, callData) {
+  if (!driverMarkers[driverId] || !driverMarkers[driverId].marker) return;
+
+  const tr = multiTrackingByDriver[driverId] || {};
+  multiTrackingByDriver[driverId] = tr;
+
+  mtHideCustomerMarkerForDriver(driverId);
+
+  tr.callId = callId;
+  tr.leg = "customer";
+  tr.destinationType = "customer";
+  tr.destinationLat = null;
+  tr.destinationLng = null;
+  tr.destinationAddress = callData.deliveryAddress || "";
+  tr.customerName = (callData.customerName || "").trim();
+  tr.nearAlertPlayed = false;
+  tr.directionsRequestedForCurrentLeg = false;
+  tr.mapFittedForCurrentLeg = false;
+  tr.lastRouteRequestAt = 0;
+
+  if (tr.routePolyline) {
+    tr.routePolyline.setMap(null);
+    tr.routePolyline = null;
+  }
+  tr.routeFullPath = [];
+
+  if (tr.etaInfoWindow) {
+    tr.etaInfoWindow.close();
+    tr.etaInfoWindow = null;
+  }
+  if (tr.etaTimerId) {
+    clearInterval(tr.etaTimerId);
+    tr.etaTimerId = null;
+  }
+  if (tr.nearCountdownTimerId) {
+    clearInterval(tr.nearCountdownTimerId);
+    tr.nearCountdownTimerId = null;
+  }
+  tr.etaSeconds = null;
+  tr.etaUpdatedAt = null;
+  tr.nearCountdownSeconds = null;
+
+  mtUpdateRouteAndEta(driverId);
+}
+
+function mtUpdateRouteProgress(driverId, currentLatLng) {
+  const tr = multiTrackingByDriver[driverId];
+  if (!tr || !tr.routePolyline) return;
+  if (!tr.routeFullPath || tr.routeFullPath.length === 0) return;
+  if (!google.maps || !google.maps.geometry || !google.maps.geometry.spherical)
+    return;
+
+  let closestIndex = 0;
+  let minDist = Infinity;
+
+  for (let i = 0; i < tr.routeFullPath.length; i++) {
+    const p = tr.routeFullPath[i];
+    const d = google.maps.geometry.spherical.computeDistanceBetween(
+      currentLatLng,
+      p
+    );
+    if (d < minDist) {
+      minDist = d;
+      closestIndex = i;
+    }
+  }
+
+  if (minDist > 80) return;
+
+  const remaining = tr.routeFullPath.slice(closestIndex);
+  tr.routeFullPath = remaining;
+  tr.routePolyline.setPath(remaining);
+}
+
+function mtUpdateRouteAndEta(driverId) {
+  const tr = multiTrackingByDriver[driverId];
+  if (!tr || !tr.destinationType) return;
+  if (!map) return;
+
+  const markerState = driverMarkers[driverId];
+  if (!markerState || !markerState.marker) return;
+
+  const origin = markerState.marker.getPosition();
+  if (!origin) return;
+
+  mtUpdateRouteProgress(driverId, origin);
+
+  const isCustomerLeg = tr.destinationType === "customer";
+
+  let distanceMetersGeo = null;
+  if (
+    tr.destinationLat != null &&
+    tr.destinationLng != null &&
+    google.maps &&
+    google.maps.geometry &&
+    google.maps.geometry.spherical
+  ) {
+    const destLatLng = new google.maps.LatLng(tr.destinationLat, tr.destinationLng);
+    distanceMetersGeo =
+      google.maps.geometry.spherical.computeDistanceBetween(origin, destLatLng);
+  }
+
+  if (!tr.nearAlertPlayed && distanceMetersGeo != null && distanceMetersGeo <= 300) {
+    tr.nearAlertPlayed = true;
+
+    if (tr.destinationType === "merchant") {
+      if (driverNearSoundEl) {
+        try {
+          driverNearSoundEl.currentTime = 0;
+          driverNearSoundEl.play();
+        } catch (e) {
+          console.warn("تعذر تشغيل صوت قرب الوصول:", e);
+        }
+      }
+
+      if (tr.routePolyline) {
+        tr.routePolyline.setMap(null);
+        tr.routePolyline = null;
+      }
+      stopDriverHalo(driverId);
+
+      if (tr.etaTimerId) {
+        clearInterval(tr.etaTimerId);
+        tr.etaTimerId = null;
+      }
+      tr.etaSeconds = null;
+      tr.etaUpdatedAt = null;
+
+      mtStartNearArrivalCountdown(driverId);
+      return;
+    } else if (tr.destinationType === "customer") {
+      if (tr.etaTimerId) {
+        clearInterval(tr.etaTimerId);
+        tr.etaTimerId = null;
+      }
+      tr.etaSeconds = null;
+      tr.etaUpdatedAt = null;
+
+      mtStartNearArrivalCountdown(driverId);
+      return;
+    }
+  }
+
+  if (tr.nearAlertPlayed) return;
+
+  if (!directionsService) {
+    directionsService = new google.maps.DirectionsService();
+  }
+
+  const now = Date.now();
+  if (!isCustomerLeg) {
+    if (tr.lastRouteRequestAt && now - tr.lastRouteRequestAt < 10000) {
+      return;
+    }
+    tr.lastRouteRequestAt = now;
+  } else {
+    if (tr.directionsRequestedForCurrentLeg) {
+      return;
+    }
+    tr.directionsRequestedForCurrentLeg = true;
+  }
+
+  let destination;
+  if (tr.destinationLat != null && tr.destinationLng != null) {
+    destination = { lat: tr.destinationLat, lng: tr.destinationLng };
+  } else if (tr.destinationAddress) {
+    destination = tr.destinationAddress;
+  } else if (
+    tr.destinationType === "merchant" &&
+    merchantLocationLat != null &&
+    merchantLocationLng != null
+  ) {
+    destination = {
+      lat: merchantLocationLat,
+      lng: merchantLocationLng
+    };
+  } else {
+    return;
+  }
+
+  directionsService.route(
+    {
+      origin,
+      destination,
+      travelMode: google.maps.TravelMode.DRIVING
+    },
+    (result, status) => {
+      if (
+        status !== "OK" ||
+        !result.routes ||
+        !result.routes[0] ||
+        !result.routes[0].legs ||
+        !result.routes[0].legs[0]
+      ) {
+        console.warn("تعذر حساب مسار السائق:", status, result);
+        return;
+      }
+
+      const leg = result.routes[0].legs[0];
+      const durationSeconds = leg.duration ? leg.duration.value : null;
+
+      if (tr.destinationType === "customer" && leg.end_location) {
+        tr.destinationLat = leg.end_location.lat();
+        tr.destinationLng = leg.end_location.lng();
+        mtEnsureCustomerMarker(
+          driverId,
+          tr.destinationLat,
+          tr.destinationLng,
+          tr.customerName || "العميل"
+        );
+      } else if (
+        tr.destinationType === "merchant" &&
+        leg.end_location &&
+        (tr.destinationLat == null || tr.destinationLng == null)
+      ) {
+        tr.destinationLat = leg.end_location.lat();
+        tr.destinationLng = leg.end_location.lng();
+      }
+
+      if (!tr.mapFittedForCurrentLeg && map && origin) {
+        const bounds = new google.maps.LatLngBounds();
+        bounds.extend(origin);
+
+        if (tr.destinationLat != null && tr.destinationLng != null) {
+          bounds.extend(
+            new google.maps.LatLng(tr.destinationLat, tr.destinationLng)
+          );
+        } else if (leg.end_location) {
+          bounds.extend(leg.end_location);
+        }
+
+        map.fitBounds(bounds);
+        tr.mapFittedForCurrentLeg = true;
+      }
+
+      const overviewPath = result.routes[0].overview_path;
+      if (overviewPath && overviewPath.length) {
+        tr.routeFullPath = overviewPath.slice();
+
+        if (!tr.routePolyline) {
+          tr.routePolyline = new google.maps.Polyline({
+            map,
+            path: tr.routeFullPath,
+            strokeColor: "#22c55e",
+            strokeOpacity: 0.8,
+            strokeWeight: 4
+          });
+        } else {
+          tr.routePolyline.setPath(tr.routeFullPath);
+        }
+
+        mtUpdateRouteProgress(driverId, origin);
+      }
+
+      if (durationSeconds != null) {
+        tr.etaSeconds = durationSeconds;
+        tr.etaUpdatedAt = Date.now();
+
+        if (!tr.etaInfoWindow) {
+          tr.etaInfoWindow = new google.maps.InfoWindow({
+            pixelOffset: new google.maps.Size(0, -40),
+            disableAutoPan: true
+          });
+        } else {
+          tr.etaInfoWindow.setOptions({ disableAutoPan: true });
+        }
+
+        mtUpdateEtaBubble(driverId);
+
+        if (!tr.etaTimerId) {
+          tr.etaTimerId = setInterval(
+            () => mtUpdateEtaBubble(driverId),
+            1000
+          );
+        }
+      }
+    }
+  );
+}
+
+function mtGetEtaSeconds(driverId) {
+  const tr = multiTrackingByDriver[driverId];
+  if (!tr || tr.etaSeconds == null || tr.etaUpdatedAt == null) return null;
+  const elapsed = (Date.now() - tr.etaUpdatedAt) / 1000;
+  return Math.max(0, Math.round(tr.etaSeconds - elapsed));
+}
+
+function mtUpdateEtaBubble(driverId) {
+  const tr = multiTrackingByDriver[driverId];
+  if (!tr || !tr.etaInfoWindow) return;
+
+  const markerState = driverMarkers[driverId];
+  if (!markerState || !markerState.marker) return;
+
+  const remaining = mtGetEtaSeconds(driverId);
+  if (remaining == null) return;
+
+  if (remaining <= 0) {
+    const arrivedText = getEtaArrivedText();
+    tr.etaInfoWindow.setContent(`
+      <div style="
+        background:#0f172a;
+        color:#bbf7d0;
+        padding:4px 8px;
+        border-radius:999px;
+        font-size:11px;
+        font-weight:700;
+        box-shadow:0 4px 12px rgba(15,23,42,0.6);
+        border:1px solid #22c55e;
+      ">
+        ${arrivedText}
+      </div>
+    `);
+    tr.etaInfoWindow.open(map, markerState.marker);
+    return;
+  }
+
+  const etaText = getEtaLabelText(remaining);
+
+  const html = `
+    <div style="
+      background:#0f172a;
+      color:#f9fafb;
+      padding:4px 8px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:700;
+      box-shadow:0 4px 12px rgba(15,23,42,0.6);
+      border:1px solid #22c55e;
+      white-space:nowrap;
+    ">
+      ${etaText}
+    </div>
+  `;
+  tr.etaInfoWindow.setContent(html);
+  tr.etaInfoWindow.open(map, markerState.marker);
+}
+
+function mtStartNearArrivalCountdown(driverId) {
+  const tr = multiTrackingByDriver[driverId];
+  if (!tr) return;
+
+  const markerState = driverMarkers[driverId];
+  if (!markerState || !markerState.marker) return;
+
+  if (tr.etaTimerId) {
+    clearInterval(tr.etaTimerId);
+    tr.etaTimerId = null;
+  }
+
+  if (tr.nearCountdownTimerId) {
+    clearInterval(tr.nearCountdownTimerId);
+    tr.nearCountdownTimerId = null;
+  }
+
+  tr.nearCountdownSeconds = 60;
+
+  if (!tr.etaInfoWindow) {
+    tr.etaInfoWindow = new google.maps.InfoWindow({
+      pixelOffset: new google.maps.Size(0, -40),
+      disableAutoPan: true
+    });
+  } else {
+    tr.etaInfoWindow.setOptions({ disableAutoPan: true });
+  }
+
+  const render = () => {
+    const st = driverMarkers[driverId];
+    if (!st || !st.marker || !st.marker.getMap()) {
+      if (tr.nearCountdownTimerId) {
+        clearInterval(tr.nearCountdownTimerId);
+        tr.nearCountdownTimerId = null;
+      }
+      tr.nearCountdownSeconds = null;
+      if (tr.etaInfoWindow) tr.etaInfoWindow.close();
+      return;
+    }
+
+    if (tr.nearCountdownSeconds == null || tr.nearCountdownSeconds <= 0) {
+      if (tr.etaInfoWindow) tr.etaInfoWindow.close();
+      if (tr.nearCountdownTimerId) {
+        clearInterval(tr.nearCountdownTimerId);
+        tr.nearCountdownTimerId = null;
+      }
+      tr.nearCountdownSeconds = null;
+      return;
+    }
+
+    const countdownText = getNearCountdownText(tr.nearCountdownSeconds);
+
+    const html = `
+      <div style="
+        background:#0f172a;
+        color:#fecaca;
+        padding:4px 10px;
+        border-radius:999px;
+        font-size:11px;
+        font-weight:700;
+        box-shadow:0 4px 12px rgba(15,23,42,0.6);
+        border:1px solid #ef4444;
+        white-space:nowrap;
+        animation: merchant-blink 0.8s linear infinite;
+      ">
+        ${countdownText}
+      </div>
+    `;
+    tr.etaInfoWindow.setContent(html);
+    tr.etaInfoWindow.open(map, st.marker);
+  };
+
+  render();
+
+  tr.nearCountdownTimerId = setInterval(() => {
+    if (tr.nearCountdownSeconds != null) {
+      tr.nearCountdownSeconds -= 1;
+      render();
+    }
+  }, 1000);
+}
+
+function mtStopTrackingForDriver(driverId) {
+  const tr = multiTrackingByDriver[driverId];
+  if (!tr) return;
+
+  if (tr.routePolyline) {
+    tr.routePolyline.setMap(null);
+    tr.routePolyline = null;
+  }
+  tr.routeFullPath = [];
+
+  if (tr.etaTimerId) {
+    clearInterval(tr.etaTimerId);
+    tr.etaTimerId = null;
+  }
+  if (tr.nearCountdownTimerId) {
+    clearInterval(tr.nearCountdownTimerId);
+    tr.nearCountdownTimerId = null;
+  }
+
+  if (tr.etaInfoWindow) {
+    tr.etaInfoWindow.close();
+    tr.etaInfoWindow = null;
+  }
+
+  tr.etaSeconds = null;
+  tr.etaUpdatedAt = null;
+  tr.nearCountdownSeconds = null;
+  tr.nearAlertPlayed = false;
+  tr.directionsRequestedForCurrentLeg = false;
+  tr.mapFittedForCurrentLeg = false;
+
+  mtHideCustomerMarkerForDriver(driverId);
+
+  delete multiTrackingByDriver[driverId];
+}
+
 function ensureCustomerMarkerOnMap(lat, lng, label) {
   if (!map || lat == null || lng == null) return;
   const pos = { lat, lng };
@@ -956,14 +2005,12 @@ function ensureCustomerMarkerOnMap(lat, lng, label) {
   }
 }
 
-// إخفاء ماركر العميل
 function hideCustomerMarker() {
   if (customerMarker) {
     customerMarker.setMap(null);
   }
 }
 
-/* حساب مسافة المسار عبر Google Directions (كم) */
 function getRouteDistanceKm(origin, destination) {
   return new Promise((resolve) => {
     if (!directionsService) {
@@ -1006,30 +2053,24 @@ function initMapAndData(merchantId) {
       center: { lat: 25.276987, lng: 55.296249 },
       zoom: 14,
       styles: [
-  // خلفية عامة و ألوان النصوص
-  { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] },
-
-  // إبقاء الطرق وأسماء الشوارع
-  {
-    featureType: "road",
-    elementType: "geometry",
-    stylers: [{ color: "#e0e0e0" }]
-  },
-  {
-    featureType: "road",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#4b5563" }]
-  },
-
-  // 🔴 إخفاء كل نقاط الاهتمام: سوبرماركت، مدارس، فنادق، ...
-  {
-    featureType: "poi",
-    stylers: [{ visibility: "off" }]
-  }
-],
-
+        { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
+        { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
+        { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] },
+        {
+          featureType: "road",
+          elementType: "geometry",
+          stylers: [{ color: "#e0e0e0" }]
+        },
+        {
+          featureType: "road",
+          elementType: "labels.text.fill",
+          stylers: [{ color: "#4b5563" }]
+        },
+        {
+          featureType: "poi",
+          stylers: [{ visibility: "off" }]
+        }
+      ],
       fullscreenControl: false,
       zoomControl: false,
       streetViewControl: false,
@@ -1037,34 +2078,31 @@ function initMapAndData(merchantId) {
       gestureHandling: "greedy"
     });
 
-        geocoder.geocode({ address: merchantAddress }, (results, status) => {
+    geocoder.geocode({ address: merchantAddress }, (results, status) => {
       if (status === "OK" && results[0]) {
         const location = results[0].geometry.location;
         map.setCenter(location);
 
         merchantLocationLat = location.lat();
-merchantLocationLng = location.lng();
+        merchantLocationLng = location.lng();
 
-// الوجهة الافتراضية لأي تتبّع هي التاجر
-currentDestinationLat = merchantLocationLat;
-currentDestinationLng = merchantLocationLng;
-currentDestinationType = "merchant";
-currentDestinationAddress = null;
-directionsRequestedForCurrentLeg = false;
+        currentDestinationLat = merchantLocationLat;
+        currentDestinationLng = merchantLocationLng;
+        currentDestinationType = "merchant";
+        currentDestinationAddress = null;
+        directionsRequestedForCurrentLeg = false;
 
-const circle = new google.maps.Circle({
-  center: location,
-  radius: 3000
-});
-map.fitBounds(circle.getBounds());
+        const circle = new google.maps.Circle({
+          center: location,
+          radius: 3000
+        });
+        map.fitBounds(circle.getBounds());
 
-// 🟦 ماركر التاجر يظهر فقط إذا كان أونلاين
-if (merchantCurrentOnline) {
-  ensureMerchantMarkerOnMap();
-} else {
-  hideMerchantMarker();
-}
-
+        if (merchantCurrentOnline) {
+          ensureMerchantMarkerOnMap();
+        } else {
+          hideMerchantMarker();
+        }
       } else {
         console.error("خطأ في جيوكود العنوان: " + status);
       }
@@ -1075,7 +2113,6 @@ if (merchantCurrentOnline) {
     }
   }
 
-  // السائقون الأونلاين
   if (driversListenerUnsub) driversListenerUnsub();
   driversListenerUnsub = db
     .collection("drivers")
@@ -1096,9 +2133,15 @@ if (merchantCurrentOnline) {
       });
 
       refreshDriverFilterOptions();
+
+      if (onlineDriversBadge) {
+        const countEl = onlineDriversBadge.querySelector(".count");
+        if (countEl) {
+          countEl.textContent = snapshot.size;
+        }
+      }
     });
 
-  // النداءات لهذا التاجر
   if (merchantCallsListenerUnsub) merchantCallsListenerUnsub();
   merchantCallsListenerUnsub = db
     .collection("merchants")
@@ -1106,7 +2149,6 @@ if (merchantCurrentOnline) {
     .collection("calls")
     .orderBy("createdAt", "desc")
     .onSnapshot((snapshot) => {
-      // نراقب تغيّر الحالة لكل نداء
       snapshot.docChanges().forEach((change) => {
         const id = change.doc.id;
         const newData = change.doc.data() || {};
@@ -1114,51 +2156,44 @@ if (merchantCurrentOnline) {
         const oldStatus = (oldData.status || "").toLowerCase();
         const newStatus = (newData.status || "").toLowerCase();
 
-        // 1) تم قبول الطلب من قبل السائق
         if (oldStatus !== "accepted" && newStatus === "accepted") {
           playCallAcceptedForMerchant(newData);
         }
 
-        // 2) السائق بدأ التوجه إلى التاجر (ضغط "بدء التوجه للتاجر")
-const wasHeadingMerchant = isStatusHeadingToMerchant(oldStatus);
-const nowHeadingMerchant = isStatusHeadingToMerchant(newStatus);
-if (!wasHeadingMerchant && nowHeadingMerchant) {
-  handleDriverHeadingToMerchant(id, newData);
-}
+        const wasHeadingMerchant = isStatusHeadingToMerchant(oldStatus);
+        const nowHeadingMerchant = isStatusHeadingToMerchant(newStatus);
+        if (!wasHeadingMerchant && nowHeadingMerchant) {
+          handleDriverHeadingToMerchant(id, newData);
+        }
 
-// 2-bis) السائق بدأ التوجه إلى العميل
-const wasHeadingCustomer = isStatusHeadingToCustomer(oldStatus);
-const nowHeadingCustomer = isStatusHeadingToCustomer(newStatus);
-if (!wasHeadingCustomer && nowHeadingCustomer) {
-  handleDriverHeadingToCustomer(id, newData);
-}
+        const wasHeadingCustomer = isStatusHeadingToCustomer(oldStatus);
+        const nowHeadingCustomer = isStatusHeadingToCustomer(newStatus);
+        if (!wasHeadingCustomer && nowHeadingCustomer) {
+          handleDriverHeadingToCustomer(id, newData);
+        }
 
-// 3) انتهى/أُلغي الطلب -> أوقف التتبع والهالة
-if (
-  newStatus === "completed" ||
-  newStatus === "finished" ||
-  newStatus === "delivered" ||
-  newStatus === "cancelled" ||
-  newStatus === "rejected"
-) {
-  // عند التسليم فقط نشغّل صوت التسليم
-  if (newStatus === "delivered" && customerDeliveredSoundEl) {
-    try {
-      customerDeliveredSoundEl.currentTime = 0;
-      customerDeliveredSoundEl.play();
-    } catch (e) {
-      console.warn("تعذر تشغيل صوت التسليم:", e);
-    }
-  }
+        if (
+          newStatus === "completed" ||
+          newStatus === "finished" ||
+          newStatus === "delivered" ||
+          newStatus === "cancelled" ||
+          newStatus === "rejected"
+        ) {
+          if (newStatus === "delivered" && customerDeliveredSoundEl) {
+            try {
+              customerDeliveredSoundEl.currentTime = 0;
+              customerDeliveredSoundEl.play();
+            } catch (e) {
+              console.warn("تعذر تشغيل صوت التسليم:", e);
+            }
+          }
 
-  stopTrackingDriverForCall(id);
-}
+          stopTrackingDriverForCall(id);
+        }
 
-        // تحديث الكاش
         lastCallsById[id] = newData;
       });
 
-      // بناء قائمة كاملة للعرض في القائمة الجانبية
       const calls = [];
       snapshot.forEach((doc) => {
         const data = doc.data();
@@ -1169,40 +2204,134 @@ if (
     });
 }
 
-/* === InfoWindow محتوى السائق على خريطة التاجر === */
 function buildDriverInfoContent(id, data) {
+  const lang = currentLang || "ar";
+
   const firstName =
     data.firstName ||
     (data.fullName || "").split(" ")[0] ||
-    "سائق";
+    (lang === "en"
+      ? "Driver"
+      : lang === "de"
+      ? "Fahrer"
+      : lang === "tr"
+      ? "Sürücü"
+      : "سائق");
+
   const isBusy = !!data.busy;
 
+  // تنسيق الأرقام حسب اللغة (فاصلة للعربي/أوروبي أو نقطة للإنجليزي)
+  const formatAmount = (num) => {
+    const s = Number(num).toFixed(2);
+    if (lang === "de" || lang === "tr") return s.replace(".", ",");
+    return s;
+  };
+
+  let texts;
+
+  switch (lang) {
+    case "en":
+      texts = {
+        phoneLabel: "Phone:",
+        cityLabel: "City:",
+        pricingLabel: "Pricing:",
+        busy: "The driver is currently busy",
+        offline: "You are offline — you cannot send a call",
+        callBtn: "Call driver",
+        noPricing: "No pricing set yet",
+        baseFeeBothSame: (base, perKm) =>
+          `Base fee ${base}€ + ${perKm}€/km (from driver to merchant and from merchant to drop-off point)`,
+        baseFeeTwoSegments: (base, toMer, perKm) =>
+          `Base fee ${base}€ + ${toMer}€/km (driver → merchant) + ${perKm}€/km (merchant → drop-off point)`,
+        baseFeeMerchantOnly: (base, perKm) =>
+          `Base fee ${base}€ + ${perKm}€/km (merchant → drop-off point)`,
+        freeKm: (km) => `First ${km} km free`
+      };
+      break;
+
+    case "de":
+      texts = {
+        phoneLabel: "Telefon:",
+        cityLabel: "Stadt:",
+        pricingLabel: "Tarif:",
+        busy: "Der Fahrer ist derzeit beschäftigt",
+        offline: "Du bist offline – du kannst keinen Ruf senden",
+        callBtn: "Fahrer rufen",
+        noPricing: "Noch kein Tarif festgelegt",
+        baseFeeBothSame: (base, perKm) =>
+          `Grundgebühr ${base}€ + ${perKm}€/km (vom Fahrer zum Händler und vom Händler zum Lieferort)`,
+        baseFeeTwoSegments: (base, toMer, perKm) =>
+          `Grundgebühr ${base}€ + ${toMer}€/km (Fahrer → Händler) + ${perKm}€/km (Händler → Lieferort)`,
+        baseFeeMerchantOnly: (base, perKm) =>
+          `Grundgebühr ${base}€ + ${perKm}€/km (Händler → Lieferort)`,
+        freeKm: (km) => `Die ersten ${km} km kostenlos`
+      };
+      break;
+
+    case "tr":
+      texts = {
+        phoneLabel: "Telefon:",
+        cityLabel: "Şehir:",
+        pricingLabel: "Fiyatlandırma:",
+        busy: "Sürücü şu anda meşgul",
+        offline: "Çevrimdışı moddasınız — çağrı gönderemezsiniz",
+        callBtn: "Sürücüyü çağır",
+        noPricing: "Henüz fiyatlandırma tanımlanmadı",
+        baseFeeBothSame: (base, perKm) =>
+          `Temel ücret ${base}€ + ${perKm}€/km (sürücüden işletmeye ve işletmeden teslimat noktasına)`,
+        baseFeeTwoSegments: (base, toMer, perKm) =>
+          `Temel ücret ${base}€ + ${toMer}€/km (sürücü → işletme) + ${perKm}€/km (işletme → teslimat noktası)`,
+        baseFeeMerchantOnly: (base, perKm) =>
+          `Temel ücret ${base}€ + ${perKm}€/km (işletme → teslimat noktası)`,
+        freeKm: (km) => `İlk ${km} km ücretsiz`
+      };
+      break;
+
+    default: // ar
+      texts = {
+        phoneLabel: "الهاتف:",
+        cityLabel: "المدينة:",
+        pricingLabel: "التسعيرة:",
+        busy: "السائق مشغول حالياً",
+        offline: "أنت في وضع أوفلاين — لا يمكنك إرسال نداء",
+        callBtn: "مناداة",
+        noPricing: "لم يحدد تسعيرة بعد",
+        baseFeeBothSame: (base, perKm) =>
+          `رسوم أساسية ${base}€ + ${perKm}€/كم (من السائق إلى التاجر ومن التاجر إلى نقطة التسليم)`,
+        baseFeeTwoSegments: (base, toMer, perKm) =>
+          `رسوم أساسية ${base}€ + ${toMer}€/كم (من السائق إلى التاجر) + ${perKm}€/كم (من التاجر إلى نقطة التسليم)`,
+        baseFeeMerchantOnly: (base, perKm) =>
+          `رسوم أساسية ${base}€ + ${perKm}€/كم (من التاجر إلى نقطة التسليم)`,
+        freeKm: (km) => `أول ${km} كم مجاناً`
+      };
+      break;
+  }
+
   let actionHtml = "";
-if (isBusy) {
-  actionHtml = `<span class="small" style="color:#d93025;">السائق مشغول حالياً</span>`;
-} else if (!merchantCurrentOnline) {
-  actionHtml = `<span class="small" style="color:#9ca3af;">أنت في وضع أوفلاين — لا يمكنك إرسال نداء</span>`;
-} else {
-  actionHtml = `<button id="callBtn_${id}" class="small call-btn">مناداة</button>`;
+  if (isBusy) {
+    actionHtml = `<span class="small" style="color:#d93025;">${texts.busy}</span>`;
+  } else if (!merchantCurrentOnline) {
+    actionHtml = `<span class="small" style="color:#9ca3af;">${texts.offline}</span>`;
+  } else {
+    actionHtml = `<button id="callBtn_${id}" class="small call-btn">${texts.callBtn}</button>`;
+  }
 
-}
-
-
-  let pricingHtml = "لم يحدد تسعيرة بعد";
+  let pricingHtml = texts.noPricing;
 
   const hasDeliveryPrice =
     typeof data.pricePerKmDelivery === "number" &&
     data.pricePerKmDelivery > 0;
 
   const includeToMerchant = !!data.includeToMerchantSegment;
-  const useSameForBoth = data.useSamePriceForBoth !== false; // افتراضياً true
+  const useSameForBoth = data.useSamePriceForBoth !== false;
   const freeKm =
     typeof data.freeKm === "number" ? data.freeKm : 0;
 
   if (hasDeliveryPrice) {
-    const deliveryP = data.pricePerKmDelivery.toFixed(2);
-    let line =
-      `رسوم أساسية ${BASE_DELIVERY_FEE.toFixed(2)}€ + ${deliveryP}€/كم`;
+    const baseFeeStr = formatAmount(BASE_DELIVERY_FEE);
+    const deliveryStr = formatAmount(data.pricePerKmDelivery);
+
+    let line = texts.baseFeeMerchantOnly(baseFeeStr, deliveryStr);
 
     if (includeToMerchant) {
       const toMerchantPrice =
@@ -1211,47 +2340,44 @@ if (isBusy) {
           ? data.pricePerKmToMerchant
           : data.pricePerKmDelivery;
 
-      const toMerP = toMerchantPrice.toFixed(2);
+      const toMerStr = formatAmount(toMerchantPrice);
 
       if (useSameForBoth) {
-        line =
-          `رسوم أساسية ${BASE_DELIVERY_FEE.toFixed(2)}€ + ${deliveryP}€/كم ` +
-          `(من السائق إلى التاجر ومن التاجر إلى نقطة التسليم)`;
+        line = texts.baseFeeBothSame(baseFeeStr, deliveryStr);
       } else {
-        line =
-          `رسوم أساسية ${BASE_DELIVERY_FEE.toFixed(2)}€ + ` +
-          `${toMerP}€/كم (من السائق إلى التاجر) + ` +
-          `${deliveryP}€/كم (من التاجر إلى نقطة التسليم)`;
+        line = texts.baseFeeTwoSegments(baseFeeStr, toMerStr, deliveryStr);
       }
     } else {
-      line =
-        `رسوم أساسية ${BASE_DELIVERY_FEE.toFixed(2)}€ + ` +
-        `${deliveryP}€/كم (من التاجر إلى نقطة التسليم)`;
+      line = texts.baseFeeMerchantOnly(baseFeeStr, deliveryStr);
     }
 
     if (freeKm > 0) {
-      line += `<br/>أول ${freeKm} كم مجاناً`;
+      line += `<br/>${texts.freeKm(freeKm)}`;
     }
 
     pricingHtml = line;
   }
 
+  const isRtl = lang === "ar";
+
   const container = document.createElement("div");
-  container.style.direction = "rtl";
-  container.style.textAlign = "right";
+  container.style.direction = isRtl ? "rtl" : "ltr";
+  container.style.textAlign = isRtl ? "right" : "left";
+
   container.innerHTML = `
     <div style="min-width:220px">
       <strong>${escapeHtml(firstName)}</strong><br/>
-      <div class="small">الهاتف: ${escapeHtml(data.phone || "")}</div>
-      <div class="small">المدينة: ${escapeHtml(data.city || "")}</div>
+      <div class="small">${texts.phoneLabel} ${escapeHtml(data.phone || "")}</div>
+      <div class="small">${texts.cityLabel} ${escapeHtml(data.city || "")}</div>
       <div class="small" style="margin-top:4px;">
-        التسعيرة:<br/>${pricingHtml}
+        ${texts.pricingLabel}<br/>${pricingHtml}
       </div>
-      <div style="margin-top:8px; display:flex; gap:6px; justify-content:flex-end;">
+      <div style="margin-top:8px; display:flex; gap:6px; justify-content:${isRtl ? "flex-end" : "flex-start"};">
         ${actionHtml}
       </div>
     </div>
   `;
+
   return container;
 }
 
@@ -1339,9 +2465,13 @@ function updateDriverMarker(id, data) {
   const newContent = buildDriverInfoContent(id, data);
   state.info.setContent(newContent);
 
-// إذا كان هذا هو السائق الذي نتابع رحلته (للمطعم أو للعميل)، حدّث المسار والـ ETA
-  if (id === trackedDriverId) {
-    updateDriverRouteAndEta();
+  if (multiTrackingByDriver[id]) {
+    mtUpdateRouteAndEta(id);
+  }
+
+  if (!data.busy && multiTrackingByDriver[id] && !hasActiveCallForDriver(id)) {
+    stopDriverHalo(id);
+    mtStopTrackingForDriver(id);
   }
 }
 
@@ -1353,21 +2483,18 @@ function removeDriverMarker(id) {
   if (state.pulseInterval) clearInterval(state.pulseInterval);
   delete driverMarkers[id];
 
-  // في حال كان هذا هو السائق المتابع، أوقف الهالة والتتبع
   stopDriverHalo(id);
-  if (id === trackedDriverId) {
-    stopTrackingDriverToMerchant();
+  if (multiTrackingByDriver[id]) {
+    mtStopTrackingForDriver(id);
   }
 }
 
-// إغلاق الـ InfoWindow الخاص بسائق معيّن (بعد إرسال النداء مثلاً)
 function closeDriverInfoWindow(driverId) {
   const state = driverMarkers[driverId];
   if (state && state.info) {
     state.info.close();
   }
 }
-// هل الحالة تعني أن السائق في طريقه إلى التاجر؟
 function isStatusHeadingToMerchant(status) {
   if (!status) return false;
   const s = String(status).toLowerCase();
@@ -1378,7 +2505,6 @@ function isStatusHeadingToMerchant(status) {
     s === "in_progress"
   );
 }
-// هل الحالة تعني أن السائق في طريقه إلى العميل؟
 function isStatusHeadingToCustomer(status) {
   if (!status) return false;
   const s = String(status).toLowerCase();
@@ -1391,7 +2517,6 @@ function isStatusHeadingToCustomer(status) {
   );
 }
 
-// صوت عند قبول الطلب من السائق
 function playCallAcceptedForMerchant(callData) {
   if (callAcceptedSoundEl) {
     try {
@@ -1403,8 +2528,6 @@ function playCallAcceptedForMerchant(callData) {
   }
 }
 
-// هالة خضراء حول ماركر السائق (Pulse)
-// هالة زرقاء حول ماركر السائق (Pulse ثابت بالبكسل)
 function startDriverHalo(driverId) {
   if (!map) return;
   const markerState = driverMarkers[driverId];
@@ -1413,10 +2536,9 @@ function startDriverHalo(driverId) {
   const pos = markerState.marker.getPosition();
   if (!pos) return;
 
-  // لو الهالة موجودة بالفعل، لا نعيد إنشاءها
   if (driverHaloState[driverId]) return;
 
-  const baseScale = 18;  // أكبر من ماركر السائق (الذي سكاله ~9)
+  const baseScale = 18;
   const maxScale  = 32;
 
   const haloMarker = new google.maps.Marker({
@@ -1426,12 +2548,12 @@ function startDriverHalo(driverId) {
     zIndex: (markerState.marker.getZIndex() || 100) - 1,
     icon: {
       path: google.maps.SymbolPath.CIRCLE,
-      fillColor: "#3b82f6",      // أزرق
+      fillColor: "#3b82f6",
       fillOpacity: 0.45,
       strokeColor: "#3b82f6",
       strokeOpacity: 0.9,
       strokeWeight: 1.5,
-      scale: baseScale,          // بالبكسل
+      scale: baseScale,
     },
   });
 
@@ -1453,18 +2575,15 @@ function startDriverHalo(driverId) {
     const curPos = mState.marker.getPosition();
     if (curPos) state.haloMarker.setPosition(curPos);
 
-    // توسيع الهالة تدريجياً ثم إعادة الضبط
     state.currentScale += 0.8;
     if (state.currentScale > state.maxScale) {
       state.currentScale = state.baseScale;
     }
 
-    // نسبة التقدم بين الحجم الصغير والكبير
     const progress =
       (state.currentScale - state.baseScale) /
       (state.maxScale - state.baseScale);
 
-    // تخفيف الشفافية كلما اتسعت الهالة
     const fillOpacity   = 0.45 * (1 - progress);
     const strokeOpacity = 0.9 * (1 - progress * 0.7);
 
@@ -1489,7 +2608,6 @@ function stopDriverHalo(driverId) {
   delete driverHaloState[driverId];
 }
 
-// تتبّع المسار و الـ ETA للسائق المتجه إلى التاجر
 function startTrackingDriverToMerchant(driverId) {
   trackedDriverId = driverId;
   trackedNearAlertPlayed = false;
@@ -1501,18 +2619,15 @@ function startTrackingDriverToMerchant(driverId) {
   directionsRequestedForCurrentLeg = false;
   mapFittedForCurrentLeg = false;
 
-  // 🔁 إعادة تعيين عدّاد النداءات والسرعة المتوسطة للرحلة الحالية
   if (currentTrackedCallId) {
     driverToMerchantDirectionsCountByCall[currentTrackedCallId] = 0;
   }
   driverRouteAvgSpeedMps = null;
 
-   // تنظيف أي آثار سابقة (مسار/بالونات/عدّادات)
   if (trackedRoutePolyline) {
     trackedRoutePolyline.setMap(null);
     trackedRoutePolyline = null;
   }
-  // 🔁 إعادة تعيين المسار الكامل
   trackedRouteFullPath = [];
 
   if (trackedEtaInfoWindow) {
@@ -1530,9 +2645,8 @@ function startTrackingDriverToMerchant(driverId) {
   }
   nearCountdownSeconds = null;
 
-  updateDriverRouteAndEta(); // أول حساب
+  updateDriverRouteAndEta();
 }
-// تتبّع مسار السائق إلى العميل
 function startTrackingDriverToCustomer(callData) {
   trackedDriverId = callData.driverId || null;
   trackedNearAlertPlayed = false;
@@ -1547,12 +2661,10 @@ function startTrackingDriverToCustomer(callData) {
 
   driverRouteAvgSpeedMps = null;
 
-  // تنظيف أي آثار سابقة (مسار/بالونات/عدّادات)
   if (trackedRoutePolyline) {
     trackedRoutePolyline.setMap(null);
     trackedRoutePolyline = null;
   }
-  // 🔁 إعادة تعيين المسار الكامل
   trackedRouteFullPath = [];
 
   if (trackedEtaInfoWindow) {
@@ -1569,10 +2681,8 @@ function startTrackingDriverToCustomer(callData) {
   }
   nearCountdownSeconds = null;
 
-  // نزيل أي ماركر عميل سابق
   hideCustomerMarker();
 
-  // أول حساب: سيستدعي Directions مرة واحدة لهذه الرحلة
   updateDriverRouteAndEta();
 }
 
@@ -1584,7 +2694,6 @@ function stopTrackingDriverToMerchant() {
     trackedRoutePolyline.setMap(null);
     trackedRoutePolyline = null;
   }
-  // 🔁 إعادة تعيين المسار الكامل
   trackedRouteFullPath = [];
 
   if (trackedEtaInfoWindow) {
@@ -1597,7 +2706,6 @@ function stopTrackingDriverToMerchant() {
     trackedEtaTimerId = null;
   }
 
-  // 🔴 تنظيف عدّاد الدقيقة أيضاً
   if (nearCountdownTimerId) {
     clearInterval(nearCountdownTimerId);
     nearCountdownTimerId = null;
@@ -1605,18 +2713,14 @@ function stopTrackingDriverToMerchant() {
   nearCountdownSeconds = null;
 }
 
-// حساب الـ ETA الحالي بالثواني
 function getCurrentEtaSeconds() {
-  // لو ما عندنا قيمة أصلية من Google نطلع null
   if (trackedEtaSeconds == null || trackedEtaUpdatedAt == null) return null;
 
-  // أساساً نعد تنازلياً من القيمة التي رجعها Google Directions
   let baseRemaining = Math.max(
     Math.round(trackedEtaSeconds - (Date.now() - trackedEtaUpdatedAt) / 1000),
     0
   );
 
-  // لو مكتبة geometry موجودة ومعنا سرعة متوسطة نحسب الزمن بناءً على المسافة الفعلية الحالية
   if (
     trackedDriverId &&
     map &&
@@ -1639,7 +2743,6 @@ function getCurrentEtaSeconds() {
         const distanceMeters =
           google.maps.geometry.spherical.computeDistanceBetween(pos, dest);
 
-        // نخزن آخر مسافة لحالات أخرى لو احتجناها
         trackedLastDistanceMeters = distanceMeters;
 
         const seconds = distanceMeters / driverRouteAvgSpeedMps;
@@ -1648,11 +2751,9 @@ function getCurrentEtaSeconds() {
     }
   }
 
-  // لو ما في geometry أو سرعة متوسطة نكتفي بالعد التنازلي البسيط
   return baseRemaining;
 }
 
-// تحديث محتوى البالون الصغير فوق السائق
 function updateEtaBubble() {
   if (!trackedEtaInfoWindow || !trackedDriverId) return;
 
@@ -1662,8 +2763,8 @@ function updateEtaBubble() {
   const remaining = getCurrentEtaSeconds();
   if (remaining == null) return;
 
-  // لو الوقت انتهى تقريباً
   if (remaining <= 0) {
+    const arrivedText = getEtaArrivedText();
     trackedEtaInfoWindow.setContent(`
       <div style="
         background:#0f172a;
@@ -1675,16 +2776,14 @@ function updateEtaBubble() {
         box-shadow:0 4px 12px rgba(15,23,42,0.6);
         border:1px solid #22c55e;
       ">
-        وصل تقريباً
+        ${arrivedText}
       </div>
     `);
     trackedEtaInfoWindow.open(map, markerState.marker);
     return;
   }
 
-  const mins = Math.floor(remaining / 60);
-  const secs = remaining % 60;
-  const label = `${mins}:${String(secs).padStart(2, "0")} دقيقة`;
+  const etaText = getEtaLabelText(remaining);
 
   const html = `
     <div style="
@@ -1698,34 +2797,30 @@ function updateEtaBubble() {
       border:1px solid #22c55e;
       white-space:nowrap;
     ">
-      🕒 متوقع خلال ${label}
+      ${etaText}
     </div>
   `;
-
   trackedEtaInfoWindow.setContent(html);
   trackedEtaInfoWindow.open(map, markerState.marker);
 }
 
-// ✅ بدء عدّاد الدقيقة (بالون أحمر يومض فوق السائق ثم يختفي عند انتهاء الوقت)
 function startNearArrivalCountdown(driverId) {
   const state = driverMarkers[driverId];
   if (!state || !state.marker) return;
 
-  // إيقاف أي تايمر ETA قديم
   if (trackedEtaTimerId) {
     clearInterval(trackedEtaTimerId);
     trackedEtaTimerId = null;
   }
 
-  // إيقاف أي عدّاد دقيقة سابق
   if (nearCountdownTimerId) {
     clearInterval(nearCountdownTimerId);
     nearCountdownTimerId = null;
   }
 
-  nearCountdownSeconds = 60; // نبدأ من 60 ثانية
+  nearCountdownSeconds = 60;
 
-    if (!trackedEtaInfoWindow) {
+  if (!trackedEtaInfoWindow) {
     trackedEtaInfoWindow = new google.maps.InfoWindow({
       pixelOffset: new google.maps.Size(0, -40),
       disableAutoPan: true
@@ -1734,12 +2829,9 @@ function startNearArrivalCountdown(driverId) {
     trackedEtaInfoWindow.setOptions({ disableAutoPan: true });
   }
 
-
-  // دالة إعادة رسم محتوى البالون
   const render = () => {
     const currentState = driverMarkers[driverId];
     if (!currentState || !currentState.marker || !currentState.marker.getMap()) {
-      // السائق اختفى من الخريطة -> تنظيف
       if (nearCountdownTimerId) {
         clearInterval(nearCountdownTimerId);
         nearCountdownTimerId = null;
@@ -1750,7 +2842,6 @@ function startNearArrivalCountdown(driverId) {
     }
 
     if (nearCountdownSeconds == null || nearCountdownSeconds <= 0) {
-      // انتهت الدقيقة -> إخفاء البالون ووقف العداد
       if (trackedEtaInfoWindow) trackedEtaInfoWindow.close();
       if (nearCountdownTimerId) {
         clearInterval(nearCountdownTimerId);
@@ -1760,9 +2851,7 @@ function startNearArrivalCountdown(driverId) {
       return;
     }
 
-    const mins = Math.floor(nearCountdownSeconds / 60);
-    const secs = nearCountdownSeconds % 60;
-    const label = `${mins}:${String(secs).padStart(2, "0")}`;
+    const countdownText = getNearCountdownText(nearCountdownSeconds);
 
     const html = `
       <div style="
@@ -1777,7 +2866,7 @@ function startNearArrivalCountdown(driverId) {
         white-space:nowrap;
         animation: merchant-blink 0.8s linear infinite;
       ">
-        ⏳ يصل خلال ${label}
+        ${countdownText}
       </div>
     `;
 
@@ -1785,10 +2874,8 @@ function startNearArrivalCountdown(driverId) {
     trackedEtaInfoWindow.open(map, currentState.marker);
   };
 
-  // أول رسم
   render();
 
-  // تايمر التناقص
   nearCountdownTimerId = setInterval(() => {
     if (nearCountdownSeconds != null) {
       nearCountdownSeconds -= 1;
@@ -1796,7 +2883,7 @@ function startNearArrivalCountdown(driverId) {
     }
   }, 1000);
 }
-// ✅ قصّ خط المسار تدريجيًا حسب موقع السائق (مطعم + عميل)
+
 function updateRouteProgressAlongPath(currentLatLng) {
   if (!trackedRoutePolyline) return;
   if (!trackedRouteFullPath || trackedRouteFullPath.length === 0) return;
@@ -1823,19 +2910,13 @@ function updateRouteProgressAlongPath(currentLatLng) {
     }
   }
 
-  // لو السائق بعيد جدًا عن خط الطريق (مثلاً غيّر مساره) لا نقصّ المسار
-  if (minDist > 80) return; // 80 متر كعتبة منطقية
+  if (minDist > 80) return;
 
   const remaining = trackedRouteFullPath.slice(closestIndex);
-
-  // نحدّث النسخة المخزّنة حتى لا نعيد الحساب على نقاط تم تجاوزها
   trackedRouteFullPath = remaining;
-
-  // تحديث البوليلاين الظاهر على الخريطة
   trackedRoutePolyline.setPath(remaining);
 }
 
-// ✅ تحديث مسار السائق + حساب المسافة/الزمن (للمطعم أو للعميل)
 function updateDriverRouteAndEta() {
   if (!trackedDriverId) return;
   if (!map) return;
@@ -1847,13 +2928,10 @@ function updateDriverRouteAndEta() {
   const origin = markerState.marker.getPosition();
   if (!origin) return;
 
-  // 🟢 في كل تحديث لموقع السائق نقصّ المسار تدريجيًا (إن وُجد)
   updateRouteProgressAlongPath(origin);
 
   const isCustomerLeg = currentDestinationType === "customer";
 
-
-  // 1) مسافة خطية بين السائق والوجهة (بدون نداء خارجي)
   let distanceMetersGeo = null;
   if (
     currentDestinationLat != null &&
@@ -1871,7 +2949,6 @@ function updateDriverRouteAndEta() {
     trackedLastDistanceMeters = distanceMetersGeo;
   }
 
-  // 2) منطق 300 متر مشترك
   if (
     !trackedNearAlertPlayed &&
     distanceMetersGeo != null &&
@@ -1880,7 +2957,6 @@ function updateDriverRouteAndEta() {
     trackedNearAlertPlayed = true;
 
     if (currentDestinationType === "merchant") {
-      // 🔔 قرب الوصول إلى التاجر (مع صوت + تنظيف كامل + دقيقة واحدة)
       if (driverNearSoundEl) {
         try {
           driverNearSoundEl.currentTime = 0;
@@ -1908,7 +2984,6 @@ function updateDriverRouteAndEta() {
     }
 
     if (currentDestinationType === "customer") {
-      // 👇 للعميل: لا صوت، لا إزالة للهالة أو المسار، فقط نوقف الـ ETA العام ونبدأ عداد دقيقة
       if (trackedEtaTimerId) {
         clearInterval(trackedEtaTimerId);
         trackedEtaTimerId = null;
@@ -1921,28 +2996,23 @@ function updateDriverRouteAndEta() {
     }
   }
 
-  // بعد دخول سيناريو الـ 300م لا نحتاج أي Directions إضافية
   if (trackedNearAlertPlayed) return;
 
-  // 3) إعداد Directions
   if (!directionsService) {
     directionsService = new google.maps.DirectionsService();
   }
 
-  // رحلة التاجر: نستخدم نفس نظام الـ throttle
   if (!isCustomerLeg) {
     const now = Date.now();
     if (now - lastDriverRouteRequestAt < 10000) return;
     lastDriverRouteRequestAt = now;
   } else {
-    // رحلة العميل: نداء واحد فقط لـ Directions
     if (directionsRequestedForCurrentLeg) {
       return;
     }
     directionsRequestedForCurrentLeg = true;
   }
 
-  // تحضير الوجهة لنداء Directions
   let destination;
   if (currentDestinationLat != null && currentDestinationLng != null) {
     destination = {
@@ -1950,7 +3020,7 @@ function updateDriverRouteAndEta() {
       lng: currentDestinationLng
     };
   } else if (currentDestinationAddress) {
-    destination = currentDestinationAddress; // مثل "Musterstr 10, Berlin"
+    destination = currentDestinationAddress;
   } else if (
     currentDestinationType === "merchant" &&
     merchantLocationLat != null &&
@@ -1986,7 +3056,6 @@ function updateDriverRouteAndEta() {
       const distanceMeters = leg.distance ? leg.distance.value : null;
       const durationSeconds = leg.duration ? leg.duration.value : null;
 
-      // سرعة متوسطة تقريبية للمسار
       if (distanceMeters != null) {
         trackedLastDistanceMeters = distanceMeters;
       }
@@ -1998,7 +3067,6 @@ function updateDriverRouteAndEta() {
         driverRouteAvgSpeedMps = distanceMeters / durationSeconds;
       }
 
-      // لو كانت رحلة العميل، نستخرج إحداثيات العنوان من نهاية المسار
       if (currentDestinationType === "customer" && leg.end_location) {
         currentDestinationLat = leg.end_location.lat();
         currentDestinationLng = leg.end_location.lng();
@@ -2015,10 +3083,10 @@ function updateDriverRouteAndEta() {
         currentDestinationLat = leg.end_location.lat();
         currentDestinationLng = leg.end_location.lng();
       }
-      // 📌 في أول مرة في هذه الرحلة نوسّط الخريطة بحيث تحتوي السائق + الوجهة معاً
+
       if (!mapFittedForCurrentLeg && map && origin) {
         const bounds = new google.maps.LatLngBounds();
-        bounds.extend(origin); // موقع السائق الحالي
+        bounds.extend(origin);
 
         if (currentDestinationLat != null && currentDestinationLng != null) {
           bounds.extend(
@@ -2032,34 +3100,30 @@ function updateDriverRouteAndEta() {
         mapFittedForCurrentLeg = true;
       }
 
-      // رسم المسار (مشترك)
       const overviewPath = result.routes[0].overview_path;
-  if (overviewPath && overviewPath.length) {
-    // 🟢 نخزّن المسار الكامل للرحلة الحالية (مطعم أو عميل)
-    trackedRouteFullPath = overviewPath.slice();
+      if (overviewPath && overviewPath.length) {
+        trackedRouteFullPath = overviewPath.slice();
 
-    if (!trackedRoutePolyline) {
-      trackedRoutePolyline = new google.maps.Polyline({
-        map,
-        path: trackedRouteFullPath,
-        strokeColor: "#22c55e",
-        strokeOpacity: 0.8,
-        strokeWeight: 4
-      });
-    } else {
-      trackedRoutePolyline.setPath(trackedRouteFullPath);
-    }
+        if (!trackedRoutePolyline) {
+          trackedRoutePolyline = new google.maps.Polyline({
+            map,
+            path: trackedRouteFullPath,
+            strokeColor: "#22c55e",
+            strokeOpacity: 0.8,
+            strokeWeight: 4
+          });
+        } else {
+          trackedRoutePolyline.setPath(trackedRouteFullPath);
+        }
 
-    // أول قصّ للمسار حسب الموقع الحالي للسائق (حتى يتماشى الشكل فوراً)
-    updateRouteProgressAlongPath(origin);
-  }
+        updateRouteProgressAlongPath(origin);
+      }
 
-      // إعداد الـ ETA العام (قبل 300م)
       if (durationSeconds != null) {
         trackedEtaSeconds = durationSeconds;
         trackedEtaUpdatedAt = Date.now();
 
-                if (!trackedEtaInfoWindow) {
+        if (!trackedEtaInfoWindow) {
           trackedEtaInfoWindow = new google.maps.InfoWindow({
             pixelOffset: new google.maps.Size(0, -40),
             disableAutoPan: true
@@ -2078,12 +3142,10 @@ function updateDriverRouteAndEta() {
   );
 }
 
-// عند بدء توجه السائق للتاجر
 function handleDriverHeadingToMerchant(callId, callData) {
-  currentTrackedCallId = callId;
-  currentTrackedDriverId = callData.driverId || null;
+  const driverId = callData.driverId || null;
+  if (!driverId) return;
 
-  // صوت + توست "السائق في طريقه إليك"
   if (driverOnWaySoundEl) {
     try {
       driverOnWaySoundEl.currentTime = 0;
@@ -2099,23 +3161,22 @@ function handleDriverHeadingToMerchant(callId, callData) {
       " " +
       (callData.driverLastName || "")
     ).trim();
+
     const label = driverName
-      ? `السائق ${driverName} في طريقه إليك`
-      : "السائق في طريقه إليك";
+      ? t("toastDriverHeadingMerchantWithName").replace("{{name}}", driverName)
+      : t("toastDriverHeadingMerchantNoName");
+
     showToast(label);
   }
 
-  if (currentTrackedDriverId) {
-    startDriverHalo(currentTrackedDriverId);
-    startTrackingDriverToMerchant(currentTrackedDriverId);
-  }
+  startDriverHalo(driverId);
+  mtStartTrackingToMerchant(driverId, callId);
 }
-// عند بدء توجه السائق إلى العميل
-function handleDriverHeadingToCustomer(callId, callData) {
-  currentTrackedCallId = callId;
-  currentTrackedDriverId = callData.driverId || null;
 
-  // نفس صوت "السائق في الطريق" (يمكنك إلغاؤه لو أردت)
+function handleDriverHeadingToCustomer(callId, callData) {
+  const driverId = callData.driverId || null;
+  if (!driverId) return;
+
   if (driverOnWaySoundEl) {
     try {
       driverOnWaySoundEl.currentTime = 0;
@@ -2131,49 +3192,26 @@ function handleDriverHeadingToCustomer(callId, callData) {
       " " +
       (callData.driverLastName || "")
     ).trim();
+
     const label = driverName
-      ? `السائق ${driverName} في طريقه للعميل`
-      : "السائق في طريقه للعميل";
+      ? t("toastDriverHeadingCustomerWithName").replace("{{name}}", driverName)
+      : t("toastDriverHeadingCustomerNoName");
+
     showToast(label);
   }
 
-  if (currentTrackedDriverId) {
-    startDriverHalo(currentTrackedDriverId);
-    startTrackingDriverToCustomer(callData);
-  }
+  startDriverHalo(driverId);
+  mtStartTrackingToCustomer(driverId, callId, callData);
 }
 
-// عند انتهاء/إلغاء نداء مرتبط بالتتبع
 function stopTrackingDriverForCall(callId) {
-  if (callId !== currentTrackedCallId) return;
-
-  if (currentTrackedDriverId) {
-    stopDriverHalo(currentTrackedDriverId);
-  }
-
-  // إيقاف أي تتبّع (للمطعم أو للعميل)
-  stopTrackingDriverToMerchant(); // تنظف المسار والبالونات والعدّادات المشتركة
-
-  // إخفاء ماركر العميل إن وجد
-  hideCustomerMarker();
-
-  // 🧹 تنظيف عدّاد النداءات والسرعة للرحلة الحالية
-  if (driverToMerchantDirectionsCountByCall[callId] != null) {
-    delete driverToMerchantDirectionsCountByCall[callId];
-  }
-  driverRouteAvgSpeedMps = null;
-
-  currentDestinationLat = null;
-  currentDestinationLng = null;
-  currentDestinationAddress = null;
-  currentDestinationType = null;
-  directionsRequestedForCurrentLeg = false;
-  currentCustomerName = "";
-
-  currentTrackedCallId = null;
-  currentTrackedDriverId = null;
-    mapFittedForCurrentLeg = false;
-
+  Object.keys(multiTrackingByDriver).forEach((driverId) => {
+    const tr = multiTrackingByDriver[driverId];
+    if (tr && tr.callId === callId) {
+      stopDriverHalo(driverId);
+      mtStopTrackingForDriver(driverId);
+    }
+  });
 }
 
 /* ========== Merchant CALLS rendering ========== */
@@ -2203,9 +3241,15 @@ function renderMerchantCalls(allCalls) {
   );
 
   const driverFilterVal = filterDriver.value;
+
   let activeFiltered = active.slice();
+  let completedFiltered = completed.slice();
+
   if (driverFilterVal) {
     activeFiltered = activeFiltered.filter(
+      (c) => c.driverId === driverFilterVal
+    );
+    completedFiltered = completedFiltered.filter(
       (c) => c.driverId === driverFilterVal
     );
   }
@@ -2214,23 +3258,24 @@ function renderMerchantCalls(allCalls) {
   activeFiltered.sort((a, b) => compareCalls(a, b, sortA));
 
   const sortC = sortCompleted.value;
-  completed.sort((a, b) => compareCalls(a, b, sortC));
+  completedFiltered.sort((a, b) => compareCalls(a, b, sortC));
 
-  countActiveEl.innerHTML = `النداءات النشطة<br><strong>${active.length}</strong>`;
-  countCompletedEl.innerHTML = `النداءات السابقة<br><strong>${completed.length}</strong>`;
+  countActiveEl.innerHTML =
+    `${t("statsActiveCalls")}<br><strong>${activeFiltered.length}</strong>`;
+  countCompletedEl.innerHTML =
+    `${t("statsPastCalls")}<br><strong>${completedFiltered.length}</strong>`;
 
   const totalDeliveryFee = completed.reduce(
     (sum, c) => sum + (c.deliveryFee || 0),
     0
   );
   document.getElementById("totalDelivery").innerHTML =
-    `إجمالي التوصيل<br><strong>${totalDeliveryFee.toFixed(2)}</strong>`;
-if (merchantEarningsTopEl) {
-  merchantEarningsTopEl.innerHTML =
-    `إجمالي التوصيل<br><strong>${totalDeliveryFee.toFixed(2)} €</strong>`;
-}
+    `${t("statsTotalDelivery")}<br><strong>${totalDeliveryFee.toFixed(2)}</strong>`;
+  if (merchantEarningsTopEl) {
+    merchantEarningsTopEl.innerHTML =
+      `${t("statsTotalDelivery")}<br><strong>${totalDeliveryFee.toFixed(2)} €</strong>`;
+  }
 
-  // --- الطلبات النشطة ---
   activeOrdersEl.innerHTML = "";
   activeFiltered.forEach((c) => {
     const driverName =
@@ -2242,30 +3287,28 @@ if (merchantEarningsTopEl) {
       "سائق";
 
     const card = document.createElement("div");
-card.className = "order-card";
-card.innerHTML = `
-  <div style="display:flex; justify-content:space-between; gap:8px; align-items:center;">
-    <div>
-      <div><strong>#${getShortId(c.id)}</strong> — ${escapeHtml(driverName)}</div>
-      <div class="small">حالة النداء: ${escapeHtml(
-        c.status || "pending"
-      )} — ${formatDate(c._date)}</div>
-    </div>
-  </div>
-`;
+    card.className = "order-card";
+    card.innerHTML = `
+      <div style="display:flex; justify-content:space-between; gap:8px; align-items:center;">
+        <div>
+          <div><strong>#${getShortId(c.id)}</strong> — ${escapeHtml(driverName)}</div>
+          <div class="small">${t("callStatusLabel")}: ${escapeHtml(
+            c.status || "pending"
+          )} — ${formatDate(c._date)}</div>
+        </div>
+      </div>
+    `;
 
     activeOrdersEl.appendChild(card);
 
-    // فتح تفاصيل الطلب عند الضغط على البطاقة
     card.addEventListener("click", (e) => {
       if (e.target.tagName.toLowerCase() === "button") return;
       viewOrderDetails(c.id);
     });
   });
 
-  // --- الطلبات السابقة ---
   completedOrdersEl.innerHTML = "";
-  completed.forEach((c) => {
+  completedFiltered.forEach((c) => {
     const driverName =
       (cachedDrivers[c.driverId] &&
         ((cachedDrivers[c.driverId].firstName || "") +
@@ -2280,17 +3323,17 @@ card.innerHTML = `
         : c._date;
 
     const card = document.createElement("div");
-card.className = "order-card";
-card.innerHTML = `
-  <div style="display:flex; justify-content:space-between; gap:8px; align-items:center;">
-    <div>
-      <div><strong>#${getShortId(c.id)}</strong> — ${escapeHtml(driverName)}</div>
-      <div class="small">${escapeHtml(
-        c.status || ""
-      )} — ${formatDate(dateBase)}</div>
-    </div>
-  </div>
-`;
+    card.className = "order-card";
+    card.innerHTML = `
+      <div style="display:flex; justify-content:space-between; gap:8px; align-items:center;">
+        <div>
+          <div><strong>#${getShortId(c.id)}</strong> — ${escapeHtml(driverName)}</div>
+          <div class="small">${escapeHtml(
+            c.status || ""
+          )} — ${formatDate(dateBase)}</div>
+        </div>
+      </div>
+    `;
 
     completedOrdersEl.appendChild(card);
 
@@ -2341,12 +3384,13 @@ function escapeHtml(s) {
 }
 function getShortId(id) {
   if (!id) return "";
-  return String(id).slice(-6); // آخر 6 خانات من الـ id
+  return String(id).slice(-6);
 }
 
 /* ========== تفاصيل الطلب (من calls) للتاجر ========== */
 window.viewOrderDetails = async function (callId) {
-  if (!currentMerchantId) return alert("لم يتم تحديد التاجر.");
+  if (!currentMerchantId) return alert(t("alertMerchantNotSet"));
+
   const doc = await db
     .collection("merchants")
     .doc(currentMerchantId)
@@ -2354,7 +3398,8 @@ window.viewOrderDetails = async function (callId) {
     .doc(callId)
     .get();
 
-  if (!doc.exists) return alert("طلب غير موجود");
+  if (!doc.exists) return alert(t("alertOrderNotFound"));
+
   const o = { id: doc.id, ...doc.data() };
 
   const dist = o.distance || {};
@@ -2378,31 +3423,55 @@ window.viewOrderDetails = async function (callId) {
     feeLabel = String(o.deliveryFee);
   }
 
-  let html = `<div><strong>طلب / نداء #${getShortId(o.id)}</strong></div>`;
+  const shortId = getShortId(o.id);
+  const driverName = (
+    (o.driverFirstName || "") +
+    " " +
+    (o.driverLastName || "")
+  ).trim();
 
-  html += `<div class="small">الحالة: ${escapeHtml(o.status || "")}</div>`;
+  let html = `<div><strong>${t("orderDetailsHeadingPrefix")} #${shortId}</strong></div>`;
+
+  html += `<div class="small">${t("orderDetailsStatusLabel")}: ${escapeHtml(
+    o.status || ""
+  )}</div>`;
   if (o.createdAt && o.createdAt.toDate) {
-    html += `<div class="small">تاريخ: ${formatDate(o.createdAt.toDate())}</div>`;
+    html += `<div class="small">${t("orderDetailsDateLabel")}: ${formatDate(
+      o.createdAt.toDate()
+    )}</div>`;
   }
 
   html += `<div style="margin-top:8px;">`;
-  html += `<div>السائق: ${escapeHtml(
-    ((o.driverFirstName || "") + " " + (o.driverLastName || "")).trim()
+  html += `<div>${t("orderDetailsDriverLabel")}: ${escapeHtml(driverName || "-")}</div>`;
+  html += `<div>${t("orderDetailsDriverPhoneLabel")}: ${escapeHtml(
+    o.driverPhone || "-"
   )}</div>`;
-  html += `<div>هاتف السائق: ${escapeHtml(o.driverPhone || "-")}</div>`;
-  html += `<div>المدينة: ${escapeHtml(o.merchantCity || "-")}</div>`;
-  html += `<div>اسم العميل: ${escapeHtml(o.customerName || "-")}</div>`;
-  html += `<div>العنوان: ${escapeHtml(o.deliveryAddress || "-")}</div>`;
+  html += `<div>${t("orderDetailsCityLabel")}: ${escapeHtml(
+    o.merchantCity || "-"
+  )}</div>`;
+  html += `<div>${t("orderDetailsCustomerNameLabel")}: ${escapeHtml(
+    o.customerName || "-"
+  )}</div>`;
+  html += `<div>${t("orderDetailsAddressLabel")}: ${escapeHtml(
+    o.deliveryAddress || "-"
+  )}</div>`;
 
   if (totalKm) {
-    html += `<div>المسافة الكلية المقطوعة: ${totalKm}</div>`;
+    html += `<div>${t("orderDetailsTotalDistanceLabel")}: ${totalKm}</div>`;
     if (d1 || d2) {
-      html += `<div class="small">من السائق إلى التاجر: ${d1 || "—"} / من التاجر إلى نقطة التسليم: ${d2 || "—"}</div>`;
+      const d1Label = d1 || "—";
+      const d2Label = d2 || "—";
+      const segText = t("orderDetailsSegmentDistancesLabel")
+        .replace("{{d1}}", d1Label)
+        .replace("{{d2}}", d2Label);
+      html += `<div class="small">${segText}</div>`;
     }
   }
 
-  html += `<div>تكلفة التوصيل: ${feeLabel}</div>`;
-  html += `<div>ملاحظات: ${escapeHtml(o.notes || "-")}</div>`;
+  html += `<div>${t("orderDetailsDeliveryCostLabel")}: ${feeLabel}</div>`;
+  html += `<div>${t("orderDetailsNotesLabel")}: ${escapeHtml(
+    o.notes || "-"
+  )}</div>`;
   html += `</div>`;
 
   html += `<div class="btn-row">`;
@@ -2412,10 +3481,16 @@ window.viewOrderDetails = async function (callId) {
     o.status === "accepted" ||
     o.status === "in_progress"
   ) {
-    html += `<button class="secondary" onclick="printOrder('${o.id}')">طباعة</button>`;
-    html += `<button onclick="cancelOrder('${o.id}')" class="secondary">إلغاء</button>`;
+    html += `<button class="secondary" onclick="printOrder('${o.id}')">${t(
+      "orderDetailsPrintBtn"
+    )}</button>`;
+    html += `<button onclick="cancelOrder('${o.id}')" class="secondary">${t(
+      "orderDetailsCancelBtn"
+    )}</button>`;
   }
-  html += `<button onclick="closeOrderModal()" class="secondary">إغلاق</button>`;
+  html += `<button onclick="closeOrderModal()" class="secondary">${t(
+    "orderDetailsCloseBtn"
+  )}</button>`;
   html += `</div>`;
 
   modalContent.innerHTML = html;
@@ -2424,13 +3499,12 @@ window.viewOrderDetails = async function (callId) {
   window.scrollTo(0, 0);
 };
 
-/* ========== إغلاق المودال ========== */
 function closeOrderModal() {
   modalBackdrop.style.display = "none";
   modalContent.innerHTML = "";
   if (orderModalEl) orderModalEl.classList.add("hidden");
 }
-closeModal.addEventListener("click", closeOrderModal);
+
 modalBackdrop.addEventListener("click", (e) => {
   if (e.target === modalBackdrop) closeOrderModal();
 });
@@ -2440,18 +3514,17 @@ async function createCallForDriver(driverId) {
   const driver = cachedDrivers[driverId] || {};
 
   if (!currentMerchantId) {
-    showToast("لا يمكن إرسال نداء: لم يتم تحديد التاجر الحالي.", "error");
+    showToast(t("toastNoMerchant"), "error");
     return;
   }
 
-  // ⛔ ممنوع إرسال نداءات إذا التاجر في وضع أوفلاين
   if (!merchantCurrentOnline) {
-    showToast("لا يمكنك إرسال نداءات وأنت في وضع أوفلاين. الرجاء التحويل إلى أونلاين أولاً.", "error");
+    showToast(t("toastOffline"), "error");
     return;
   }
 
   if (driver.busy) {
-    showToast("السائق مشغول حالياً ولا يمكن مناداته.", "error");
+    showToast(t("toastDriverBusy"), "error");
     return;
   }
 
@@ -2482,7 +3555,6 @@ async function createCallForDriver(driverId) {
       .collection("calls")
       .add(callData);
 
-    // 🔊 تشغيل صوت نجاح إرسال النداء
     if (merchantCallSoundEl) {
       try {
         merchantCallSoundEl.currentTime = 0;
@@ -2492,14 +3564,14 @@ async function createCallForDriver(driverId) {
       }
     }
 
-    // 🔻 إغلاق البالون الذي يحتوي معلومات السائق
     closeDriverInfoWindow(driverId);
 
-    // ✅ توست نجاح
-    showToast("تم إرسال نداء للسائق " + (driver.firstName || ""), "success");
+    const label = driver.firstName
+      ? t("toastCallSentPrefix") + " " + driver.firstName
+      : t("toastCallSentPrefix");
+    showToast(label, "success");
   } catch (err) {
-    // ❌ توست خطأ
-    showToast("خطأ أثناء إرسال النداء: " + err.message, "error");
+    showToast(t("toastErrorSendCallPrefix") + " " + err.message, "error");
   }
 }
 
@@ -2513,25 +3585,35 @@ exportCsvBtn.addEventListener("click", () => {
     "delivered"
   ];
 
-  const completed = lastCallsCache.filter((c) =>
+  let completed = lastCallsCache.filter((c) =>
     completedStatuses.includes((c.status || "").toLowerCase())
   );
 
+  const driverFilterVal = filterDriver.value;
+  if (driverFilterVal) {
+    completed = completed.filter((c) => c.driverId === driverFilterVal);
+  }
+
   if (!completed.length) {
-    alert("لا توجد طلبات للتصدير.");
+    if (driverFilterVal) {
+      alert(t("alertNoExportForDriver"));
+    } else {
+      alert(t("alertNoExportAll"));
+    }
     return;
   }
 
   const rows = [];
+  // رؤوس الأعمدة مترجمة
   rows.push([
-    "id",
-    "driverId",
-    "driverName",
-    "status",
-    "requestTime",
-    "responseTime",
-    "merchantName",
-    "merchantCity"
+    t("csvHeaderId"),
+    t("csvHeaderDriverId"),
+    t("csvHeaderDriverName"),
+    t("csvHeaderStatus"),
+    t("csvHeaderRequestTime"),
+    t("csvHeaderResponseTime"),
+    t("csvHeaderMerchantName"),
+    t("csvHeaderMerchantCity")
   ]);
 
   completed.forEach((c) => {
@@ -2576,7 +3658,18 @@ exportCsvBtn.addEventListener("click", () => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `calls_${new Date().toISOString().slice(0, 10)}.csv`;
+
+  let fileName = `calls_${new Date().toISOString().slice(0, 10)}.csv`;
+  if (driverFilterVal) {
+    const d = cachedDrivers[driverFilterVal] || {};
+    const driverNameFile =
+      ((d.firstName || "") + "_" + (d.lastName || "")).trim() || "driver";
+    fileName = `calls_${driverNameFile}_${new Date()
+      .toISOString()
+      .slice(0, 10)}.csv`;
+  }
+  a.download = fileName;
+
   a.click();
   URL.revokeObjectURL(url);
 });
@@ -2590,12 +3683,45 @@ printBtn.addEventListener("click", () => {
     "delivered"
   ];
 
-  const completed = lastCallsCache.filter((c) =>
+  let completed = lastCallsCache.filter((c) =>
     completedStatuses.includes((c.status || "").toLowerCase())
   );
 
-  let html = `<html dir="rtl"><head><meta charset="utf-8"><title>طباعة النداءات</title></head><body>`;
-  html += `<h3>النداءات السابقة — ${new Date().toLocaleString()}</h3>`;
+  const driverFilterVal = filterDriver.value;
+  if (driverFilterVal) {
+    completed = completed.filter((c) => c.driverId === driverFilterVal);
+  }
+
+  if (!completed.length) {
+    if (driverFilterVal) {
+      alert(t("alertNoPrintForDriver"));
+    } else {
+      alert(t("alertNoPrintAll"));
+    }
+    return;
+  }
+
+  const docDir = currentLang === "ar" ? "rtl" : "ltr";
+
+  let html =
+    `<html dir="${docDir}"><head><meta charset="utf-8">` +
+    `<title>${t("printCallsTitle")}</title></head><body>`;
+
+  const nowStr = new Date().toLocaleString();
+
+  if (driverFilterVal) {
+    const d = cachedDrivers[driverFilterVal] || {};
+    const driverName =
+      ((d.firstName || "") + " " + (d.lastName || "")).trim() || "-";
+
+    const heading = t("printCallsHeadingForDriver").replace(
+      "{{driverName}}",
+      escapeHtml(driverName)
+    );
+    html += `<h3>${heading} — ${nowStr}</h3>`;
+  } else {
+    html += `<h3>${t("printCallsHeadingAll")} — ${nowStr}</h3>`;
+  }
 
   completed.forEach((c) => {
     const driverName =
@@ -2617,10 +3743,10 @@ printBtn.addEventListener("click", () => {
     <strong>#${getShortId(c.id)}</strong> — ${escapeHtml(
       driverName
     )} — ${formatDate(dateBase)}<br/>
-    الحالة: ${escapeHtml(c.status || "")}<br/>
-    المتجر: ${escapeHtml(c.merchantName || "-")} (${escapeHtml(
-  c.merchantCity || "-"
-)})
+    ${t("callStatusLabel")}: ${escapeHtml(c.status || "")}<br/>
+    ${t("printMerchantLabel")}: ${escapeHtml(c.merchantName || "-")} (${escapeHtml(
+      c.merchantCity || "-"
+    )})
   </div>
 `;
   });
@@ -2636,7 +3762,7 @@ printBtn.addEventListener("click", () => {
 function refreshDriverFilterOptions() {
   const ids = Object.keys(cachedDrivers);
   const cur = filterDriver.value;
-  filterDriver.innerHTML = `<option value="">الجميع</option>`;
+  filterDriver.innerHTML = `<option value="">${t("filterAllDrivers")}</option>`;
   ids.forEach((id) => {
     const d = cachedDrivers[id];
     const name = (d.firstName || "") + " " + (d.lastName || "");
@@ -2650,27 +3776,50 @@ function refreshDriverFilterOptions() {
 
 /* ========== طباعة نداء مفرد (call) ========== */
 window.printOrder = async function (callId) {
-  if (!currentMerchantId) return alert("لم يتم تحديد التاجر.");
+  if (!currentMerchantId) return alert(t("alertMerchantNotSet"));
   const doc = await db
     .collection("merchants")
     .doc(currentMerchantId)
     .collection("calls")
     .doc(callId)
     .get();
-  if (!doc.exists) return alert("طلب غير موجود");
+  if (!doc.exists) return alert(t("alertOrderNotFound"));
   const o = { id: doc.id, ...doc.data() };
 
-  let html = `<html dir="rtl"><head><meta charset="utf-8"><title>طلب #${getShortId(o.id)}</title></head><body>`;
-html += `<h3>طلب #${getShortId(o.id)}</h3>`;
-  html += `<div>السائق: ${escapeHtml(
-    ((o.driverFirstName || "") + " " + (o.driverLastName || "")).trim()
+  const shortId = getShortId(o.id);
+  const docDir = currentLang === "ar" ? "rtl" : "ltr";
+
+  const titlePrefix = t("printSingleOrderTitlePrefix");
+  const headingPrefix = t("printSingleOrderHeadingPrefix");
+
+  let html =
+    `<html dir="${docDir}"><head><meta charset="utf-8">` +
+    `<title>${titlePrefix} #${shortId}</title></head><body>`;
+
+  html += `<h3>${headingPrefix} #${shortId}</h3>`;
+
+  const driverName = (
+    (o.driverFirstName || "") +
+    " " +
+    (o.driverLastName || "")
+  ).trim();
+
+  html += `<div>${t("printSingleOrderDriverLabel")}: ${escapeHtml(
+    driverName
   )}</div>`;
-  html += `<div>هاتف السائق: ${escapeHtml(o.driverPhone || "-")}</div>`;
-  html += `<div>العميل: ${escapeHtml(o.customerName || "-")}</div>`;
-  html += `<div>العنوان: ${escapeHtml(o.deliveryAddress || "-")}</div>`;
-  html += `<div>تكلفة: ${escapeHtml(
+  html += `<div>${t("printSingleOrderDriverPhoneLabel")}: ${escapeHtml(
+    o.driverPhone || "-"
+  )}</div>`;
+  html += `<div>${t("printSingleOrderCustomerLabel")}: ${escapeHtml(
+    o.customerName || "-"
+  )}</div>`;
+  html += `<div>${t("printSingleOrderAddressLabel")}: ${escapeHtml(
+    o.deliveryAddress || "-"
+  )}</div>`;
+  html += `<div>${t("printSingleOrderCostLabel")}: ${escapeHtml(
     o.deliveryFee != null ? o.deliveryFee : "-"
   )}</div>`;
+
   html += `</body></html>`;
   const w = window.open("", "_blank");
   w.document.write(html);
@@ -2680,8 +3829,8 @@ html += `<h3>طلب #${getShortId(o.id)}</h3>`;
 
 /* ========== إلغاء الطلب (call) من التاجر ========== */
 window.cancelOrder = async function (callId) {
-  if (!currentMerchantId) return alert("لم يتم تحديد التاجر.");
-  if (!confirm("هل ترغب فعلاً في إلغاء هذا الطلب؟")) return;
+  if (!currentMerchantId) return alert(t("alertMerchantNotSet"));
+  if (!confirm(t("confirmCancelOrder"))) return;
   try {
     await db
       .collection("merchants")
@@ -2694,7 +3843,7 @@ window.cancelOrder = async function (callId) {
       });
     closeOrderModal();
   } catch (err) {
-    alert("خطأ أثناء إلغاء الطلب: " + err.message);
+    alert(t("alertCancelOrderErrorPrefix") + err.message);
   }
 };
 
@@ -2709,12 +3858,131 @@ filterDriver.addEventListener("change", () =>
   renderMerchantCalls(lastCallsCache)
 );
 
+/* ========== i18n: تطبيق اللغة على النصوص الثابتة ========== */
+function applyLanguageToStaticUI() {
+  document.title = t("pageTitle");
+  const mainHeaderEl = document.getElementById("mainHeader");
+  if (mainHeaderEl) mainHeaderEl.textContent = t("mainHeader");
+
+  const langLabel = document.getElementById("langLabel");
+  if (langLabel) langLabel.textContent = t("languageLabel");
+
+  if (registerTab) registerTab.textContent = t("tabRegister");
+  if (loginTab) loginTab.textContent = t("tabLogin");
+
+  const regTitle = document.querySelector("#merchantForm h3");
+  if (regTitle) regTitle.textContent = t("registerTitle");
+  const storeNameEl = document.getElementById("storeName");
+  if (storeNameEl) storeNameEl.placeholder = t("storeNamePlaceholder");
+  const storeAddressEl = document.getElementById("storeAddress");
+  if (storeAddressEl) storeAddressEl.placeholder = t("storeAddressPlaceholder");
+  const storeCityEl = document.getElementById("storeCity");
+  if (storeCityEl) storeCityEl.placeholder = t("storeCityPlaceholder");
+  const storePhoneEl = document.getElementById("storePhone");
+  if (storePhoneEl) storePhoneEl.placeholder = t("storePhonePlaceholder");
+  const contactNameEl = document.getElementById("contactName");
+  if (contactNameEl) contactNameEl.placeholder = t("contactNamePlaceholder");
+  const contactPhoneEl = document.getElementById("contactPhone");
+  if (contactPhoneEl) contactPhoneEl.placeholder = t("contactPhonePlaceholder");
+  const contactEmailEl = document.getElementById("contactEmail");
+  if (contactEmailEl) contactEmailEl.placeholder = t("contactEmailPlaceholder");
+  const merchantPasswordEl = document.getElementById("merchantPassword");
+  if (merchantPasswordEl) merchantPasswordEl.placeholder = t("merchantPasswordPlaceholder");
+  const regSubmitBtn = merchantForm && merchantForm.querySelector('button[type="submit"]');
+  if (regSubmitBtn) regSubmitBtn.textContent = t("registerSubmit");
+
+  const loginTitle = document.querySelector("#loginForm h3");
+  if (loginTitle) loginTitle.textContent = t("loginTitle");
+  const loginEmailEl = document.getElementById("loginEmail");
+  if (loginEmailEl) loginEmailEl.placeholder = t("loginEmailPlaceholder");
+  const loginPasswordEl = document.getElementById("loginPassword");
+  if (loginPasswordEl) loginPasswordEl.placeholder = t("loginPasswordPlaceholder");
+  const loginSubmitBtn = loginForm && loginForm.querySelector('button[type="submit"]');
+  if (loginSubmitBtn) loginSubmitBtn.textContent = t("loginSubmit");
+
+  if (merchantOnlineToggle) {
+    merchantOnlineToggle.textContent = merchantCurrentOnline ? t("topbarOnline") : t("topbarOffline");
+  }
+  if (merchantEarningsTopEl) {
+    const currentHtml = merchantEarningsTopEl.innerHTML;
+    const valueMatch = currentHtml.match(/<strong>(.*?)<\/strong>/);
+    const val = valueMatch ? valueMatch[1] : "0 €";
+    merchantEarningsTopEl.innerHTML = `${t("topbarTotalDelivery")}<br><strong>${val}</strong>`;
+  }
+  if (onlineDriversBadge) {
+    const label = onlineDriversBadge.querySelector(".label");
+    if (label) label.textContent = t("onlineDriversLabel");
+  }
+
+  const activeTitle = document.getElementById("activeOrdersTitle");
+  if (activeTitle) activeTitle.textContent = t("activeOrdersTitle");
+  const completedTitle = document.getElementById("completedOrdersTitle");
+  if (completedTitle) completedTitle.textContent = t("completedOrdersTitle");
+
+  if (filterDriver && filterDriver.options.length > 0) {
+    filterDriver.options[0].textContent = t("filterAllDrivers");
+  }
+
+  if (sortActive && sortActive.options.length === 4) {
+    sortActive.options[0].textContent = t("sortDateDesc");
+    sortActive.options[1].textContent = t("sortDateAsc");
+    sortActive.options[2].textContent = t("sortDriverAsc");
+    sortActive.options[3].textContent = t("sortDriverDesc");
+  }
+  if (sortCompleted && sortCompleted.options.length === 4) {
+    sortCompleted.options[0].textContent = t("sortDateDesc");
+    sortCompleted.options[1].textContent = t("sortDateAsc");
+    sortCompleted.options[2].textContent = t("sortDriverAsc");
+    sortCompleted.options[3].textContent = t("sortDriverDesc");
+  }
+  // عنوان مودال تفاصيل الطلب + زر إغلاق في الهيدر
+  const orderDetailsHeader = document.querySelector("#orderModal h3");
+  if (orderDetailsHeader) {
+    orderDetailsHeader.textContent = t("orderDetailsModalTitle");
+  }
+
+  if (exportCsvBtn) exportCsvBtn.textContent = t("exportCsv");
+  if (printBtn) printBtn.textContent = t("print");
+  if (logoutBtn) logoutBtn.textContent = t("logout");
+
+  renderMerchantCalls(lastCallsCache || []);
+}
+
+function initLanguage() {
+  const select = document.getElementById("langSelect");
+  const saved = localStorage.getItem("merchantLang");
+  if (saved && I18N[saved]) {
+    currentLang = saved;
+  } else {
+    currentLang = "ar";
+  }
+  document.documentElement.lang = currentLang;
+  if (select) select.value = currentLang;
+
+  if (select) {
+    select.addEventListener("change", () => {
+      const val = select.value;
+      if (I18N[val]) {
+        currentLang = val;
+        document.documentElement.lang = val;
+        localStorage.setItem("merchantLang", val);
+        applyLanguageToStaticUI();
+      }
+    });
+  }
+
+  applyLanguageToStaticUI();
+}
+
 /* ========== Clean up when leave ========== */
 window.addEventListener("beforeunload", () => {
   if (ordersListenerUnsub) ordersListenerUnsub();
   if (driversListenerUnsub) driversListenerUnsub();
   if (merchantCallsListenerUnsub) merchantCallsListenerUnsub();
 });
+
+/* تشغيل i18n بعد تحميل السكربت */
+initLanguage();
 </script>
 </body>
 </html>
