@@ -664,6 +664,8 @@ const I18N = {
     print: "طباعة",
     logout: "تسجيل خروج",
         callStatusLabel: "حالة النداء",
+		cancelActiveOrderConfirm:
+      "السائق الذي اخترته في طريقه إليك.\n\nهل تريد بالفعل حذف هذا الطلب؟\nإذا قمت بحذف الطلب سيتم احتساب المسافة التي قطعها السائق بناءً على أسعار السائق.",
     toastNoMerchant: "لا يمكن إرسال نداء: لم يتم تحديد التاجر الحالي.",
     toastOffline: "لا يمكنك إرسال نداءات وأنت في وضع أوفلاين. الرجاء التحويل إلى أونلاين أولاً.",
     toastDriverBusy: "السائق مشغول حالياً ولا يمكن مناداته.",
@@ -805,6 +807,8 @@ printNoOrdersForDriver: "لا توجد طلبات سابقة لهذا السائ
     logout: "Logout",
     
 	    callStatusLabel: "Call status",
+		cancelActiveOrderConfirm:
+      "The driver you selected is already on the way to you.\n\nDo you really want to cancel this order?\nIf you cancel, the distance the driver has already travelled will be charged according to the driver's pricing.",
     toastNoMerchant: "Cannot send a call: current merchant is not set.",
     toastOffline: "You can't send calls while you are offline. Please switch to online first.",
     toastDriverBusy: "The driver is currently busy and cannot be called.",
@@ -945,6 +949,8 @@ printNoOrdersForDriver: "No past orders for this driver to print.",
     print: "Drucken",
     logout: "Abmelden",
         callStatusLabel: "Anfragestatus",
+		    cancelActiveOrderConfirm:
+      "Der von dir ausgewählte Fahrer ist bereits auf dem Weg zu dir.\n\nMöchtest du diese Bestellung wirklich stornieren?\nWenn du stornierst, wird die bereits gefahrene Strecke gemäß der Preisgestaltung des Fahrers berechnet.",
     toastNoMerchant: "Anfrage kann nicht gesendet werden: aktueller Händler ist nicht festgelegt.",
     toastOffline: "Sie können keine Anfragen senden, während Sie offline sind. Bitte gehen Sie zuerst online.",
     toastDriverBusy: "Der Fahrer ist momentan beschäftigt und kann nicht angefragt werden.",
@@ -1085,6 +1091,8 @@ printNoOrdersForDriver: "Es gibt keine vergangenen Bestellungen für diesen Fahr
     print: "Yazdır",
     logout: "Çıkış yap",
         callStatusLabel: "Çağrı durumu",
+		cancelActiveOrderConfirm:
+      "Seçtiğiniz sürücü şu anda size doğru geliyor.\n\nBu siparişi gerçekten iptal etmek istiyor musunuz?\nİptal ederseniz, sürücünün şimdiye kadar kat ettiği mesafe sürücünün fiyatlandırmasına göre ücretlendirilir.",
     toastNoMerchant: "Çağrı gönderilemiyor: geçerli işletme tanımlı değil.",
     toastOffline: "Çevrimdışıyken çağrı gönderemezsiniz. Lütfen önce çevrimiçi moda geçin.",
     toastDriverBusy: "Sürücü şu anda meşgul, çağrı gönderilemez.",
@@ -4272,8 +4280,8 @@ window.printOrder = async function (callId) {
 
 /* ========== إلغاء الطلب (call) من التاجر ========== */
 window.cancelOrder = async function (callId) {
-  if (!currentMerchantId) return alert(t("alertMerchantNotSet"));
-  if (!confirm(t("confirmCancelOrder"))) return;
+  if (!currentMerchantId) return alert("لم يتم تحديد التاجر.");
+  if (!confirm(t("cancelActiveOrderConfirm"))) return;
   try {
     await db
       .collection("merchants")
@@ -4286,7 +4294,7 @@ window.cancelOrder = async function (callId) {
       });
     closeOrderModal();
   } catch (err) {
-    alert(t("alertCancelOrderErrorPrefix") + err.message);
+    alert("خطأ أثناء إلغاء الطلب: " + err.message);
   }
 };
 
@@ -4442,6 +4450,3 @@ initLanguage();
 </script>
 </body>
 </html>
-
-
-
