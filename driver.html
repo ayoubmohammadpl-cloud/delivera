@@ -25,6 +25,9 @@
         padding: 0;
         overflow: hidden;
     }
+body.driver-mode .auth-lang-switcher {
+    display: none !important;
+}
 
     h2 { text-align: center; margin-bottom: 10px; }
     .tabs { display: flex; justify-content: center; gap:10px; margin-bottom: 20px; }
@@ -1822,6 +1825,8 @@ const orderModalEl = document.getElementById("orderModal");
 const mainHeader = document.getElementById("mainHeader");
 const authTabs = document.getElementById("authTabs");
 const footerEl = document.querySelector("footer");
+const authLangSwitcher = document.querySelector(".auth-lang-switcher"); // ✅ جديد
+
 // 🔊 صوت الأونلاين + فلاج لتشغيله فقط عند ضغط الزر
 const onlineSoundEl = document.getElementById("onlineSound");
 let playOnlineSoundNext = false;
@@ -2270,13 +2275,15 @@ driverLogoutBtn.addEventListener("click", async () => {
 
     await auth.signOut();
 
-    driverDashboard.classList.add("hidden");
+        driverDashboard.classList.add("hidden");
     registerSection.classList.remove("hidden");
     loginSection.classList.remove("hidden");
     if (mainHeader) mainHeader.classList.remove("hidden");
     if (authTabs) authTabs.classList.remove("hidden");
     if (footerEl) footerEl.classList.remove("hidden");
+    if (authLangSwitcher) authLangSwitcher.classList.remove("hidden"); // ✅ إرجاع شريط اللغة
     document.body.classList.remove("driver-mode");
+
   } catch (err) {
     alert(t("alert_logout_failed") + err.message);
 
@@ -2389,12 +2396,14 @@ async function showDriverDashboard(uid) {
   registerSection.classList.add("hidden");
   loginSection.classList.add("hidden");
 
-  if (mainHeader) mainHeader.classList.add("hidden");
+    if (mainHeader) mainHeader.classList.add("hidden");
   if (authTabs) authTabs.classList.add("hidden");
   if (footerEl) footerEl.classList.add("hidden");
+  if (authLangSwitcher) authLangSwitcher.classList.add("hidden"); // ✅ إخفاء شريط اللغة العلوي
 
   driverDashboard.classList.remove("hidden");
   document.body.classList.add("driver-mode");
+
 
   // تهيئة خريطة السائق
   initDriverMap();
