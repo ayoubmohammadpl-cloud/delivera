@@ -3537,16 +3537,39 @@ function renderMerchantCalls(allCalls) {
     `${t("statsPastCalls")}<br><strong>${completedFiltered.length}</strong>`;
 
   // إجمالي التوصيل لجميع السائقين (لشريط الأعلى)
-  const totalDeliveryFeeAll = completed.reduce(
-    (sum, c) => sum + (c.deliveryFee || 0),
-    0
-  );
+  const getCallFee = (c) => {
+    if (c && c.cost && typeof c.cost.totalFee === "number") {
+      return c.cost.totalFee;
+    }
+    if (typeof c.deliveryFee === "number") {
+      return c.deliveryFee;
+    }
+    return 0;
+  };
+
+  const totalDeliveryFeeAll = completed.reduce((sum, c) => {
+    const status = (c.status || "").toLowerCase();
+    const fee = getCallFee(c);
+
+    // نحتسب:
+    // 1) كل الطلبات المسلّمة
+    // 2) الطلبات الملغاة اللي فيها تعويض فعلي (> 0)
+    if (status === "delivered" || (status === "cancelled" && fee > 0)) {
+      return sum + fee;
+    }
+    return sum;
+  }, 0);
 
   // إجمالي التوصيل حسب الفلتر (السائق المحدد فقط)
-  const totalDeliveryFeeFiltered = completedFiltered.reduce(
-    (sum, c) => sum + (c.deliveryFee || 0),
-    0
-  );
+  const totalDeliveryFeeFiltered = completedFiltered.reduce((sum, c) => {
+    const status = (c.status || "").toLowerCase();
+    const fee = getCallFee(c);
+
+    if (status === "delivered" || (status === "cancelled" && fee > 0)) {
+      return sum + fee;
+    }
+    return sum;
+  }, 0);
 
   // صندوق "إجمالي التوصيل" داخل القائمة الجانبية يتبع الفلتر
   document.getElementById("totalDelivery").innerHTML =
