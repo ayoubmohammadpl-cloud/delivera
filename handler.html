@@ -1271,6 +1271,45 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+// إلغاء الطلب من لوحة التاجر + عكسه فوراً في وثيقة السائق
+async function cancelCallAndNotifyDriver(callRef) {
+  const snap = await callRef.get();
+  if (!snap.exists) return;
+
+  const data = snap.data() || {};
+  const driverId = data.driverId;
+  const callId   = callRef.id;
+
+  const patch = {
+    status: "cancelled",
+    cancelledBy: "merchant",
+    cancelledAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  const batch = db.batch();
+
+  // 1) تحديث وثيقة التاجر
+  batch.update(callRef, patch);
+
+  // 2) تحديث / إنشاء وثيقة السائق بنفس callId
+  if (driverId) {
+    const driverCallRef = db
+      .collection("drivers")
+      .doc(driverId)
+      .collection("calls")
+      .doc(callId);
+
+    // نستخدم set مع merge حتى لو الوثيقة غير موجودة يتم إنشاؤها
+    batch.set(
+      driverCallRef,
+      patch,
+      { merge: true }
+    );
+  }
+
+  await batch.commit();
+}
+
 // الرسم الأساسي
 const BASE_DELIVERY_FEE = 3.5; // EUR
 // مسار أيقونة ماركر التاجر (غيّره لما يناسبك)
@@ -4280,21 +4319,26 @@ window.printOrder = async function (callId) {
 
 /* ========== إلغاء الطلب (call) من التاجر ========== */
 window.cancelOrder = async function (callId) {
-  if (!currentMerchantId) return alert("لم يتم تحديد التاجر.");
+  if (!currentMerchantId) {
+    return alert(t("alertMerchantNotSet"));
+  }
+
+  // نفس نص التنبيه الذي عرفناه في I18N: cancelActiveOrderConfirm
   if (!confirm(t("cancelActiveOrderConfirm"))) return;
+
   try {
-    await db
+    const callRef = db
       .collection("merchants")
       .doc(currentMerchantId)
       .collection("calls")
-      .doc(callId)
-      .update({
-        status: "cancelled",
-        cancelledAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
+      .doc(callId);
+
+    // هنا نستخدم الدالة المشتركة التي تحدث التاجر + السائق معاً
+    await cancelCallAndNotifyDriver(callRef);
+
     closeOrderModal();
   } catch (err) {
-    alert("خطأ أثناء إلغاء الطلب: " + err.message);
+    alert(t("alertCancelOrderErrorPrefix") + err.message);
   }
 };
 
