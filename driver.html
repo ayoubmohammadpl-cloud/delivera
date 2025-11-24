@@ -794,6 +794,8 @@
 
 <!-- 🔊 صوت الأونلاين (غيّر online-sound.mp3 لاسم الملف الذي تريده) -->
 <audio id="onlineSound" src="online1.mp3" preload="auto"></audio>
+<!-- 🔊 صوت إلغاء الطلب من التاجر -->
+<audio id="orderCancelledSound" src="cancel.mp3" preload="auto"></audio>
 <!-- Google Maps API -->
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCUMgXQwwe7afBlRpp6zrXunbTVSCXfSqQ&libraries=geometry,places&language=ar"></script>
 
@@ -990,7 +992,12 @@ const translations = {
     alert_completeDeliverySuccess:
       "Distance and delivery fee have been calculated and order status updated.",
     confirm_cancel_order:
-      "Are you sure you want to cancel this order?"
+      "Are you sure you want to cancel this order?",
+	      orderCancelledByMerchant_title: "Order cancelled by merchant",
+    orderCancelledByMerchant_message:
+      "This order was cancelled by the merchant. The distance you have already driven will be charged according to your configured prices.",
+    orderCancelledByMerchant_confirmBtn: "I understand",
+
   },
 
   de: {
@@ -1159,7 +1166,12 @@ const translations = {
     alert_completeDeliverySuccess:
       "Strecke und Liefergebühr wurden berechnet und der Status aktualisiert.",
     confirm_cancel_order:
-      "Bist du sicher, dass du diese Bestellung stornieren möchtest?"
+      "Bist du sicher, dass du diese Bestellung stornieren möchtest?",
+	      orderCancelledByMerchant_title: "Bestellung vom Händler storniert",
+    orderCancelledByMerchant_message:
+      "Diese Bestellung wurde vom Händler storniert. Die bereits gefahrene Strecke wird gemäß deinen hinterlegten Preisen abgerechnet.",
+    orderCancelledByMerchant_confirmBtn: "Ich verstehe",
+
   },
 
   ar: {
@@ -1324,7 +1336,12 @@ const translations = {
     alert_completeDeliverySuccess:
       "تم حساب مسافة وتكلفة التوصيل وتحديث حالة الطلب.",
     confirm_cancel_order:
-      "هل أنت متأكد من إلغاء هذا الطلب؟"
+      "هل أنت متأكد من إلغاء هذا الطلب؟",
+	      orderCancelledByMerchant_title: "تم إلغاء الطلب من قبل التاجر",
+    orderCancelledByMerchant_message:
+      "تم حذف هذا الطلب من قبل التاجر. سيتم احتساب المسافة التي قطعتها بناءً على أسعارك المسجّلة.",
+    orderCancelledByMerchant_confirmBtn: "أتفهم ذلك",
+
   }
 };
 
@@ -1587,6 +1604,8 @@ let playOnlineSoundNext = false;
 
 // صوت النداء الجديد
 const callSoundEl = document.getElementById("callSound");
+// 🔊 صوت إلغاء الطلب من التاجر
+const orderCancelledSoundEl = document.getElementById("orderCancelledSound");
 
 // حالة السائق
 let driverCurrentOnline = false;
@@ -1598,11 +1617,14 @@ let driverMap;
 let currentDriverData = null;
 let driverOrdersListener = null;
 let driverCallsListener = null;
+let driverOrdersInitialLoaded = false;
 let lastDriverCalls = [];
 let driverCallsCache = [];
 let directionsService = null;
 let directionsRenderer = null; // لعرض المسار على الخريطة
 let currentOrderCollapsed = false; // حالة طي/فتح بطاقة الطلب النشط
+let autoCollapseCurrentOrderAfterAccept = false; // بعد قبول الطلب نطوي الكرت مرة واحدة
+
 // مسار الطريق الحالي (من Google Directions)
 let routePath = [];
 let remainingRoutePolyline = null;
@@ -2155,7 +2177,7 @@ async function showDriverDashboard(uid) {
 
   // تعبئة نموذج التسعير من بيانات السائق الحالية
   populatePricingFormFromData();
-
+driverOrdersInitialLoaded = false;
   listenDriverOrders(uid);
   listenDriverCalls(uid);
 }
@@ -3048,6 +3070,102 @@ function getRouteDistanceKm(origin, destination) {
     );
   });
 }
+async function handleMerchantCancelDistanceCharge(call, currentLat, currentLng) {
+  if (!call || !call.id) return;
+
+  // لازم تكون عندنا نقطة انطلاق مسجّلة (بداية المشوار)
+  if (call.driverStartLat == null || call.driverStartLng == null) {
+    // ما في نقطة انطلاق → ما نقدر نحسب التعويض
+    return;
+  }
+
+  const startPoint = {
+    lat: call.driverStartLat,
+    lng: call.driverStartLng
+  };
+
+  // احسب المسافة بالكيلومتر بين نقطة الانطلاق وموقع السائق الحالي
+  const distanceKm = await getRouteDistanceKm(
+    startPoint,
+    { lat: currentLat, lng: currentLng }
+  );
+
+  if (!distanceKm || distanceKm <= 0) return;
+
+  // إعدادات التسعير: نستخدم التسعير المخزون مع النداء، وإلا إعدادات السائق الحالية
+  const driverPricing = call.pricing || currentDriverData || {};
+  const includeToMerchantSegment = !!driverPricing.includeToMerchantSegment;
+  const useSamePriceForBoth =
+    driverPricing.useSamePriceForBoth !== false;
+  const pricePerKmDelivery =
+    typeof driverPricing.pricePerKmDelivery === "number"
+      ? driverPricing.pricePerKmDelivery
+      : 0;
+  let pricePerKmToMerchant =
+    typeof driverPricing.pricePerKmToMerchant === "number"
+      ? driverPricing.pricePerKmToMerchant
+      : null;
+
+  if (includeToMerchantSegment && (pricePerKmToMerchant == null || useSamePriceForBoth)) {
+    pricePerKmToMerchant = pricePerKmDelivery;
+  }
+
+  // 👉 في حالة الإلغاء من المطعم: نعتبر كل المسافة جزء "إلى التاجر"
+  let perKm = 0;
+  if (includeToMerchantSegment) {
+    perKm = pricePerKmToMerchant || pricePerKmDelivery || 0;
+  } else {
+    // السائق لم يفعّل احتساب المسافة إلى التاجر → لا تعويض مسافة
+    perKm = 0;
+  }
+
+  if (!perKm || perKm <= 0) {
+    // ما في سعر صالح لكل كم → لا شيء نحسبه
+    return;
+  }
+
+  const freeKm =
+    typeof driverPricing.freeKm === "number"
+      ? driverPricing.freeKm
+      : 0;
+
+  let rawDistanceFee = distanceKm * perKm;
+  let freeKmUsed = 0;
+
+  // نفس منطق الكيلومترات المجانية
+  if (freeKm > 0 && distanceKm > 0 && rawDistanceFee > 0) {
+    freeKmUsed = Math.min(freeKm, distanceKm);
+    const avgPerKm = rawDistanceFee / distanceKm;
+    const discount = freeKmUsed * avgPerKm;
+    rawDistanceFee = Math.max(rawDistanceFee - discount, 0);
+  }
+
+  const distanceFee = rawDistanceFee;
+
+  // ⚠️ هنا النقطة المهمة: لا نضيف الرسم الأساسي → baseFee = 0
+  const totalFee = distanceFee;
+
+  const patch = {
+    // status يبقى "cancelled" كما هو
+    distance: {
+      driverToMerchantKm: distanceKm,
+      merchantToDropoffKm: 0,
+      totalKm: distanceKm,
+      freeKmUsed: freeKmUsed
+    },
+    cost: {
+      baseFee: 0,                 // استثناء الرسم الأساسي من الحسبة
+      distanceFee: distanceFee,
+      totalFee: totalFee,
+      perKmDriverToMerchant: perKm,
+      perKmMerchantToDropoff: 0,
+      freeKm: freeKm
+    }
+  };
+
+  // نحدّث سجل السائق + سجل المطعم معًا
+  await updateDriverCallAndMerchant(call.id, patch);
+}
 
 /* هل لدى السائق طلب نشط؟ */
 function driverHasActiveJob() {
@@ -3191,20 +3309,154 @@ if (includeCheckboxElm && useSameCheckboxElm) {
   includeCheckboxElm.addEventListener("change", updatePricingFormUi);
   useSameCheckboxElm.addEventListener("change", updatePricingFormUi);
 }
+function showOrderCancelledByMerchantModal(call) {
+  const title = t("orderCancelledByMerchant_title");
+  const message = t("orderCancelledByMerchant_message");
+
+  // 1) تشغيل صوت الإلغاء عند ظهور المودال
+  if (orderCancelledSoundEl) {
+    try {
+      orderCancelledSoundEl.currentTime = 0;
+      orderCancelledSoundEl.play();
+    } catch (e) {
+      console.warn("تعذر تشغيل صوت إلغاء الطلب:", e);
+    }
+  }
+
+  modalContent.innerHTML = `
+    <div><strong>${escapeHtml(title)}</strong></div>
+    <div class="small" style="margin-top:8px;">
+      ${escapeHtml(message)}
+    </div>
+    <div class="btn-row" style="margin-top:14px;">
+      <button id="orderCancelledConfirmBtn">
+        ${t("orderCancelledByMerchant_confirmBtn")}
+      </button>
+    </div>
+  `;
+
+  if (orderModalEl) orderModalEl.classList.remove("hidden");
+  modalBackdrop.style.display = "flex";
+  window.scrollTo(0, 0);
+
+  const btn = document.getElementById("orderCancelledConfirmBtn");
+  if (btn) {
+    btn.onclick = () => {
+      // دالة مساعدة لتجميع تنظيف الحالة بعد كل شيء
+      const finishCleanup = async () => {
+        if (driverUid) {
+          try {
+            await db.collection("drivers").doc(driverUid).update({
+              busy: false
+            });
+          } catch (e) {
+            console.warn("تعذر تحديث حالة السائق بعد إلغاء التاجر:", e);
+          }
+        }
+
+        try {
+          clearRouteAndNavigation();
+        } catch (e) {}
+
+        try {
+          // إعادة رسم الواجهة (إخفاء كرت الطلب + إرجاع كبسولة الحالة)
+          renderDriverOrders(lastDriverCalls || []);
+        } catch (e) {}
+
+        closeOrderModal();
+      };
+
+      if (!navigator.geolocation) {
+        // لا يمكن تحديد الموقع → ننظف فقط
+        alert(t("alert_geo_not_supported"));
+        finishCleanup();
+        return;
+      }
+
+      const geoOptions = {
+        enableHighAccuracy: true,
+        timeout: 20000,
+        maximumAge: 5000
+      };
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const currentLat = position.coords.latitude;
+          const currentLng = position.coords.longitude;
+
+          try {
+            // تحديت موقع السائق في Firestore (اختياري)
+            handleDriverLocationUpdate(currentLat, currentLng);
+
+            // 💰 حساب مسافة التعويض وتكلفتها (بدون الرسم الأساسي)
+            await handleMerchantCancelDistanceCharge(
+              call,
+              currentLat,
+              currentLng
+            );
+          } catch (e) {
+            console.error("خطأ أثناء حساب تعويض الإلغاء من المطعم:", e);
+          }
+
+          await finishCleanup();
+        },
+        async (err) => {
+          console.warn("تعذر الحصول على موقع السائق عند إلغاء التاجر:", err);
+          alert(t("alert_geo_failed_prefix") + err.message);
+          await finishCleanup();
+        },
+        geoOptions
+      );
+    };
+  }
+}
 
 /* ========== استماع لطلبات السائق من drivers/{driverId}/calls ========== */
 function listenDriverOrders(driverId) {
   if (driverOrdersListener) driverOrdersListener();
+
   driverOrdersListener = db
     .collection("drivers")
     .doc(driverId)
     .collection("calls")
     .onSnapshot((snapshot) => {
+      const previousCalls = driverCallsCache || [];
       const allCalls = [];
+
       snapshot.forEach((doc) => {
         allCalls.push({ id: doc.id, ...doc.data(), _ref: doc.ref });
       });
+
+      // بعد أول Snapshot فقط نبدأ نراقب التغييرات
+      if (driverOrdersInitialLoaded) {
+        allCalls.forEach((call) => {
+          const prev = previousCalls.find((p) => p.id === call.id);
+
+          const nowStatus = (call.status || "").toLowerCase();
+          const wasStatus = prev ? (prev.status || "").toLowerCase() : null;
+
+          const nowCancelled = nowStatus === "cancelled";
+          const wasCancelled = wasStatus === "cancelled";
+
+          if (nowCancelled && !wasCancelled) {
+            // لو ألغاه السائق نفسه = لا نظهر منبثق التاجر
+            const cancelledBy = (call.cancelledBy || "").toLowerCase();
+            const isDriverCancel = cancelledBy === "driver";
+
+            // أي إلغاء ليس من السائق نعتبره من التاجر (أو من السيستم)
+            if (!isDriverCancel) {
+              // تنظيف المسار والتوجيه من الخريطة
+              clearRouteAndNavigation();
+              // منبثق "تم الإلغاء من قبل التاجر"
+              showOrderCancelledByMerchantModal(call);
+            }
+          }
+        });
+      }
+
       driverCallsCache = allCalls;
+      driverOrdersInitialLoaded = true;
+
       renderDriverOrders(allCalls);
     });
 }
@@ -3235,6 +3487,7 @@ function listenDriverCalls(driverId) {
           // لو خرج النداء من حالة pending (مثلاً تم قبوله/رفضه في السحاب)
           const removedId = change.doc.id;
           stopNewCallSoundLoop(removedId);
+		  closeOrderModal();
         }
       });
     });
@@ -3274,6 +3527,7 @@ async function updateDriverCallAndMerchant(callId, dataPatch) {
 function renderDriverCurrentOrder(call) {
   if (!driverCurrentOrderEl) return;
 
+  // لا يوجد طلب نشط → إخفاء الكرت تماماً
   if (!call) {
     driverCurrentOrderEl.classList.add("hidden");
     driverCurrentOrderEl.innerHTML = "";
@@ -3291,19 +3545,14 @@ function renderDriverCurrentOrder(call) {
       : "—";
 
   let buttonsHtml = "";
+  const statusCode = (call.status || "accepted").toLowerCase();
 
-  // 🟢 حالة الطلب قبل البدء (accepted / أو بدون status) → فقط "بدء التوجه للتاجر"
-  if (!call.status || call.status === "accepted") {
-    buttonsHtml = `
-      <button onclick="driverStartCall('${call.id}')">
-        ${t("currentOrder_btn_startToMerchant")}
-      </button>
-    `;
-  }
-    // 🟡 بعد البدء (in_progress أو heading_to_customer) → يظهر زر "تسليم"
-  else if (
-    call.status === "in_progress" ||
-    call.status === "heading_to_customer"
+  // ✅ من لحظة قبول الطلب (accepted / in_progress / heading_to_customer)
+  // يظهر فقط زر "تم التسليم" داخل الكرت
+  if (
+    statusCode === "accepted" ||
+    statusCode === "in_progress" ||
+    statusCode === "heading_to_customer"
   ) {
     buttonsHtml = `
       <button onclick="driverCompleteCall('${call.id}')">
@@ -3312,7 +3561,7 @@ function renderDriverCurrentOrder(call) {
     `;
   }
 
-  // ❌ لا نضيف أي زر إلغاء/حذف هنا نهائياً
+  // ❌ لا نضيف زر "التوجه إلى التاجر" هنا نهائياً (هذا صار من زر القبول)
 
   driverCurrentOrderEl.innerHTML = `
     <div class="driver-current-order-header">
@@ -3333,9 +3582,16 @@ function renderDriverCurrentOrder(call) {
     </div>
   `;
 
+  // 🔒 دائماً: الكرت يظهر في وضع "مغلق"
   driverCurrentOrderEl.classList.remove("hidden");
-  driverCurrentOrderEl.classList.remove("collapsed");
-  currentOrderCollapsed = false;
+  driverCurrentOrderEl.classList.add("collapsed");
+  currentOrderCollapsed = true;
+
+  const toggleBtn = driverCurrentOrderEl.querySelector(".driver-current-order-toggle");
+  if (toggleBtn) {
+    // بما أن الكرت مغلق → نعرض سهم لأعلى (لفتحه)
+    toggleBtn.textContent = "▲";
+  }
 }
 
 // زر طيّ/إظهار بطاقة الطلب النشط (Bottom Sheet)
@@ -3634,80 +3890,87 @@ function showCallModalForDriver(call) {
   const rejectBtn = document.getElementById("rejectCallBtn");
 
   if (acceptBtn) {
-    acceptBtn.onclick = async () => {
-      try {
-        const driverId = driverUid || call.driverId;
-        if (!driverId) {
-          alert(t("alert_cannotAcceptCallNoDriver"));
-          return;
-        }
-
-        const driverRef = db.collection("drivers").doc(driverId);
-        const driverCallRef = driverRef.collection("calls").doc(call.id);
-
-        const driverPricing = currentDriverData || {};
-        const pricing = {
-          baseFee: BASE_DELIVERY_FEE,
-          pricePerKmDelivery:
-            typeof driverPricing.pricePerKmDelivery === "number"
-              ? driverPricing.pricePerKmDelivery
-              : null,
-          includeToMerchantSegment: !!driverPricing.includeToMerchantSegment,
-          useSamePriceForBoth: driverPricing.useSamePriceForBoth !== false,
-          pricePerKmToMerchant:
-            typeof driverPricing.pricePerKmToMerchant === "number"
-              ? driverPricing.pricePerKmToMerchant
-              : null,
-          freeKm:
-            typeof driverPricing.freeKm === "number"
-              ? driverPricing.freeKm
-              : 0
-        };
-
-        const driverCallData = {
-          merchantId: call.merchantId,
-          merchantName: call.merchantName || "",
-          merchantCity: call.merchantCity || "",
-          merchantLat: call.merchantLat || null,
-          merchantLng: call.merchantLng || null,
-          driverId: driverId,
-          driverFirstName: call.driverFirstName || "",
-          driverLastName: call.driverLastName || "",
-          driverPhone: call.driverPhone || "",
-          status: "accepted",
-          createdAt:
-            call.createdAt || firebase.firestore.FieldValue.serverTimestamp(),
-          respondedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          merchantCallPath: call.ref.path,
-          deliveryFee: call.deliveryFee || 0,
-          customerName: call.customerName || "",
-          deliveryAddress: call.deliveryAddress || "",
-          notes: call.notes || "",
-          pricing: pricing
-        };
-
-        await driverCallRef.set(driverCallData, { merge: true });
-
-        await call.ref.update({
-          status: "accepted",
-          respondedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          pricing: pricing
-        });
-
-                await driverRef.update({
-          busy: true
-        });
-
-        // ✅ تم التفاعل مع النداء (قبول) -> أوقف تكرار الصوت
-        stopNewCallSoundLoop(call.id);
-
-
-        closeOrderModal();
-      } catch (err) {
-        alert(t("alert_acceptCallError") + err.message);
+  acceptBtn.onclick = async () => {
+    try {
+      const driverId = driverUid || call.driverId;
+      if (!driverId) {
+        alert(t("alert_cannotAcceptCallNoDriver"));
+        return;
       }
-    };
-  }
+
+      const driverRef = db.collection("drivers").doc(driverId);
+      const driverCallRef = driverRef.collection("calls").doc(call.id);
+
+      const driverPricing = currentDriverData || {};
+      const pricing = {
+        baseFee: BASE_DELIVERY_FEE,
+        pricePerKmDelivery:
+          typeof driverPricing.pricePerKmDelivery === "number"
+            ? driverPricing.pricePerKmDelivery
+            : null,
+        includeToMerchantSegment: !!driverPricing.includeToMerchantSegment,
+        useSamePriceForBoth: driverPricing.useSamePriceForBoth !== false,
+        pricePerKmToMerchant:
+          typeof driverPricing.pricePerKmToMerchant === "number"
+            ? driverPricing.pricePerKmToMerchant
+            : null,
+        freeKm:
+          typeof driverPricing.freeKm === "number"
+            ? driverPricing.freeKm
+            : 0
+      };
+
+      const driverCallData = {
+        merchantId: call.merchantId,
+        merchantName: call.merchantName || "",
+        merchantCity: call.merchantCity || "",
+        merchantLat: call.merchantLat || null,
+        merchantLng: call.merchantLng || null,
+        driverId: driverId,
+        driverFirstName: call.driverFirstName || "",
+        driverLastName: call.driverLastName || "",
+        driverPhone: call.driverPhone || "",
+        status: "accepted",
+        createdAt:
+          call.createdAt || firebase.firestore.FieldValue.serverTimestamp(),
+        respondedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        merchantCallPath: call.ref.path,
+        deliveryFee: call.deliveryFee || 0,
+        customerName: call.customerName || "",
+        deliveryAddress: call.deliveryAddress || "",
+        notes: call.notes || "",
+        pricing: pricing
+      };
+
+      // إنشاء/تحديث نداء السائق
+      await driverCallRef.set(driverCallData, { merge: true });
+
+      // تحديث نداء المطعم
+      await call.ref.update({
+        status: "accepted",
+        respondedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        pricing: pricing
+      });
+
+      await driverRef.update({
+        busy: true
+      });
+
+      // تم التفاعل مع النداء (قبول) → إيقاف صوت الرنين
+      stopNewCallSoundLoop(call.id);
+
+      // إغلاق المودال
+      closeOrderModal();
+
+      // ✅ مباشرة بعد القبول نبدأ سيناريو "التوجه إلى التاجر"
+      if (window.driverStartCall) {
+        window.driverStartCall(call.id);
+      }
+    } catch (err) {
+      alert(t("alert_acceptCallError") + err.message);
+    }
+  };
+}
 
   if (rejectBtn) {
     rejectBtn.onclick = async () => {
@@ -3737,78 +4000,100 @@ function showCallModalForDriver(call) {
 
 /* ========== أزرار أكشن السائق (start / complete / cancel) ========== */
 window.driverStartCall = function (callId) {
-  const call = driverCallsCache.find(function (c) {
-    return c.id === callId;
-  });
-  if (!call) {
-    alert(t("alert_orderNotFound"));
+  const useCallAndStart = (call) => {
+    if (!navigator.geolocation) {
+      alert(t("alert_geo_not_supported"));
+      return;
+    }
 
-    return;
-  }
+    const geoOptions = {
+      enableHighAccuracy: true,
+      timeout: 20000,
+      maximumAge: 5000
+    };
 
-  if (!navigator.geolocation) {
-    alert(t("alert_geo_not_supported"));
+    navigator.geolocation.getCurrentPosition(
+      async function (position) {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
 
-    return;
-  }
+        try {
+          // تسجيل بداية المشوار ونقطة الانطلاق
+          await updateDriverCallAndMerchant(callId, {
+            status: "in_progress",
+            driverStartLat: lat,
+            driverStartLng: lng,
+            startedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
 
-  const geoOptions = {
-    enableHighAccuracy: true,
-    timeout: 20000,
-    maximumAge: 5000
+          if (driverUid) {
+            await db.collection("drivers").doc(driverUid).update({
+              busy: true
+            });
+          }
+
+          // تجهيز المسار والتوجيه الحي باتجاه التاجر
+          if (call.merchantLat != null && call.merchantLng != null) {
+            navigationMode = "merchant";
+
+            showDriverRouteToMerchant(
+              lat,
+              lng,
+              call.merchantLat,
+              call.merchantLng
+            );
+            startGuidance(call.merchantLat, call.merchantLng);
+          }
+
+          // طيّ كرت الطلب النشط بعد بدء الرحلة
+          if (window.toggleCurrentOrderPanel) {
+            toggleCurrentOrderPanel(true);
+          }
+
+          alert(t("alert_driverStartSuccess"));
+        } catch (err) {
+          alert(t("alert_driverStartError") + err.message);
+        }
+      },
+      function (err) {
+        alert(t("alert_geo_failed_prefix") + err.message);
+      },
+      geoOptions
+    );
   };
 
-  navigator.geolocation.getCurrentPosition(
-    async function (position) {
-      const lat = position.coords.latitude;
-      const lng = position.coords.longitude;
+  // نحاول أولاً من الكاش
+  let call = driverCallsCache.find(function (c) {
+    return c.id === callId;
+  });
 
-      try {
-        // تحديث حالة الطلب كبداية رحلة
-        await updateDriverCallAndMerchant(callId, {
-          status: "in_progress",
-          driverStartLat: lat,
-          driverStartLng: lng,
-          startedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+  if (call) {
+    useCallAndStart(call);
+    return;
+  }
 
-        if (driverUid) {
-          await db.collection("drivers").doc(driverUid).update({
-            busy: true
-          });
-        }
+  // لو مش موجود في الكاش، نقرأه مباشرة من Firestore
+  if (!driverUid) {
+    alert(t("alert_currentDriverNotSet"));
+    return;
+  }
 
-                // رسم المسار + بدء التوجيه الحي إلى التاجر
-        if (call.merchantLat != null && call.merchantLng != null) {
-          navigationMode = "merchant"; // ✅ الهدف الحالي: المطعم
-
-          showDriverRouteToMerchant(
-            lat,
-            lng,
-            call.merchantLat,
-            call.merchantLng
-          );
-          startGuidance(call.merchantLat, call.merchantLng);
-        }
-
-        // طيّ بطاقة الطلب بعد بدء الرحلة (يبقى زر السهم فقط)
-        if (window.toggleCurrentOrderPanel) {
-          toggleCurrentOrderPanel(true);
-        }
-
-        alert(t("alert_driverStartSuccess"));
-
-      } catch (err) {
-        alert(t("alert_driverStartError") + err.message);
-
+  db.collection("drivers")
+    .doc(driverUid)
+    .collection("calls")
+    .doc(callId)
+    .get()
+    .then((doc) => {
+      if (!doc.exists) {
+        alert(t("alert_orderNotFound"));
+        return;
       }
-    },
-    function (err) {
-      alert(t("alert_geo_failed_prefix") + err.message);
-
-    },
-    geoOptions
-  );
+      const fetchedCall = { id: doc.id, ...doc.data() };
+      useCallAndStart(fetchedCall);
+    })
+    .catch((err) => {
+      alert(t("alert_readOrderDetailsError") + err.message);
+    });
 };
 
 window.driverCompleteCall = function (callId) {
@@ -3979,6 +4264,7 @@ window.driverCancelCall = async function (callId) {
     try {
     await updateDriverCallAndMerchant(callId, {
       status: "cancelled",
+      cancelledBy: "driver",
       cancelledAt: firebase.firestore.FieldValue.serverTimestamp()
     });
 
