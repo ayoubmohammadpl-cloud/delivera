@@ -38,6 +38,91 @@ body.driver-mode .auth-lang-switcher {
     input, select, button, textarea { width: 100%; padding: 10px; margin: 8px 0; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; }
     button { background: var(--primary); color: #fff; border: none; cursor: pointer; }
     button.secondary { background: #fff; color: var(--primary); border: 1px solid #cde; }
+	/* نوع المركبة (دروب داون مع صورة) */
+.vehicle-select {
+    margin: 8px 0;
+    position: relative;
+}
+
+.vehicle-select-label {
+    font-size: 13px;
+    color: #444;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.vehicle-select-display {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    background: #fff;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.vehicle-select-display-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.vehicle-select-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: #f5f7ff;
+    flex-shrink: 0;
+}
+
+.vehicle-select-placeholder {
+    color: #999;
+}
+
+.vehicle-select-arrow {
+    font-size: 10px;
+    opacity: 0.7;
+}
+
+.vehicle-select-options {
+    position: absolute;
+    z-index: 10;
+    top: 100%;
+    inset-inline: 0;
+    margin-top: 4px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.vehicle-option {
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.vehicle-option:hover {
+    background: #f3f6fb;
+}
+
+.vehicle-option-img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    border-radius: 999px;
+    background: #f5f7ff;
+}
+
     .hidden { display:none; }
     .small { font-size:13px; color:var(--muted); }
     .btn-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
@@ -352,6 +437,23 @@ body.driver-mode .auth-lang-switcher {
     margin-top: 0;
     white-space: nowrap;      /* منع نزول الاسم لسطرين */
 }
+.driver-side-name-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.driver-vehicle-icon {
+    width: 30px;   /* نفس حجم أيقونة الدروبداون تقريباً */
+    height: 30px;
+    border-radius: 999px;
+    background-color: #f5f7ff;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    flex-shrink: 0;
+    border: 1px solid #dde3f0; /* إطار ناعم يضمن احتواء الصورة داخله */
+}
 
     .driver-side-section {
         margin-top: 12px;
@@ -626,8 +728,46 @@ body.driver-mode .auth-lang-switcher {
         <input type="text" id="firstName" placeholder="الاسم الأول" required />
         <input type="text" id="lastName" placeholder="الاسم الثاني" required />
         <input type="text" id="address" placeholder="العنوان" required />
-        <input type="text" id="city" placeholder="المدينة" required />
-        <input type="email" id="driverEmail" placeholder="البريد الإلكتروني" required />
+<input type="text" id="city" placeholder="المدينة" required />
+
+<!-- نوع المركبة -->
+<div class="vehicle-select">
+  <label id="vehicleTypeLabel" class="vehicle-select-label">نوع المركبة</label>
+
+  <button type="button" id="vehicleSelectToggle" class="vehicle-select-display">
+    <div class="vehicle-select-display-left">
+      <div id="vehicleSelectIcon" class="vehicle-select-icon"></div>
+      <span id="vehicleSelectText" class="vehicle-select-placeholder">
+        اختر نوع المركبة
+      </span>
+    </div>
+    <span class="vehicle-select-arrow">▾</span>
+  </button>
+
+  <div id="vehicleSelectOptions" class="vehicle-select-options hidden">
+    <div class="vehicle-option" data-value="car">
+      <!-- غيّر car.png لاسم صورة السيارة عندك -->
+      <img src="car.png" alt="" class="vehicle-option-img" />
+      <span id="vehicleOptionCarText">سيارة</span>
+    </div>
+    <div class="vehicle-option" data-value="motorcycle">
+      <!-- غيّر motorcycle.png لاسم صورة الدراجة النارية -->
+      <img src="motorcycle.png" alt="" class="vehicle-option-img" />
+      <span id="vehicleOptionMotorcycleText">دراجة نارية</span>
+    </div>
+    <div class="vehicle-option" data-value="bicycle">
+      <!-- غيّر bicycle.png لاسم صورة الدراجة الهوائية -->
+      <img src="bicycle.png" alt="" class="vehicle-option-img" />
+      <span id="vehicleOptionBicycleText">دراجة هوائية</span>
+    </div>
+  </div>
+
+  <!-- القيمة الفعلية التي نخزنها في Firestore -->
+  <input type="hidden" id="vehicleType" name="vehicleType" />
+</div>
+
+<input type="email" id="driverEmail" placeholder="البريد الإلكتروني" required />
+
         <input type="text" id="driverPhone" placeholder="رقم الهاتف" required />
         <input type="password" id="driverPassword" placeholder="كلمة السر (6+ حروف)" required />
         <button type="submit">تسجيل السائق</button>
@@ -700,12 +840,17 @@ body.driver-mode .auth-lang-switcher {
     <div id="driverSidePanel" class="driver-side-panel">
         <div class="driver-side-header">
     <div class="driver-side-header-main">
-        <div class="driver-side-title">القائمة</div>
-        <div id="driverName" class="driver-side-driver-name">اسم السائق</div>
+    <div class="driver-side-title">القائمة</div>
 
-        <!-- ✅ اختيار اللغة تحت اسم السائق -->
-        <div class="driver-lang-controls">
-            <select id="langSelect">
+    <!-- اسم السائق + صورة المركبة -->
+    <div class="driver-side-name-row">
+        <div id="driverVehicleIcon" class="driver-vehicle-icon"></div>
+        <div id="driverName" class="driver-side-driver-name">اسم السائق</div>
+    </div>
+
+    <!-- ✅ اختيار اللغة تحت اسم السائق -->
+    <div class="driver-lang-controls">
+        <select id="langSelect">
     <option value="en">English</option>
     <option value="de">Deutsch</option>
     <option value="tr">Türkçe</option>
@@ -1043,6 +1188,12 @@ const translations = {
     orderCancelledByMerchant_confirmBtn: "I understand",
     alert_no_active_target:
       "There is no active destination on the map right now. Please start navigating to the merchant or choose the customer's address first.",
+    vehicleType_label: "Vehicle type",
+    vehicleType_placeholder: "Select vehicle type",
+    vehicleType_car: "Car",
+    vehicleType_motorcycle: "Motorbike",
+    vehicleType_bicycle: "Bicycle",
+    vehicleType_required: "Please choose your vehicle type.",
 
   },
 
@@ -1219,6 +1370,12 @@ const translations = {
     orderCancelledByMerchant_confirmBtn: "Ich verstehe",
     alert_no_active_target:
       "Derzeit gibt es kein aktives Ziel auf der Karte. Bitte starte zuerst die Fahrt zum Händler oder wähle zunächst die Adresse des Kunden.",
+    vehicleType_label: "Fahrzeugtyp",
+    vehicleType_placeholder: "Fahrzeugtyp wählen",
+    vehicleType_car: "Auto",
+    vehicleType_motorcycle: "Motorrad",
+    vehicleType_bicycle: "Fahrrad",
+    vehicleType_required: "Bitte wähle deinen Fahrzeugtyp.",
 
   },
 
@@ -1391,6 +1548,12 @@ const translations = {
     orderCancelledByMerchant_confirmBtn: "أتفهم ذلك",
     alert_no_active_target:
       "لا يوجد هدف نشط حالياً على الخريطة. رجاءً ابدأ التوجه إلى المتجر أو اختر عنوان العميل أولاً.",
+    vehicleType_label: "نوع المركبة",
+    vehicleType_placeholder: "اختر نوع المركبة",
+    vehicleType_car: "سيارة",
+    vehicleType_motorcycle: "دراجة نارية",
+    vehicleType_bicycle: "دراجة هوائية",
+    vehicleType_required: "رجاءً اختر نوع المركبة.",
 
   },
     tr: {
@@ -1570,7 +1733,13 @@ const translations = {
 
     alert_no_active_target:
       "Şu anda haritada aktif bir hedef yok. Lütfen önce işletmeye doğru gitmeyi başlatın veya müşterinin adresini seçin.",
- 
+     vehicleType_label: "Araç tipi",
+    vehicleType_placeholder: "Araç tipi seçin",
+    vehicleType_car: "Araba",
+    vehicleType_motorcycle: "Motosiklet",
+    vehicleType_bicycle: "Bisiklet",
+    vehicleType_required: "Lütfen araç tipinizi seçin.",
+
 
   }
 
@@ -1582,6 +1751,62 @@ function t(key) {
   if (dict && key in dict) return dict[key];
   if (translations.en && key in translations.en) return translations.en[key];
   return key;
+}
+function setVehicleSelectValue(value) {
+  const hiddenInput = document.getElementById("vehicleType");
+  const textSpan = document.getElementById("vehicleSelectText");
+  const iconDiv = document.getElementById("vehicleSelectIcon");
+
+  if (hiddenInput) {
+    hiddenInput.value = value || "";
+  }
+
+  // النص المعروض
+  if (textSpan) {
+    if (value) {
+      let labelKey = "vehicleType_placeholder";
+      if (value === "car") labelKey = "vehicleType_car";
+      else if (value === "motorcycle") labelKey = "vehicleType_motorcycle";
+      else if (value === "bicycle") labelKey = "vehicleType_bicycle";
+
+      textSpan.textContent = t(labelKey);
+      textSpan.classList.remove("vehicle-select-placeholder");
+    } else {
+      textSpan.textContent = t("vehicleType_placeholder");
+      textSpan.classList.add("vehicle-select-placeholder");
+    }
+  }
+
+  // الأيقونة (الصورة)
+  if (iconDiv) {
+    const iconFiles = {
+      car: "car.png",
+      motorcycle: "motorcycle.png",
+      bicycle: "bicycle.png"
+    };
+    if (value && iconFiles[value]) {
+      iconDiv.style.backgroundImage = `url("${iconFiles[value]}")`;
+    } else {
+      iconDiv.style.backgroundImage = "none";
+    }
+  }
+}
+function updateDriverVehicleIcon(vehicleType) {
+  if (!driverVehicleIconEl) return;
+
+  // نفس أسماء ملفات الصور التي استخدمتها في الدروبداون
+  const iconFiles = {
+    car: "car.png",
+    motorcycle: "motorcycle.png",
+    bicycle: "bicycle.png"
+  };
+
+  if (vehicleType && iconFiles[vehicleType]) {
+    driverVehicleIconEl.style.backgroundImage = `url("${iconFiles[vehicleType]}")`;
+  } else {
+    // لو ما في نوع مركبة (سائق قديم مثلاً) نخفي الصورة
+    driverVehicleIconEl.style.backgroundImage = "none";
+  }
 }
 
 function applyTranslations(lang) {
@@ -1631,6 +1856,32 @@ function applyTranslations(lang) {
   if (cityInput && dict.city_placeholder) {
     cityInput.placeholder = dict.city_placeholder;
   }
+    const vehicleTypeLabelEl = document.getElementById("vehicleTypeLabel");
+  if (vehicleTypeLabelEl && dict.vehicleType_label) {
+    vehicleTypeLabelEl.textContent = dict.vehicleType_label;
+  }
+
+  const vehicleOptionCarText = document.getElementById("vehicleOptionCarText");
+  if (vehicleOptionCarText && dict.vehicleType_car) {
+    vehicleOptionCarText.textContent = dict.vehicleType_car;
+  }
+
+  const vehicleOptionMotorcycleText = document.getElementById("vehicleOptionMotorcycleText");
+  if (vehicleOptionMotorcycleText && dict.vehicleType_motorcycle) {
+    vehicleOptionMotorcycleText.textContent = dict.vehicleType_motorcycle;
+  }
+
+  const vehicleOptionBicycleText = document.getElementById("vehicleOptionBicycleText");
+  if (vehicleOptionBicycleText && dict.vehicleType_bicycle) {
+    vehicleOptionBicycleText.textContent = dict.vehicleType_bicycle;
+  }
+
+  // تحديث النص الظاهر في الدروبداون حسب اللغة/القيمة الحالية
+  const vehicleTypeInputEl = document.getElementById("vehicleType");
+  if (vehicleTypeInputEl) {
+    setVehicleSelectValue(vehicleTypeInputEl.value || "");
+  }
+
   const driverEmailInput = document.getElementById("driverEmail");
   if (driverEmailInput && dict.driverEmail_placeholder) {
     driverEmailInput.placeholder = dict.driverEmail_placeholder;
@@ -1788,9 +2039,39 @@ const loginSection = document.getElementById("loginSection");
 
 const driverForm = document.getElementById("driverForm");
 const loginForm = document.getElementById("loginForm");
+const vehicleSelectToggle = document.getElementById("vehicleSelectToggle");
+const vehicleSelectOptions = document.getElementById("vehicleSelectOptions");
+
+if (vehicleSelectToggle && vehicleSelectOptions) {
+  // فتح/إغلاق القائمة
+  vehicleSelectToggle.addEventListener("click", () => {
+    vehicleSelectOptions.classList.toggle("hidden");
+  });
+
+  // اختيار نوع مركبة
+  vehicleSelectOptions.addEventListener("click", (e) => {
+    const option = e.target.closest(".vehicle-option");
+    if (!option) return;
+    const value = option.getAttribute("data-value") || "";
+    setVehicleSelectValue(value);
+    vehicleSelectOptions.classList.add("hidden");
+  });
+
+  // إغلاق القائمة عند الضغط خارجها
+  document.addEventListener("click", (e) => {
+    if (
+      !vehicleSelectToggle.contains(e.target) &&
+      !vehicleSelectOptions.contains(e.target)
+    ) {
+      vehicleSelectOptions.classList.add("hidden");
+    }
+  });
+}
 
 const driverDashboard = document.getElementById("driverDashboard");
 const driverNameEl = document.getElementById("driverName");
+const driverVehicleIconEl = document.getElementById("driverVehicleIcon");
+
 const driverActiveOrdersEl = document.getElementById("driverActiveOrders");
 const driverCompletedOrdersEl = document.getElementById("driverCompletedOrders");
 const driverActiveCountEl = document.getElementById("driverActiveCount");
@@ -2040,7 +2321,10 @@ driverForm.addEventListener("submit", async (e) => {
   const email = document.getElementById("driverEmail").value.trim();
   const phone = document.getElementById("driverPhone").value.trim();
   const password = document.getElementById("driverPassword").value;
+  const vehicleType = document.getElementById("vehicleType").value;
+
   if (password.length < 6) return alert(t("alert_password_too_short"));
+  if (!vehicleType) return alert(t("vehicleType_required"));
 
   try {
     const userCredential = await auth.createUserWithEmailAndPassword(
@@ -2048,13 +2332,14 @@ driverForm.addEventListener("submit", async (e) => {
       password
     );
     const uid = userCredential.user.uid;
-    await db.collection("drivers").doc(uid).set({
+        await db.collection("drivers").doc(uid).set({
       firstName,
       lastName,
       address,
       city,
       email,
       phone,
+      vehicleType,        // ✅ نوع المركبة
       role: "driver",
 
       online: false,
@@ -2073,6 +2358,8 @@ driverForm.addEventListener("submit", async (e) => {
     alert(t("alert_driver_register_success"));
 
     driverForm.reset();
+	    setVehicleSelectValue(""); // يرجّع الدروبداون للحالة الافتراضية
+
   } catch (err) {
     alert(t("alert_generic_error_prefix") + err.message);
 
@@ -2445,6 +2732,13 @@ async function showDriverDashboard(uid) {
     (driverData.firstName || "") +
     " " +
     (driverData.lastName || "");
+  driverNameEl.textContent =
+    (driverData.firstName || "") +
+    " " +
+    (driverData.lastName || "");
+
+  // ✅ تحديث صورة المركبة في القائمة الجانبية
+  updateDriverVehicleIcon(driverData.vehicleType || "");
 
   registerSection.classList.add("hidden");
   loginSection.classList.add("hidden");
