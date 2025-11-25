@@ -756,62 +756,68 @@ body.driver-mode .auth-lang-switcher {
             </div>
         </div>
 
-        <!-- إعدادات التسعير -->
+                <!-- إعدادات التسعير -->
         <div class="driver-side-section">
             <button id="pricingSettingsBtn" class="driver-side-link driver-section-toggle" data-target="driverPricingPane">
                 <span>ضبط تكاليف التوصيل</span>
             </button>
             <div id="driverPricingPane" class="driver-side-pane">
-    <div class="card driver-side-card">
-        <div id="pricingIntroText" class="small" style="margin-bottom:6px;">
-            قم بضبط تسعيرة التوصيل ليتم احتساب تكلفة كل رحلة تلقائياً.
-        </div>
+                <div class="card driver-side-card">
+                    <div id="pricingIntroText" class="small" style="margin-bottom:6px;">
+                        قم بضبط تسعيرة التوصيل ليتم احتساب تكلفة كل رحلة تلقائياً.
+                    </div>
 
-        <label id="pricingDeliveryLabel" class="small">
-            سعر الكيلومتر من التاجر إلى نقطة التسليم (€)
-        </label>
-        <input id="pricePerKmDelivery" type="number" step="0.01" min="0" />
+                    <label id="pricingDeliveryLabel" class="small">
+                        سعر الكيلومتر من التاجر إلى نقطة التسليم (€)
+                    </label>
+                    <input id="pricePerKmDelivery" type="number" step="0.01" min="0" />
 
-        <label style="display:flex; align-items:center; gap:6px; margin-top:8px;">
-            <input id="includeToMerchantSegment" type="checkbox" />
-            <span id="pricingIncludeLabel" class="small">
-                احتساب المسافة من موقعي إلى التاجر
-            </span>
-        </label>
+                    <label style="display:flex; align-items:center; gap:6px; margin-top:8px;">
+                        <input id="includeToMerchantSegment" type="checkbox" />
+                        <span id="pricingIncludeLabel" class="small">
+                            احتساب المسافة من موقعي إلى التاجر
+                        </span>
+                    </label>
 
-        <div style="margin-right:4px; margin-top:6px;">
-            <label class="small" style="display:flex; align-items:center; gap:6px;">
-                <input id="useSamePriceForBoth" type="checkbox" />
-                <span id="pricingSamePriceLabel" class="small">
-                    استخدام نفس السعر للمسارين
-                </span>
-            </label>
-        </div>
+                    <div style="margin-right:4px; margin-top:6px;">
+                        <label class="small" style="display:flex; align-items:center; gap:6px;">
+                            <input id="useSamePriceForBoth" type="checkbox" />
+                            <span id="pricingSamePriceLabel" class="small">
+                                استخدام نفس السعر للمسارين
+                            </span>
+                        </label>
+                    </div>
 
-        <div id="toMerchantRow" style="margin-top:6px;">
-            <label id="pricingToMerchantLabel" class="small">
-                سعر الكيلومتر من موقعي إلى التاجر (€)
-            </label>
-            <input id="pricePerKmToMerchant" type="number" step="0.01" min="0" />
-        </div>
+                    <div id="toMerchantRow" style="margin-top:6px;">
+                        <label id="pricingToMerchantLabel" class="small">
+                            سعر الكيلومتر من موقعي إلى التاجر (€)
+                        </label>
+                        <input id="pricePerKmToMerchant" type="number" step="0.01" min="0" />
+                    </div>
 
-        <label id="pricingFreeKmLabel" class="small" style="margin-top:8px;">
-            عدد الكيلومترات المجانية الأولى
-        </label>
-        <input id="freeKmInput" type="number" step="0.1" min="0" />
+                    <label id="pricingFreeKmLabel" class="small" style="margin-top:8px;">
+                        عدد الكيلومترات المجانية الأولى
+                    </label>
+                    <input id="freeKmInput" type="number" step="0.1" min="0" />
 
-        <div class="btn-row">
-            <button id="savePricingBtn">حفظ</button>
-        </div>
+                    <div class="btn-row">
+                        <button id="savePricingBtn">حفظ</button>
+                    </div>
 
-        <div class="small" id="pricingBaseFeeHint" style="margin-top:4px;"></div>
-    </div>
-</div>
+                    <div class="small" id="pricingBaseFeeHint" style="margin-top:4px;"></div>
+                </div>
+            </div>
+
+            <!-- ✅ زر يفتح منبثق قانوني -->
+            <button id="driverLegalBtn" class="driver-side-link">
+                <span>Rechtlicher Hinweis (Beta)</span>
+            </button>
 
             <button id="driverLogoutBtn" class="driver-side-link driver-side-danger">
                 <span>تسجيل خروج</span>
             </button>
         </div>
+
     </div>
     <div id="driverSidePanelBackdrop" class="driver-side-backdrop"></div>
 </div>
@@ -825,10 +831,10 @@ body.driver-mode .auth-lang-switcher {
     </div>
 </div>
 
-<footer>واجهة السائق — مربوطة مع Firebase & Google Maps (لحساب المسافة)</footer>
+<footer>Der Dienst befindet sich in der Erprobungsphase und kann technische Fehler oder Einschränkungen enthalten. Die Nutzung erfolgt auf eigene Verantwortung.</footer>
 <!-- صوت نداء جديد -->
 <audio id="callSound" src="coin.wav" preload="auto"></audio>
-<footer>واجهة السائق — مربوطة مع Firebase & Google Maps (لحساب المسافة)</footer>
+<footer>Der Dienst befindet sich in der Erprobungsphase und kann technische Fehler oder Einschränkungen enthalten. Die Nutzung erfolgt auf eigene Verantwortung.</footer>
 
 <!-- 🔊 صوت الأونلاين (غيّر online-sound.mp3 لاسم الملف الذي تريده) -->
 <audio id="onlineSound" src="online1.mp3" preload="auto"></audio>
@@ -939,7 +945,7 @@ const translations = {
 
     // Footer
     footer_text:
-      "Driver interface — connected to Firebase & Google Maps (distance calculation)",
+      "Taussil e.K. – Beta-Version im Testbetrieb. Nutzung auf eigene Verantwortung.",
 
     // Status labels
     status_pending: "Pending",
@@ -1104,7 +1110,7 @@ const translations = {
       "Preis-Einstellungen wurden erfolgreich gespeichert.",
 
     footer_text:
-      "Fahreroberfläche – verbunden mit Firebase & Google Maps (Distanzberechnung)",
+      "Taussil e.K. – Beta-Version im Testbetrieb. Nutzung auf eigene Verantwortung.",
 
     // Status labels
     status_pending: "Ausstehend",
@@ -1280,7 +1286,7 @@ const translations = {
     pricing_saved_success: "تم حفظ إعدادات التسعير بنجاح.",
 
     footer_text:
-      "واجهة السائق — مربوطة مع Firebase & Google Maps (لحساب المسافة)",
+      "Taussil e.K. – Beta-Version im Testbetrieb. Nutzung auf eigene Verantwortung.",
 
     // Status labels
     status_pending: "قيد الانتظار",
@@ -1455,7 +1461,7 @@ const translations = {
 
     // Footer
     footer_text:
-      "Sürücü arayüzü — mesafe hesaplama için Firebase & Google Maps ile bağlı",
+      "Taussil e.K. – Beta-Version im Testbetrieb. Nutzung auf eigene Verantwortung.",
 
     // Status labels
     status_pending: "Beklemede",
@@ -1791,6 +1797,53 @@ const driverActiveCountEl = document.getElementById("driverActiveCount");
 const driverCompletedCountEl = document.getElementById("driverCompletedCount");
 const driverEarningsEl = document.getElementById("driverEarnings");
 const driverLogoutBtn = document.getElementById("driverLogoutBtn");
+const driverLegalBtn = document.getElementById("driverLegalBtn");
+if (driverLegalBtn) {
+  driverLegalBtn.addEventListener("click", () => {
+    // نص قانوني مختصر بالألمانية (Beta + Haftung)
+    modalContent.innerHTML = `
+      <div><strong>Rechtlicher Hinweis &amp; Haftungsausschluss (Beta-Version)</strong></div>
+      <div class="small" style="margin-top:8px;">
+        Die Fahreroberfläche von „Taussil“ befindet sich in einer Testphase (Beta-Version)
+        und wird ausschließlich zu Erprobungs- und Verbesserungszwecken eingesetzt.<br /><br />
+
+        Taussil stellt lediglich die technische Plattform zur Verfügung, über die Lieferaufträge
+        zwischen Händlern und Fahrern vermittelt werden. Taussil ist selbst nicht Vertragspartei
+        der Lieferverhältnisse und wird nicht Partei von Zahlungs- oder Beförderungsverträgen
+        zwischen Händler, Fahrer und Endkunden.<br /><br />
+
+        Insbesondere gilt:<br />
+        <ul>
+          <li>Die Verantwortung für die ordnungsgemäße Ausführung der Lieferungen liegt ausschließlich beim Fahrer.</li>
+          <li>Die Verantwortung für das Einziehen und Weiterleiten von Barzahlungen an den Händler liegt ausschließlich beim Fahrer.</li>
+          <li>Taussil übernimmt keine Haftung für verlorene, verweigerte oder unterschlagene Bargeldbeträge oder Waren.</li>
+          <li>Streitigkeiten über Zahlung, Leistung, Verspätung oder Schaden bestehen ausschließlich zwischen Händler, Fahrer und Endkunden.</li>
+        </ul>
+
+        Fahrer sind selbst dafür verantwortlich, alle für ihre Tätigkeit geltenden rechtlichen Pflichten
+        (z. B. Gewerbeanmeldung, Steuern, Versicherung, Fahrerlaubnis) zu prüfen und zu erfüllen.<br /><br />
+
+        Die Nutzung der App in dieser Beta-Version erfolgt auf eigenes Risiko. Es besteht kein Anspruch
+        auf jederzeit fehlerfreien Betrieb oder auf bestimmte Funktionen.
+      </div>
+      <div class="btn-row" style="margin-top:14px;">
+        <button id="legalCloseBtn">Schließen</button>
+      </div>
+    `;
+
+    if (orderModalEl) orderModalEl.classList.remove("hidden");
+    if (modalBackdrop) modalBackdrop.style.display = "flex";
+    window.scrollTo(0, 0);
+
+    const legalCloseBtn = document.getElementById("legalCloseBtn");
+    if (legalCloseBtn) {
+      legalCloseBtn.addEventListener("click", () => {
+        closeOrderModal();
+      });
+    }
+  });
+}
+
 const pricingSettingsBtn = document.getElementById("pricingSettingsBtn");
 const toggleOnlineBtn = document.getElementById("toggleOnlineBtn");
 
