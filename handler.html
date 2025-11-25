@@ -465,6 +465,21 @@ html[dir="ltr"] .toast {
   color: #fff !important;
   font-weight: 700;
 }
+/* تذييل النسخة التجريبية في واجهة التسجيل */
+.beta-footer{
+  max-width:520px;
+  margin:8px auto 0;
+  font-size:11px;
+  color:#6b7280;
+  text-align:center;
+}
+
+/* زر الملاحظة القانونية في القائمة الجانبية */
+.merchant-side-panel .beta-legal-btn{
+  margin-top:4px;
+  margin-bottom:4px;
+  font-size:11px;
+}
 
 </style>
 </head>
@@ -513,6 +528,10 @@ html[dir="ltr"] .toast {
         <input type="password" id="loginPassword" placeholder="كلمة السر" required />
         <button type="submit">تسجيل الدخول</button>
     </form>
+</div>
+<!-- تذييل النسخة التجريبية في واجهة التسجيل -->
+<div id="betaFooter" class="beta-footer">
+  Taussil e.K. – Beta-Version im Testbetrieb. Nutzung auf eigene Verantwortung.
 </div>
 
 <!-- SECTION: Merchant Dashboard -->
@@ -597,7 +616,10 @@ html[dir="ltr"] .toast {
           </div>
           <div id="completedOrders" class="orders-list"></div>
         </div>
-
+<!-- زر الملاحظة القانونية للنسخة التجريبية -->
+        <button id="betaLegalBtn" class="secondary full-width beta-legal-btn" type="button">
+          Hinweis zur Testphase (Beta-Version)
+        </button>
         <!-- زر الخروج -->
         <button id="logoutBtn" class="secondary full-width">تسجيل خروج</button>
       </div>
@@ -621,6 +643,34 @@ html[dir="ltr"] .toast {
     </div>
 </div>
 
+<!-- مودال الملاحظة القانونية للنسخة التجريبية -->
+<div id="betaLegalModal" class="hidden">
+  <div class="modal-backdrop" id="betaLegalBackdrop" style="display:none;">
+    <div class="modal">
+      <div class="flex-between">
+        <h3>Hinweis zur Testphase (Beta-Version)</h3>
+        <button type="button" id="betaLegalClose" class="icon-btn">✕</button>
+      </div>
+      <div style="margin-top:12px; max-height:60vh; overflow:auto; font-size:13px; line-height:1.5;">
+        <p>Die Plattform „Taussil“ befindet sich derzeit in einer begrenzten Testphase (Beta-Version) und wird ausschließlich zu Erprobungs- und Verbesserungszwecken eingesetzt.</p>
+
+        <p>Taussil stellt lediglich eine technische Vermittlungsplattform zwischen Händlern und Fahrern zur Verfügung. Verträge über Lieferungen, Zahlungen oder sonstige Leistungen werden ausschließlich zwischen Händler und Fahrer (und ggf. dessen Kunden) geschlossen.</p>
+
+        <p>Taussil übernimmt keine Haftung für:</p>
+        <ul>
+          <li>die ordnungsgemäße Durchführung der Lieferung,</li>
+          <li>das Verhalten von Fahrern oder Händlern,</li>
+          <li>den Verlust, die verspätete Übergabe oder die Nicht-Übergabe von Bargeldbeträgen, die Fahrer im Auftrag des Händlers bei Kunden kassieren,</li>
+          <li>Streitigkeiten oder Schäden, die aus dem Verhältnis zwischen Händler, Fahrer und Endkunden entstehen.</li>
+        </ul>
+
+        <p>Die Nutzung der Plattform in dieser Testphase erfolgt auf eigenes Risiko des Händlers. Es besteht kein Anspruch auf fehlerfreien Betrieb, permanente Verfügbarkeit oder bestimmte Funktionen. Daten und Einstellungen können sich im Rahmen der Weiterentwicklung der Software ändern.</p>
+
+        <p>Mit der Nutzung der Plattform in dieser Beta-Version erkennt der Händler diese Rahmenbedingungen ausdrücklich an.</p>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- صوت عند التحول إلى أونلاين للتاجر -->
 <audio id="merchantOnlineSound" src="online1.mp3" preload="auto"></audio>
@@ -1366,6 +1416,12 @@ const modalBackdrop = document.getElementById("modalBackdrop");
 const modalContent = document.getElementById("modalContent");
 
 const orderModalEl = document.getElementById("orderModal");
+const betaFooterEl = document.getElementById("betaFooter");
+const betaLegalBtn = document.getElementById("betaLegalBtn");
+const betaLegalModal = document.getElementById("betaLegalModal");
+const betaLegalBackdrop = document.getElementById("betaLegalBackdrop");
+const betaLegalCloseBtn = document.getElementById("betaLegalClose");
+
 /* ========== Toast helper ========== */
 const toastContainer = document.getElementById("toastContainer");
 
@@ -1402,6 +1458,32 @@ function showToast(message, type = "success") {
     // فالباك إضافي لو لأي سبب transitionend ما اشتغل
     setTimeout(removeToast, 800);
   }, 2500);
+}
+/* ========== مودال النص القانوني للنسخة التجريبية ========== */
+function openBetaLegalModal() {
+  if (!betaLegalModal || !betaLegalBackdrop) return;
+  betaLegalModal.classList.remove("hidden");
+  betaLegalBackdrop.style.display = "flex";
+}
+
+function closeBetaLegalModal() {
+  if (!betaLegalModal || !betaLegalBackdrop) return;
+  betaLegalBackdrop.style.display = "none";
+  betaLegalModal.classList.add("hidden");
+}
+
+if (betaLegalBtn) {
+  betaLegalBtn.addEventListener("click", openBetaLegalModal);
+}
+if (betaLegalCloseBtn) {
+  betaLegalCloseBtn.addEventListener("click", closeBetaLegalModal);
+}
+if (betaLegalBackdrop) {
+  betaLegalBackdrop.addEventListener("click", (e) => {
+    if (e.target === betaLegalBackdrop) {
+      closeBetaLegalModal();
+    }
+  });
 }
 
 /* عناصر الواجهة الجديدة (الشريط العلوي + القائمة الجانبية) */
@@ -1668,6 +1750,7 @@ loginForm.addEventListener("submit", async (e) => {
       document.getElementById("authTabs").classList.add("hidden");
       const langSwitcher = document.getElementById("langSwitcher");
       if (langSwitcher) langSwitcher.classList.add("hidden");
+      if (betaFooterEl) betaFooterEl.classList.add("hidden");
 
       initMapAndData(uid);
       document.body.classList.add("merchant-mode");
@@ -1696,6 +1779,8 @@ logoutBtn.addEventListener("click", async () => {
   document.getElementById("authTabs").classList.remove("hidden");
   const langSwitcher = document.getElementById("langSwitcher");
   if (langSwitcher) langSwitcher.classList.remove("hidden");
+    if (betaFooterEl) betaFooterEl.classList.remove("hidden");
+
   document.body.classList.remove("merchant-mode");
 });
 
