@@ -204,7 +204,7 @@ html[dir="ltr"] .merchant-topbar {
 /* كرت عدد السائقين الأونلاين (منفصل عن الشريط العلوي) */
 .online-drivers-card {
   position: absolute;
-  top: 6px;
+  top: 0px;
   left: -150px;
   background: #ffffff;
   color: #111827;
@@ -226,6 +226,105 @@ html[dir="ltr"] .merchant-topbar {
   font-weight: 700;   /* خط أعرض */
   font-size: 16px;    /* ممكن تكبير الرقم شوي */
   color: #22c55e;     /* أخضر واضح */
+}
+.drivers-picker-toggle {
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: none;
+  background: #0f172a;
+  color: #e5e7eb;
+  font-size: 11px;
+  cursor: pointer;
+}
+.drivers-picker-toggle:hover {
+  background: #1f2937;
+}
+
+/* البانل العائم للسائقين المتاحين */
+.selected-drivers-panel {
+  position: fixed;
+  top: 100px;
+  right: 10px;
+  width: 230px;
+  max-height: 60vh;
+  background: #020617;
+  color: #e5e7eb;
+  border-radius: 14px;
+  box-shadow: 0 12px 30px rgba(15,23,42,0.7);
+  z-index: 30;
+  padding: 8px 10px;
+  display: none;
+  overflow-y: auto;
+}
+
+.selected-drivers-panel.visible {
+  display: block;
+}
+
+.selected-drivers-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.selected-drivers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.selected-driver-item {
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  cursor: pointer;
+  border: 1px solid #1f2937;
+  font-size: 12px;
+}
+
+.selected-driver-item:hover {
+  border-color: #22c55e;
+}
+
+.selected-driver-name {
+  font-weight: 600;
+}
+
+.selected-driver-price {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.selected-drivers-close {
+  border: none;
+  background: #111827;
+  color: #e5e7eb;
+  border-radius: 999px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+@media (max-width: 600px) {
+  .selected-drivers-panel {
+    top: auto;
+    bottom: 80px;
+    right: 8px;
+    left: 8px;
+    width: auto;
+    max-height: 40vh;
+  }
 }
 
 html[dir="rtl"] .online-drivers-card {
@@ -537,8 +636,17 @@ html[dir="ltr"] .toast {
 <!-- SECTION: Merchant Dashboard -->
 <div id="merchantDashboard" class="hidden merchant-dashboard">
   <div class="merchant-map-wrapper">
-    <!-- الخريطة ملء الشاشة -->
-    <div id="map"></div>
+  <!-- الخريطة ملء الشاشة -->
+  <div id="map"></div>
+
+  <!-- بانل السائقين المتاحين (مرتب من الأقل سعراً للأغلى) -->
+  <div id="driversPickerPanel" class="selected-drivers-panel">
+    <div class="selected-drivers-header">
+      <span id="driversPickerTitle">السائقون المتاحون (من الأقل سعراً)</span>
+      <button id="driversPickerClose" type="button" class="selected-drivers-close">✕</button>
+    </div>
+    <div id="driversPickerList" class="selected-drivers-list"></div>
+  </div>
 
     <!-- الشريط العلوي العائم: يمين زر القائمة، وسط أونلاين/أوفلاين، يسار الأرباح -->
     <div class="merchant-topbar">
@@ -551,9 +659,14 @@ html[dir="ltr"] .toast {
       </div>
       <!-- صندوق عدد السائقين الأونلاين -->
       <div id="onlineDriversBadge" class="online-drivers-card">
-        <span class="label">السائقون المتاحون</span>
-        <span class="count">0</span>
-      </div>
+  <div>
+    <span class="label">السائقون المتاحون</span>
+    <span class="count">0</span>
+  </div>
+  <!-- زر السهم لفتح قائمة السائقين -->
+  <button id="openDriversPicker" class="drivers-picker-toggle" type="button">▾</button>
+</div>
+
     </div>
 
     <!-- القائمة الجانبية -->
@@ -1385,6 +1498,13 @@ const BASE_DELIVERY_FEE = 3.5; // EUR
 const MERCHANT_MARKER_ICON_PATH = "markt 1.png";
 // مسار أيقونة ماركر العميل (غيّره لما يناسبك)
 const CUSTOMER_MARKER_ICON_PATH = "kunde.png";
+// مسارات أيقونات مركبات السائقين (حدّث أسماء الملفات حسب صورك الفعلية)
+const DRIVER_VEHICLE_ICONS = {
+  car: "car.png",
+  motorcycle: "motorcycle.png",
+  bicycle: "bicycle.png",
+  default: "driver-default.png"
+};
 
 /* ========== عناصر DOM ========== */
 const registerTab = document.getElementById("registerTab");
@@ -1491,6 +1611,10 @@ const merchantMenuBtn = document.getElementById("merchantMenuBtn");
 const merchantOnlineToggle = document.getElementById("merchantOnlineToggle");
 const merchantEarningsTopEl = document.getElementById("merchantEarnings");
 const onlineDriversBadge = document.getElementById("onlineDriversBadge");
+const openDriversPickerBtn = document.getElementById("openDriversPicker");
+const driversPickerPanel = document.getElementById("driversPickerPanel");
+const driversPickerList = document.getElementById("driversPickerList");
+const driversPickerCloseBtn = document.getElementById("driversPickerClose");
 
 const merchantSidePanel = document.getElementById("merchantSidePanel");
 const merchantSidePanelBackdrop = document.getElementById("merchantSidePanelBackdrop");
@@ -1794,6 +1918,48 @@ function createCircleIcon(color, scale) {
     strokeWeight: 3
   };
 }
+function getDriverVehicleIcon(driverData) {
+  if (typeof google === "undefined" || !google.maps) return null;
+
+  const rawType = (driverData.vehicleType || "").toLowerCase();
+  let key;
+  if (rawType === "car") {
+    key = "car";
+  } else if (rawType === "motorcycle" || rawType === "motorbike") {
+    key = "motorcycle";
+  } else if (rawType === "bicycle" || rawType === "bike") {
+    key = "bicycle";
+  } else {
+    key = "default";
+  }
+
+  const url = DRIVER_VEHICLE_ICONS[key] || DRIVER_VEHICLE_ICONS.default;
+
+  return {
+    url,
+    scaledSize: new google.maps.Size(40, 40),
+    origin: new google.maps.Point(0, 0),
+    anchor: new google.maps.Point(20, 20)
+  };
+}
+
+// URL فقط لاستخدامه داخل فقاعة الـ ETA
+function getDriverVehicleIconUrlForId(driverId) {
+  const data = cachedDrivers[driverId] || {};
+  const rawType = (data.vehicleType || "").toLowerCase();
+  let key;
+  if (rawType === "car") {
+    key = "car";
+  } else if (rawType === "motorcycle" || rawType === "motorbike") {
+    key = "motorcycle";
+  } else if (rawType === "bicycle" || rawType === "bike") {
+    key = "bicycle";
+  } else {
+    key = "default";
+  }
+  return DRIVER_VEHICLE_ICONS[key] || DRIVER_VEHICLE_ICONS.default;
+}
+
 function getMerchantMarkerIcon() {
   if (typeof google === "undefined" || !google.maps) return null;
   return {
@@ -2025,8 +2191,7 @@ function mtUpdateRouteAndEta(driverId) {
         tr.routePolyline.setMap(null);
         tr.routePolyline = null;
       }
-      stopDriverHalo(driverId);
-
+      
       if (tr.etaTimerId) {
         clearInterval(tr.etaTimerId);
         tr.etaTimerId = null;
@@ -2215,6 +2380,7 @@ function mtUpdateEtaBubble(driverId) {
         font-weight:700;
         box-shadow:0 4px 12px rgba(15,23,42,0.6);
         border:1px solid #22c55e;
+        white-space:nowrap;
       ">
         ${arrivedText}
       </div>
@@ -2487,7 +2653,7 @@ function initMapAndData(merchantId) {
     }
   }
 
-  if (driversListenerUnsub) driversListenerUnsub();
+    if (driversListenerUnsub) driversListenerUnsub();
   driversListenerUnsub = db
     .collection("drivers")
     .where("online", "==", true)
@@ -2513,6 +2679,11 @@ function initMapAndData(merchantId) {
         if (countEl) {
           countEl.textContent = snapshot.size;
         }
+      }
+
+      // لو البانل مفتوح نحدّث القائمة ديناميكياً
+      if (driversPickerPanel && driversPickerPanel.classList.contains("visible")) {
+        buildDriversPickerList();
       }
     });
 
@@ -2760,26 +2931,43 @@ function addDriverMarker(id, data) {
   if (!data.lat || !data.lng) return;
 
   const isBusy = !!data.busy;
-  const color = isBusy ? "#d93025" : "#28a745";
-  const baseScale = 9;
 
+  // إذا الماركر موجود مسبقاً: نحدّثه
   if (driverMarkers[id]) {
     const state = driverMarkers[id];
     state.marker.setPosition({ lat: data.lat, lng: data.lng });
-    state.color = color;
-    state.baseScale = baseScale;
+
+    const wasBusy = !!state.isBusy;
+    state.isBusy = isBusy;
+
+    // دائماً نستخدم صورة المركبة كأيقونة
+    const vehIcon = getDriverVehicleIcon(data);
+    if (vehIcon) {
+      state.marker.setIcon(vehIcon);
+    }
+
+    // لو تغيّرت حالة الانشغال نغيّر لون الهالة
+    if (wasBusy !== isBusy) {
+      stopDriverHalo(id);
+      startDriverHalo(id); // يختار اللون بحسب isBusy
+    } else {
+      // نفس الحالة لكن لا يوجد هالة (احتياط)
+      if (!driverHaloState[id]) {
+        startDriverHalo(id);
+      }
+    }
+
     const newContent = buildDriverInfoContent(id, data);
     state.info.setContent(newContent);
     return;
   }
 
+  // إنشاء ماركر جديد
   const marker = new google.maps.Marker({
     position: { lat: data.lat, lng: data.lng },
     map,
     title: (data.firstName || "") + " " + (data.lastName || "")
   });
-
-  marker.setIcon(createCircleIcon(color, baseScale));
 
   const info = new google.maps.InfoWindow();
   const content = buildDriverInfoContent(id, data);
@@ -2798,55 +2986,27 @@ function addDriverMarker(id, data) {
   const state = {
     marker,
     info,
-    color,
-    baseScale,
-    growing: true,
-    currentScale: baseScale
+    isBusy
   };
 
-  const pulseInterval = setInterval(() => {
-    if (!state.marker.getMap()) {
-      clearInterval(pulseInterval);
-      return;
-    }
-    const maxScale = state.baseScale + 3;
-    const minScale = state.baseScale - 1;
-    if (state.growing) {
-      state.currentScale += 0.25;
-      if (state.currentScale >= maxScale) state.growing = false;
-    } else {
-      state.currentScale -= 0.25;
-      if (state.currentScale <= minScale) state.growing = true;
-    }
-    state.marker.setIcon(
-      createCircleIcon(state.color, state.currentScale)
-    );
-  }, 80);
-
-  state.pulseInterval = pulseInterval;
   driverMarkers[id] = state;
+
+  // دائماً صورة المركبة كأيقونة
+  const vehIcon = getDriverVehicleIcon(data);
+  if (vehIcon) {
+    marker.setIcon(vehIcon);
+  }
+
+  // هالة خضراء لمتاح، حمراء لمشغول
+  startDriverHalo(id);
 }
 
 function updateDriverMarker(id, data) {
-  if (!driverMarkers[id]) {
-    addDriverMarker(id, data);
-    return;
-  }
-  const state = driverMarkers[id];
-  if (data.lat && data.lng) {
-    state.marker.setPosition({ lat: data.lat, lng: data.lng });
-  }
-  state.color = data.busy ? "#d93025" : "#28a745";
-  const newContent = buildDriverInfoContent(id, data);
-  state.info.setContent(newContent);
+  // نعيد استعمال addDriverMarker لتحديث الموقع والأيقونة والهالة
+  addDriverMarker(id, data);
 
   if (multiTrackingByDriver[id]) {
     mtUpdateRouteAndEta(id);
-  }
-
-  if (!data.busy && multiTrackingByDriver[id] && !hasActiveCallForDriver(id)) {
-    stopDriverHalo(id);
-    mtStopTrackingForDriver(id);
   }
 }
 
@@ -2903,7 +3063,7 @@ function playCallAcceptedForMerchant(callData) {
   }
 }
 
-function startDriverHalo(driverId) {
+function startDriverHalo(driverId, forcedColor) {
   if (!map) return;
   const markerState = driverMarkers[driverId];
   if (!markerState || !markerState.marker) return;
@@ -2911,7 +3071,11 @@ function startDriverHalo(driverId) {
   const pos = markerState.marker.getPosition();
   if (!pos) return;
 
+  // لو في هالة مسبقاً لا نكرر
   if (driverHaloState[driverId]) return;
+
+  // اللون: أحمر للمشغول، أخضر للمتاح (ما لم يتم تمرير forcedColor)
+  const color = forcedColor || (markerState.isBusy ? "#d93025" : "#22c55e");
 
   const baseScale = 18;
   const maxScale  = 32;
@@ -2923,9 +3087,9 @@ function startDriverHalo(driverId) {
     zIndex: (markerState.marker.getZIndex() || 100) - 1,
     icon: {
       path: google.maps.SymbolPath.CIRCLE,
-      fillColor: "#3b82f6",
+      fillColor: color,
       fillOpacity: 0.45,
-      strokeColor: "#3b82f6",
+      strokeColor: color,
       strokeOpacity: 0.9,
       strokeWeight: 1.5,
       scale: baseScale,
@@ -2937,6 +3101,7 @@ function startDriverHalo(driverId) {
     baseScale,
     maxScale,
     currentScale: baseScale,
+    color,
     intervalId: null,
   };
 
@@ -2959,14 +3124,14 @@ function startDriverHalo(driverId) {
       (state.currentScale - state.baseScale) /
       (state.maxScale - state.baseScale);
 
-    const fillOpacity   = 0.45 * (1 - progress);
+    const fillOpacity   = 0.80 * (1 - progress);
     const strokeOpacity = 0.9 * (1 - progress * 0.7);
 
     state.haloMarker.setIcon({
       path: google.maps.SymbolPath.CIRCLE,
-      fillColor: "#3b82f6",
+      fillColor: state.color,
       fillOpacity,
-      strokeColor: "#3b82f6",
+      strokeColor: state.color,
       strokeOpacity,
       strokeWeight: 1.5,
       scale: state.currentScale,
@@ -2975,6 +3140,7 @@ function startDriverHalo(driverId) {
 
   driverHaloState[driverId] = state;
 }
+
 function stopDriverHalo(driverId) {
   const state = driverHaloState[driverId];
   if (!state) return;
@@ -3150,6 +3316,7 @@ function updateEtaBubble() {
         font-weight:700;
         box-shadow:0 4px 12px rgba(15,23,42,0.6);
         border:1px solid #22c55e;
+        white-space:nowrap;
       ">
         ${arrivedText}
       </div>
@@ -3345,8 +3512,7 @@ function updateDriverRouteAndEta() {
         trackedRoutePolyline.setMap(null);
         trackedRoutePolyline = null;
       }
-      stopDriverHalo(trackedDriverId);
-
+      
       if (trackedEtaTimerId) {
         clearInterval(trackedEtaTimerId);
         trackedEtaTimerId = null;
@@ -3583,7 +3749,7 @@ function stopTrackingDriverForCall(callId) {
   Object.keys(multiTrackingByDriver).forEach((driverId) => {
     const tr = multiTrackingByDriver[driverId];
     if (tr && tr.callId === callId) {
-      stopDriverHalo(driverId);
+      // نوقف فقط تتبع المسار والـ ETA، ونترك الهالة الخضراء العامة
       mtStopTrackingForDriver(driverId);
     }
   });
@@ -4135,6 +4301,20 @@ printBtn.addEventListener("click", () => {
     noOrdersAll: t("printNoOrders"),
     noOrdersDriver: t("printNoOrdersForDriver")
   };
+  let printButtonLabel;
+  switch (currentLang) {
+    case "en":
+      printButtonLabel = "Print";
+      break;
+    case "de":
+      printButtonLabel = "Drucken";
+      break;
+    case "tr":
+      printButtonLabel = "Yazdır";
+      break;
+    default:
+      printButtonLabel = "طباعة";
+  }
 
   if (!completed.length) {
     const msg = driverFilterVal ? labels.noOrdersDriver : labels.noOrdersAll;
@@ -4211,6 +4391,21 @@ printBtn.addEventListener("click", () => {
 </style>
 </head>
 <body>`;
+  // زر الطباعة داخل صفحة التقرير نفسها
+  html += `
+  <div style="text-align:${align}; margin-bottom:10px;">
+    <button onclick="window.print()" style="
+      padding:6px 14px;
+      border-radius:999px;
+      border:none;
+      background:#111827;
+      color:#f9fafb;
+      font-size:12px;
+      cursor:pointer;
+    ">
+      ${printButtonLabel}
+    </button>
+  </div>`;
 
   // الهيدر: تاجر + سائق + تاريخ طباعة
   html += `<h2>${escapeHtml(labels.title)}</h2>`;
@@ -4399,6 +4594,157 @@ function refreshDriverFilterOptions() {
   // نحافظ على الاختيار السابق إن وجد
   if (cur) filterDriver.value = cur;
 }
+// نحسب "درجة السعر" للسائق: كلما كانت أقل كان السائق أرخص
+function computeDriverPriceScore(driverData) {
+  if (!driverData) return Infinity;
+  if (typeof driverData.pricePerKmDelivery === "number") {
+    return driverData.pricePerKmDelivery;
+  }
+  return Infinity; // بدون تسعيرة نضعه في الآخر
+}
+
+// يبني قائمة السائقين المتاحين داخل البانل (لا يفتح/يغلق)
+function buildDriversPickerList() {
+  if (!driversPickerList) return;
+
+  driversPickerList.innerHTML = "";
+
+  // نستخدم driverMarkers لضمان أن السائق له ماركر (أونلاين فعلاً)
+  const items = [];
+  Object.keys(driverMarkers).forEach((id) => {
+    const d = cachedDrivers[id] || {};
+    if (d.busy) return; // نأخذ فقط المتاحين
+    items.push({
+      id,
+      data: d,
+      priceScore: computeDriverPriceScore(d)
+    });
+  });
+
+  // ترتيب من الأقل سعراً للأغلى
+  items.sort((a, b) => a.priceScore - b.priceScore);
+
+  // عنوان البانل حسب اللغة الحالية
+  const titleEl = document.getElementById("driversPickerTitle");
+  if (titleEl) {
+    let titleText;
+    switch (currentLang) {
+      case "en":
+        titleText = "Available drivers (cheapest first)";
+        break;
+      case "de":
+        titleText = "Verfügbare Fahrer (günstigste zuerst)";
+        break;
+      case "tr":
+        titleText = "Müsait sürücüler (en ucuzdan)";
+        break;
+      default:
+        titleText = "السائقون المتاحون (من الأقل سعراً)";
+    }
+    titleEl.textContent = titleText;
+  }
+
+  if (!items.length) {
+    const empty = document.createElement("div");
+    empty.className = "small";
+    empty.style.padding = "4px 2px";
+    let msg;
+    switch (currentLang) {
+      case "en":
+        msg = "No available drivers at the moment.";
+        break;
+      case "de":
+        msg = "Zurzeit keine verfügbaren Fahrer.";
+        break;
+      case "tr":
+        msg = "Şu anda müsait sürücü yok.";
+        break;
+      default:
+        msg = "لا يوجد سائقون متاحون حالياً.";
+    }
+    empty.textContent = msg;
+    driversPickerList.appendChild(empty);
+    return;
+  }
+
+  items.forEach((item) => {
+    const d = item.data;
+    const name = (
+      ((d.firstName || "") + " " + (d.lastName || "")).trim() || "سائق"
+    );
+
+    let priceLabel = "";
+    if (typeof d.pricePerKmDelivery === "number") {
+      let p = d.pricePerKmDelivery.toFixed(2);
+      if (currentLang === "de" || currentLang === "tr") {
+        p = p.replace(".", ",");
+      }
+      priceLabel = p + " €/km";
+    } else {
+      switch (currentLang) {
+        case "en":
+          priceLabel = "no pricing";
+          break;
+        case "de":
+          priceLabel = "kein Tarif";
+          break;
+        case "tr":
+          priceLabel = "tarife yok";
+          break;
+        default:
+          priceLabel = "بدون تسعيرة";
+      }
+    }
+
+    const itemEl = document.createElement("div");
+    itemEl.className = "selected-driver-item";
+    itemEl.innerHTML = `
+      <div class="selected-driver-name">${escapeHtml(name)}</div>
+      <div class="selected-driver-price">${escapeHtml(priceLabel)}</div>
+    `;
+    itemEl.addEventListener("click", () => {
+      focusDriverOnMap(item.id);
+    });
+    driversPickerList.appendChild(itemEl);
+  });
+}
+
+// فتح/إغلاق البانل
+function openDriversPicker() {
+  if (!driversPickerPanel) return;
+  buildDriversPickerList();
+  driversPickerPanel.classList.add("visible");
+}
+
+function closeDriversPicker() {
+  if (!driversPickerPanel) return;
+  driversPickerPanel.classList.remove("visible");
+}
+
+// تركيز الخريطة وفتح فقاعة السائق الموجودة مسبقاً
+function focusDriverOnMap(driverId) {
+  const state = driverMarkers[driverId];
+  if (!state || !state.marker) return;
+
+  const pos = state.marker.getPosition();
+  if (pos && map) {
+    map.panTo(pos);
+    if (map.getZoom() < 15) {
+      map.setZoom(15);
+    }
+  }
+
+  // فتح الـ InfoWindow الافتراضي للسائق
+  state.info.open(map, state.marker);
+
+  // تفعيل زر النداء داخل الفقاعة (نفس منطق الضغط على الماركر)
+  setTimeout(() => {
+    const btn = document.getElementById(`callBtn_${driverId}`);
+    if (btn) {
+      btn.onclick = () => createCallForDriver(driverId);
+    }
+  }, 80);
+}
 
 /* ========== طباعة نداء مفرد (call) ========== */
 window.printOrder = async function (callId) {
@@ -4418,33 +4764,42 @@ window.printOrder = async function (callId) {
   const titlePrefix = t("printSingleOrderTitlePrefix");
   const headingPrefix = t("printSingleOrderHeadingPrefix");
 
+  // نص زر الطباعة حسب اللغة
+  let printButtonLabel;
+  switch (currentLang) {
+    case "en":
+      printButtonLabel = "Print";
+      break;
+    case "de":
+      printButtonLabel = "Drucken";
+      break;
+    case "tr":
+      printButtonLabel = "Yazdır";
+      break;
+    default:
+      printButtonLabel = "طباعة";
+  }
+
   let html =
     `<html dir="${docDir}"><head><meta charset="utf-8">` +
     `<title>${titlePrefix} #${shortId}</title></head><body>`;
 
+  // زر الطباعة داخل صفحة الطلب
+  html += `<div style="margin-bottom:10px; text-align:${docDir === "rtl" ? "right" : "left"};">
+    <button onclick="window.print()" style="
+      padding:6px 14px;
+      border-radius:999px;
+      border:none;
+      background:#111827;
+      color:#f9fafb;
+      font-size:12px;
+      cursor:pointer;
+    ">
+      ${printButtonLabel}
+    </button>
+  </div>`;
+
   html += `<h3>${headingPrefix} #${shortId}</h3>`;
-
-  const driverName = (
-    (o.driverFirstName || "") +
-    " " +
-    (o.driverLastName || "")
-  ).trim();
-
-  html += `<div>${t("printSingleOrderDriverLabel")}: ${escapeHtml(
-    driverName
-  )}</div>`;
-  html += `<div>${t("printSingleOrderDriverPhoneLabel")}: ${escapeHtml(
-    o.driverPhone || "-"
-  )}</div>`;
-  html += `<div>${t("printSingleOrderCustomerLabel")}: ${escapeHtml(
-    o.customerName || "-"
-  )}</div>`;
-  html += `<div>${t("printSingleOrderAddressLabel")}: ${escapeHtml(
-    o.deliveryAddress || "-"
-  )}</div>`;
-  html += `<div>${t("printSingleOrderCostLabel")}: ${escapeHtml(
-    o.deliveryFee != null ? o.deliveryFee : "-"
-  )}</div>`;
 
   html += `</body></html>`;
   const w = window.open("", "_blank");
@@ -4488,6 +4843,54 @@ sortCompleted.addEventListener("change", () =>
 filterDriver.addEventListener("change", () =>
   renderMerchantCalls(lastCallsCache)
 );
+sortActive.addEventListener("change", () =>
+  renderMerchantCalls(lastCallsCache)
+);
+sortCompleted.addEventListener("change", () =>
+  renderMerchantCalls(lastCallsCache)
+);
+filterDriver.addEventListener("change", () =>
+  renderMerchantCalls(lastCallsCache)
+);
+// إغلاق قائمة السائقين عند الضغط خارجها
+document.addEventListener("click", (event) => {
+  if (!driversPickerPanel) return;
+
+  // لو ليست مفتوحة، لا نفعل شيئاً
+  if (!driversPickerPanel.classList.contains("visible")) return;
+
+  const target = event.target;
+
+  // إذا كان الضغط داخل البانل نفسه → لا تغلق
+  if (driversPickerPanel.contains(target)) return;
+
+  // إذا كان الضغط على زر السهم الذي يفتح/يغلق القائمة → لا نغلق هنا
+  if (openDriversPickerBtn && openDriversPickerBtn.contains(target)) return;
+
+  // في كل الحالات الأخرى (أي مكان خارج البانل) → أغلق
+  closeDriversPicker();
+});
+
+// ⬇⬇ ضع هذا القطع هنا ⬇⬇
+if (openDriversPickerBtn) {
+  openDriversPickerBtn.addEventListener("click", () => {
+    if (driversPickerPanel && driversPickerPanel.classList.contains("visible")) {
+      closeDriversPicker();
+    } else {
+      openDriversPicker();
+    }
+  });
+}
+
+if (driversPickerCloseBtn) {
+  driversPickerCloseBtn.addEventListener("click", closeDriversPicker);
+}
+// ⬆⬆ نهاية الكود الجديد ⬆⬆
+
+/* ========== i18n: تطبيق اللغة على النصوص الثابتة ========== */
+function applyLanguageToStaticUI() {
+  // ...
+}
 
 /* ========== i18n: تطبيق اللغة على النصوص الثابتة ========== */
 function applyLanguageToStaticUI() {
