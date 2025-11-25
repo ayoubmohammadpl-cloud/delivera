@@ -4301,20 +4301,6 @@ printBtn.addEventListener("click", () => {
     noOrdersAll: t("printNoOrders"),
     noOrdersDriver: t("printNoOrdersForDriver")
   };
-  let printButtonLabel;
-  switch (currentLang) {
-    case "en":
-      printButtonLabel = "Print";
-      break;
-    case "de":
-      printButtonLabel = "Drucken";
-      break;
-    case "tr":
-      printButtonLabel = "Yazdır";
-      break;
-    default:
-      printButtonLabel = "طباعة";
-  }
 
   if (!completed.length) {
     const msg = driverFilterVal ? labels.noOrdersDriver : labels.noOrdersAll;
@@ -4391,21 +4377,6 @@ printBtn.addEventListener("click", () => {
 </style>
 </head>
 <body>`;
-  // زر الطباعة داخل صفحة التقرير نفسها
-  html += `
-  <div style="text-align:${align}; margin-bottom:10px;">
-    <button onclick="window.print()" style="
-      padding:6px 14px;
-      border-radius:999px;
-      border:none;
-      background:#111827;
-      color:#f9fafb;
-      font-size:12px;
-      cursor:pointer;
-    ">
-      ${printButtonLabel}
-    </button>
-  </div>`;
 
   // الهيدر: تاجر + سائق + تاريخ طباعة
   html += `<h2>${escapeHtml(labels.title)}</h2>`;
@@ -4764,42 +4735,33 @@ window.printOrder = async function (callId) {
   const titlePrefix = t("printSingleOrderTitlePrefix");
   const headingPrefix = t("printSingleOrderHeadingPrefix");
 
-  // نص زر الطباعة حسب اللغة
-  let printButtonLabel;
-  switch (currentLang) {
-    case "en":
-      printButtonLabel = "Print";
-      break;
-    case "de":
-      printButtonLabel = "Drucken";
-      break;
-    case "tr":
-      printButtonLabel = "Yazdır";
-      break;
-    default:
-      printButtonLabel = "طباعة";
-  }
-
   let html =
     `<html dir="${docDir}"><head><meta charset="utf-8">` +
     `<title>${titlePrefix} #${shortId}</title></head><body>`;
 
-  // زر الطباعة داخل صفحة الطلب
-  html += `<div style="margin-bottom:10px; text-align:${docDir === "rtl" ? "right" : "left"};">
-    <button onclick="window.print()" style="
-      padding:6px 14px;
-      border-radius:999px;
-      border:none;
-      background:#111827;
-      color:#f9fafb;
-      font-size:12px;
-      cursor:pointer;
-    ">
-      ${printButtonLabel}
-    </button>
-  </div>`;
-
   html += `<h3>${headingPrefix} #${shortId}</h3>`;
+
+  const driverName = (
+    (o.driverFirstName || "") +
+    " " +
+    (o.driverLastName || "")
+  ).trim();
+
+  html += `<div>${t("printSingleOrderDriverLabel")}: ${escapeHtml(
+    driverName
+  )}</div>`;
+  html += `<div>${t("printSingleOrderDriverPhoneLabel")}: ${escapeHtml(
+    o.driverPhone || "-"
+  )}</div>`;
+  html += `<div>${t("printSingleOrderCustomerLabel")}: ${escapeHtml(
+    o.customerName || "-"
+  )}</div>`;
+  html += `<div>${t("printSingleOrderAddressLabel")}: ${escapeHtml(
+    o.deliveryAddress || "-"
+  )}</div>`;
+  html += `<div>${t("printSingleOrderCostLabel")}: ${escapeHtml(
+    o.deliveryFee != null ? o.deliveryFee : "-"
+  )}</div>`;
 
   html += `</body></html>`;
   const w = window.open("", "_blank");
