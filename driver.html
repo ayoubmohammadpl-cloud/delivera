@@ -2206,56 +2206,100 @@ let navigationMode = null; // "merchant" أو "customer" حسب الهدف ال�
 let locationWatchId = null;
 let lastLocationUpdateAt = 0;
 const LOCATION_UPDATE_MIN_INTERVAL_MS = 7000; // كل ~7 ثواني كحد أدنى بين كل تحديث والتالي
-// ====== جسر Median لتتبع الموقع في الخلفية ======
-const MEDIAN_BG_POST_URL = "https://median-location-test-186649231022.europe-west1.run.app";
+// ====== جسر Median لتتبع الموقع في الخلفية (Background Location Bridge) ======
+const MEDIAN_BG_POST_URL =
+  "https://median-location-test-186649231022.europe-west1.run.app";
+
+// يتم استدعاؤها عندما يكون الـ WebView مفتوح (للديبَغ وتحديث Firestore من داخل التطبيق)
+function handleMedianLocationCallback(location) {
+  try {
+    console.log("Median backgroundLocation callback:", location);
+
+    if (
+      !location ||
+      typeof location.latitude !== "number" ||
+      typeof location.longitude !== "number"
+    ) {
+      return;
+    }
+
+    // نعيد استخدام نفس ثروتل التتبع العادي
+    handleDriverLocationUpdate(location.latitude, location.longitude);
+  } catch (e) {
+    console.warn("Error in handleMedianLocationCallback:", e);
+  }
+}
 
 function startMedianBackgroundLocation() {
-  // لو الكود يعمل في متصفح عادي (خارج Median) لن يحدث شيء
-  if (!window.median || !median.backgroundLocation) {
-    console.warn("Median backgroundLocation bridge is not available in this environment.");
-    return;
-  }
-
-  if (!driverUid) {
-    console.warn("Cannot start Median background tracking: driverUid is not set yet.");
-    return;
-  }
-
-  const locationRequest = {
-    // نرسل بيانات الموقع إلى الفنكشن مع driverUid كـ query
-    postUrl:
-      MEDIAN_BG_POST_URL +
-      "?driverUid=" +
-      encodeURIComponent(driverUid),
-
-    // إعدادات iOS
-    iosBackgroundIndicator: true,
-    iosPauseAutomatically: false,
-    iosDesiredAccuracy: "bestForNavigation",
-    iosActivityType: "automotiveNavigation",
-
-    // إعدادات أندرويد
-    androidPriority: "highAccuracy",
-    androidInterval: 5000,         // كل 5 ثواني تقريباً
-    androidFastestInterval: 3000,  // أسرع شيء
-    androidSmallestDisplacement: 0,
-    androidNotificationTitle: "Navigation",
-    androidNotificationText: "Tap to return to app"
-  };
-
   try {
-    median.backgroundLocation.start(locationRequest);
-    console.log("Median background location started", locationRequest);
+    // لو الصفحة مفتوحة في متصفح عادي وما في median → لا شيء
+    if (
+      typeof window === "undefined" ||
+      !window.median ||
+      !window.median.backgroundLocation
+    ) {
+      console.log(
+        "Median backgroundLocation bridge not available in this environment."
+      );
+      return;
+    }
+
+    if (!driverUid) {
+      console.warn(
+        "Cannot start Median backgroundLocation: driverUid is not set yet."
+      );
+      return;
+    }
+
+    // نرسل الـ uid باسمين uid و driverUid حتى نضمن التوافق مع خدمة Cloud Run
+    const encodedUid = encodeURIComponent(driverUid);
+    const postUrl =
+      MEDIAN_BG_POST_URL +
+      "?uid=" +
+      encodedUid +
+      "&driverUid=" +
+      encodedUid;
+
+    const locationRequest = {
+      callback: handleMedianLocationCallback, // يعمل عندما يكون التطبيق في الأمام
+      postUrl: postUrl, // يعمل دائماً من البلَغ-إن حتى بالخلفية
+
+      // إعدادات iOS
+      iosBackgroundIndicator: true,
+      iosPauseAutomatically: false,
+      iosDesiredAccuracy: "bestForNavigation",
+      iosActivityType: "automotiveNavigation",
+
+      // إعدادات أندرويد
+      androidPriority: "highAccuracy",
+      androidInterval: 5000,
+      androidFastestInterval: 3000,
+      androidSmallestDisplacement: 0,
+      androidNotificationTitle: "Taussil Fahrer",
+      androidNotificationText: "Die App nutzt Ihren Standort für Lieferungen"
+    };
+
+    console.log(
+      "Starting Median backgroundLocation with postUrl:",
+      postUrl
+    );
+    window.median.backgroundLocation.start(locationRequest);
   } catch (e) {
     console.error("Failed to start Median backgroundLocation:", e);
   }
 }
 
 function stopMedianBackgroundLocation() {
-  if (!window.median || !median.backgroundLocation) return;
-
   try {
-    median.backgroundLocation.stop();
+    if (
+      typeof window === "undefined" ||
+      !window.median ||
+      !window.median.backgroundLocation
+    ) {
+      return;
+    }
+
+    window.median.backgroundLocation.stop();
     console.log("Median background location stopped.");
   } catch (e) {
     console.error("Failed to stop Median backgroundLocation:", e);
