@@ -990,6 +990,45 @@ body.driver-mode .auth-lang-switcher {
 
 
 <script>
+/* 🔵 Median Background Location + Cloud Function 🔵 */
+
+// هذه الدالة يناديها Median في الواجهة الأمامية (foreground)
+// كلما وصلته إحداثيات جديدة
+function taussilMedianLocationTest(data) {
+  console.log("📍 Median location callback (foreground):", data);
+
+  // لاحقًا ممكن نربط هذه البيانات مع الخريطة أو نرسلها لفايرستور من الواجهة الأمامية إذا أحببنا
+}
+
+// هذه الدالة تشغّل خدمة تتبع الموقع بالخلفية من طرف Median
+function startMedianBackgroundLocation() {
+  // نتأكد أننا داخل WebView الخاصة بـ Median وليس متصفح عادي
+  if (!window.median || !median.backgroundLocation) {
+    console.log("⚠️ median.backgroundLocation غير متوفر (غالباً فتح من متصفح عادي)");
+    return;
+  }
+
+  // إعداد طلب الخلفية
+  var locationRequest = {
+    // اسم الدالة أعلاه بالضبط
+    callback: "taussilMedianLocationTest",
+
+    // عنوان Cloud Function التي نشرناها
+    postUrl: "https://europe-west1-delivera-7pq7jc.cloudfunctions.net/medianBackgroundLocation",
+
+    // خيار لطيف لإظهار مؤشر الخلفية في iOS
+    iosBackgroundIndicator: true
+  };
+
+  console.log("🚀 بدء Median Background Location مع Cloud Function...");
+  median.backgroundLocation.start(locationRequest);
+}
+
+// نبدأ التتبع بمجرد تحميل صفحة السائق داخل Median
+window.addEventListener("load", function () {
+  startMedianBackgroundLocation();
+});
+
 /* ========== إعداد Firebase ========== */
 const firebaseConfig = {
   apiKey: "AIzaSyBhiKPw7M3NMCOhzoBJJyI9enOa6qZQnHc",
@@ -2206,106 +2245,6 @@ let navigationMode = null; // "merchant" أو "customer" حسب الهدف ال�
 let locationWatchId = null;
 let lastLocationUpdateAt = 0;
 const LOCATION_UPDATE_MIN_INTERVAL_MS = 7000; // كل ~7 ثواني كحد أدنى بين كل تحديث والتالي
-// ====== جسر Median لتتبع الموقع في الخلفية (Background Location Bridge) ======
-const MEDIAN_BG_POST_URL =
-  "https://median-location-test-186649231022.europe-west1.run.app";
-
-// يتم استدعاؤها عندما يكون الـ WebView مفتوح (للديبَغ وتحديث Firestore من داخل التطبيق)
-function handleMedianLocationCallback(location) {
-  try {
-    console.log("Median backgroundLocation callback:", location);
-
-    if (
-      !location ||
-      typeof location.latitude !== "number" ||
-      typeof location.longitude !== "number"
-    ) {
-      return;
-    }
-
-    // نعيد استخدام نفس ثروتل التتبع العادي
-    handleDriverLocationUpdate(location.latitude, location.longitude);
-  } catch (e) {
-    console.warn("Error in handleMedianLocationCallback:", e);
-  }
-}
-
-function startMedianBackgroundLocation() {
-  try {
-    // لو الصفحة مفتوحة في متصفح عادي وما في median → لا شيء
-    if (
-      typeof window === "undefined" ||
-      !window.median ||
-      !window.median.backgroundLocation
-    ) {
-      console.log(
-        "Median backgroundLocation bridge not available in this environment."
-      );
-      return;
-    }
-
-    if (!driverUid) {
-      console.warn(
-        "Cannot start Median backgroundLocation: driverUid is not set yet."
-      );
-      return;
-    }
-
-    // نرسل الـ uid باسمين uid و driverUid حتى نضمن التوافق مع خدمة Cloud Run
-    const encodedUid = encodeURIComponent(driverUid);
-    const postUrl =
-      MEDIAN_BG_POST_URL +
-      "?uid=" +
-      encodedUid +
-      "&driverUid=" +
-      encodedUid;
-
-    const locationRequest = {
-      callback: handleMedianLocationCallback, // يعمل عندما يكون التطبيق في الأمام
-      postUrl: postUrl, // يعمل دائماً من البلَغ-إن حتى بالخلفية
-
-      // إعدادات iOS
-      iosBackgroundIndicator: true,
-      iosPauseAutomatically: false,
-      iosDesiredAccuracy: "bestForNavigation",
-      iosActivityType: "automotiveNavigation",
-
-      // إعدادات أندرويد
-      androidPriority: "highAccuracy",
-      androidInterval: 5000,
-      androidFastestInterval: 3000,
-      androidSmallestDisplacement: 0,
-      androidNotificationTitle: "Taussil Fahrer",
-      androidNotificationText: "Die App nutzt Ihren Standort für Lieferungen"
-    };
-
-    console.log(
-      "Starting Median backgroundLocation with postUrl:",
-      postUrl
-    );
-    window.median.backgroundLocation.start(locationRequest);
-  } catch (e) {
-    console.error("Failed to start Median backgroundLocation:", e);
-  }
-}
-
-function stopMedianBackgroundLocation() {
-  try {
-    if (
-      typeof window === "undefined" ||
-      !window.median ||
-      !window.median.backgroundLocation
-    ) {
-      return;
-    }
-
-    window.median.backgroundLocation.stop();
-    console.log("Median background location stopped.");
-  } catch (e) {
-    console.error("Failed to stop Median backgroundLocation:", e);
-  }
-}
-// ====== نهاية جسر Median ======
 
 // نقاط المتجر والعميل
 let merchantMarker = null;
@@ -2561,9 +2500,6 @@ toggleOnlineBtn.addEventListener("click", async () => {
 
             // ✅ بدء تتبع موقع السائق في الخلفية وتحديثه على Firestore
             startDriverLocationTracking();
-			            // ✅ تشغيل تتبع Median بالخلفية أيضاً
-            startMedianBackgroundLocation();
-
           },
           async (err) => {
             alert(t("alert_geo_failed_prefix") + err.message);
@@ -2585,9 +2521,6 @@ toggleOnlineBtn.addEventListener("click", async () => {
             playOnlineSoundNext = false;
 
             updateOnlineBtn();
-			            // حتى لو فشل geolocation في المتصفح، نبدأ Median لأنه يعمل من الـ WebView
-            startMedianBackgroundLocation();
-
           },
           geoOptions
         );
@@ -2611,9 +2544,6 @@ toggleOnlineBtn.addEventListener("click", async () => {
         playOnlineSoundNext = false;
 
         updateOnlineBtn();
-		        // المتصفح ما يدعم geolocation، نعتمد فقط على Median
-        startMedianBackgroundLocation();
-
       }
     } else {
       await driverRef.update({
@@ -2626,8 +2556,6 @@ toggleOnlineBtn.addEventListener("click", async () => {
 
       // ⛔ إيقاف تتبع الموقع في الخلفية
       stopDriverLocationTracking();
-      // ⛔ إيقاف تتبع Median في الخلفية أيضاً
-      stopMedianBackgroundLocation();
 
       // أوقف أي توجيه حي (لو شغّال) → هذا سيعيد الخريطة للوضع العادي
       if (typeof stopGuidance === "function") {
@@ -2716,16 +2644,15 @@ driverLogoutBtn.addEventListener("click", async () => {
       return;
     }
 
-      // 🔓 تنظيف جلسة السائق في Firestore
-  await releaseDriverSession();
+    // 🔓 تنظيف جلسة السائق في Firestore
+    await releaseDriverSession();
 
-  // إيقاف كل أنواع التتبع (المتصفح + Median)
-  stopDriverLocationTracking();
-  stopMedianBackgroundLocation();
-  clearRouteAndNavigation();
+        // إيقاف تتبع الموقع بالكامل
+    stopDriverLocationTracking();
+    clearRouteAndNavigation();
 
-  await auth.signOut();
 
+    await auth.signOut();
 
         driverDashboard.classList.add("hidden");
     registerSection.classList.remove("hidden");
@@ -5048,7 +4975,6 @@ window.addEventListener("beforeunload", () => {
 
   // إيقاف تتبع الموقع + تنظيف الخريطة
   stopDriverLocationTracking();
-  stopMedianBackgroundLocation();
   clearRouteAndNavigation();
 
   stopNewCallSoundLoop(); // لإيقاف أي تايمر شغّال
