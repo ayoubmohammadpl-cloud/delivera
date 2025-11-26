@@ -1003,6 +1003,8 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 const BASE_DELIVERY_FEE = 3.5; // EUR
+// Endpoint الخاص بخدمة Cloud Run التي تستقبل مواقع Median
+const MEDIAN_LOCATION_ENDPOINT = "https://median-location-test-186649231022.europe-west1.run.app";
 
 // أيقونة العميل (نقطة التسليم) من نفس مجلد الملف
 const CUSTOMER_MARKER_ICON_PATH = "kunde.png";
@@ -2174,6 +2176,97 @@ const orderCancelledSoundEl = document.getElementById("orderCancelledSound");
 let driverCurrentOnline = false;
 let driverUid = null;
 let activeDriverSessionId = null;
+// ===== جسر Median Background Location =====
+
+// دالة callback تستقبل المواقع عندما التطبيق في الواجهة (foreground)
+function handleMedianLocationCallback(data) {
+  try {
+    console.log("Median callback locations:", data);
+
+    if (!data || !Array.isArray(data.locations) || data.locations.length === 0) {
+      return;
+    }
+
+    // نأخذ آخر نقطة فقط
+    const latest = data.locations[data.locations.length - 1];
+    const lat = latest.latitude;
+    const lng = latest.longitude;
+
+    if (typeof lat !== "number" || typeof lng !== "number") return;
+
+    // اختياري: نحدّث ماركر السائق على الخريطة من نفس دالتك الحالية
+    try {
+      ensureDriverMarker(lat, lng, null);
+    } catch (e) {
+      console.warn("ensureDriverMarker from Median failed:", e);
+    }
+  } catch (e) {
+    console.warn("Error in handleMedianLocationCallback:", e);
+  }
+}
+
+// تشغيل التتبع بالخلفية عبر Median
+function startMedianBackgroundLocation() {
+  try {
+    // لو الصفحة ليست داخل Median webview ما نعمل شيء
+    if (
+      typeof window === "undefined" ||
+      !window.median ||
+      !window.median.backgroundLocation
+    ) {
+      console.log("Median backgroundLocation not available in this environment.");
+      return;
+    }
+
+    if (!driverUid) {
+      console.warn("Cannot start Median backgroundLocation: driverUid is not set yet.");
+      return;
+    }
+
+    // نربط uid مع الـ endpoint
+    const postUrl = MEDIAN_LOCATION_ENDPOINT + "?uid=" + encodeURIComponent(driverUid);
+
+    const locationRequest = {
+      callback: handleMedianLocationCallback,
+      postUrl: postUrl,
+
+      // إعدادات iOS
+      iosBackgroundIndicator: true,
+      iosPauseAutomatically: false,
+      iosDesiredAccuracy: "bestForNavigation",
+      iosActivityType: "automotiveNavigation",
+
+      // إعدادات Android
+      androidPriority: "highAccuracy",
+      androidInterval: 5000,        // نطلب تقريباً كل 5 ثواني
+      androidFastestInterval: 3000,
+      androidNotificationTitle: "Taussil Fahrer",
+      androidNotificationText: "Die App nutzt Ihren Standort für Lieferungen"
+    };
+
+    console.log("Starting Median backgroundLocation with postUrl:", postUrl);
+    window.median.backgroundLocation.start(locationRequest);
+  } catch (e) {
+    console.error("Error starting Median backgroundLocation:", e);
+  }
+}
+
+// إيقاف التتبع بالخلفية عبر Median
+function stopMedianBackgroundLocation() {
+  try {
+    if (
+      typeof window === "undefined" ||
+      !window.median ||
+      !window.median.backgroundLocation
+    ) {
+      return;
+    }
+    console.log("Stopping Median backgroundLocation");
+    window.median.backgroundLocation.stop();
+  } catch (e) {
+    console.error("Error stopping Median backgroundLocation:", e);
+  }
+}
 
 // بيانات/استماعات
 let driverMap;
@@ -2205,93 +2298,7 @@ let navigationMode = null; // "merchant" أو "customer" حسب الهدف ال�
 // تتبع موقع السائق وتحديثه على Firestore (خلفية)
 let locationWatchId = null;
 let lastLocationUpdateAt = 0;
-const LOCATION_UPDATE_MIN_INTERVAL_MS = 5000; // كل 5 ثواني كحد أدنى
-// تتبع موقع السائق عبر Median Background Location
-let isMedianBackgroundLocationRunning = false;
-
-// تشغيل تتبع الخلفية بواسطة Plugin ميديان (كل 5 ثواني)
-function startMedianBackgroundLocation() {
-  if (!window.median || !median.backgroundLocation) {
-    console.log("Median backgroundLocation plugin غير متوفر، نستخدم geolocation العادي.");
-    return;
-  }
-  if (isMedianBackgroundLocationRunning) return;
-
-  const locationRequest = {
-    // الدالة التي تستقبل المواقع داخل ملف السائق (انظر البند 2)
-    callback: "onMedianBackgroundLocation",
-
-    // جودة التتبع
-    type: "balanced",
-
-    // كل كم ميلي ثانية يرسل موقع جديد
-    updateInterval: 5000, // 5 ثوانٍ
-
-    // إعداد إشعار أندرويد أثناء تشغيل التتبع بالخلفية
-    androidNotificationTitle: "Taussil — تتبع الموقع",
-    androidNotificationText: "يتم تحديث موقعك أثناء التوصيل حتى في الخلفية",
-    androidNotificationChannelName: "Driver Tracking"
-  };
-
-  try {
-    median.backgroundLocation.start(locationRequest);
-    isMedianBackgroundLocationRunning = true;
-    console.log("Median background location started");
-  } catch (e) {
-    console.error("Error starting Median background location", e);
-  }
-}
-
-// إيقاف تتبع الخلفية في ميديان
-function stopMedianBackgroundLocation() {
-  if (!window.median || !median.backgroundLocation) return;
-  if (!isMedianBackgroundLocationRunning) return;
-
-  try {
-    median.backgroundLocation.stop();
-    console.log("Median background location stopped");
-  } catch (e) {
-    console.error("Error stopping Median background location", e);
-  }
-  isMedianBackgroundLocationRunning = false;
-}
-// تستقبل التحديثات من Plugin ميديان وتحدّث الخريطة + Firestore
-function onMedianBackgroundLocation(payload) {
-  // أحيانًا يكون موقع واحد، وأحيانًا مصفوفة مواقع
-  const locations = Array.isArray(payload) ? payload : [payload];
-
-  locations.forEach((loc) => {
-    if (!loc) return;
-
-    // نحاول قراءة الإحداثيات من أكثر من شكل محتمل
-    const lat =
-      loc.latitude ??
-      (loc.coords && loc.coords.latitude);
-    const lng =
-      loc.longitude ??
-      (loc.coords && loc.coords.longitude);
-
-    if (lat == null || lng == null) return;
-
-    // 1) تحديث ماركر السائق على الخريطة (تتبع لايف)
-    try {
-      ensureDriverMarker(lat, lng, null);
-    } catch (e) {
-      console.warn("تعذر تحديث ماركر السائق من Median:", e);
-    }
-
-    // 2) إرسال الإحداثيات إلى Firestore عبر الدالة الحالية
-    try {
-      handleDriverLocationUpdate(lat, lng);
-    } catch (e) {
-      console.error(
-        "Error in handleDriverLocationUpdate from Median background location",
-        e
-      );
-    }
-  });
-}
-
+const LOCATION_UPDATE_MIN_INTERVAL_MS = 7000; // كل ~7 ثواني كحد أدنى بين كل تحديث والتالي
 
 // نقاط المتجر والعميل
 let merchantMarker = null;
@@ -2879,14 +2886,6 @@ function handleDriverLocationUpdate(lat, lng) {
 // تشغيل تتبع الموقع في الخلفية (watchPosition مستقل عن التوجيه)
 function startDriverLocationTracking() {
   if (!driverCurrentOnline) return;
-
-  // أولاً: لو التطبيق يعمل داخل Median ومعنا Background Location Plugin
-  if (window.median && median.backgroundLocation) {
-    startMedianBackgroundLocation();
-    return; // لا نستخدم watchPosition في هذه الحالة
-  }
-
-  // متصفح عادي (بدون ميديان) → نستخدم geolocation التقليدي
   if (!navigator.geolocation) {
     console.warn("المتصفح لا يدعم تحديد الموقع لتتبع السائق.");
     return;
@@ -2903,8 +2902,7 @@ function startDriverLocationTracking() {
     (pos) => {
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
-
-      // تحديث Firestore (مع Throttle داخلي) + بإمكانك هنا أيضًا استدعاء ensureDriverMarker إن أردت
+      // هنا فقط نكتب في Firestore (مع Throttle داخلي)
       handleDriverLocationUpdate(lat, lng);
     },
     (err) => {
@@ -2916,10 +2914,6 @@ function startDriverLocationTracking() {
 
 // إيقاف تتبع الموقع في الخلفية
 function stopDriverLocationTracking() {
-  // إيقاف Median Background Location لو كان شغال
-  stopMedianBackgroundLocation();
-
-  // وإيقاف watchPosition في حالة المتصفح العادي
   if (locationWatchId !== null && navigator.geolocation) {
     navigator.geolocation.clearWatch(locationWatchId);
   }
