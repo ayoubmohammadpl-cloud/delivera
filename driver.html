@@ -2554,6 +2554,9 @@ toggleOnlineBtn.addEventListener("click", async () => {
 
             // ✅ بدء تتبع موقع السائق في الخلفية وتحديثه على Firestore
             startDriverLocationTracking();
+			            // ✅ تشغيل تتبع Median بالخلفية أيضاً
+            startMedianBackgroundLocation();
+
           },
           async (err) => {
             alert(t("alert_geo_failed_prefix") + err.message);
@@ -2575,6 +2578,9 @@ toggleOnlineBtn.addEventListener("click", async () => {
             playOnlineSoundNext = false;
 
             updateOnlineBtn();
+			            // حتى لو فشل geolocation في المتصفح، نبدأ Median لأنه يعمل من الـ WebView
+            startMedianBackgroundLocation();
+
           },
           geoOptions
         );
@@ -2598,6 +2604,9 @@ toggleOnlineBtn.addEventListener("click", async () => {
         playOnlineSoundNext = false;
 
         updateOnlineBtn();
+		        // المتصفح ما يدعم geolocation، نعتمد فقط على Median
+        startMedianBackgroundLocation();
+
       }
     } else {
       await driverRef.update({
@@ -2610,6 +2619,8 @@ toggleOnlineBtn.addEventListener("click", async () => {
 
       // ⛔ إيقاف تتبع الموقع في الخلفية
       stopDriverLocationTracking();
+      // ⛔ إيقاف تتبع Median في الخلفية أيضاً
+      stopMedianBackgroundLocation();
 
       // أوقف أي توجيه حي (لو شغّال) → هذا سيعيد الخريطة للوضع العادي
       if (typeof stopGuidance === "function") {
@@ -2698,15 +2709,16 @@ driverLogoutBtn.addEventListener("click", async () => {
       return;
     }
 
-    // 🔓 تنظيف جلسة السائق في Firestore
-    await releaseDriverSession();
+      // 🔓 تنظيف جلسة السائق في Firestore
+  await releaseDriverSession();
 
-        // إيقاف تتبع الموقع بالكامل
-    stopDriverLocationTracking();
-    clearRouteAndNavigation();
+  // إيقاف كل أنواع التتبع (المتصفح + Median)
+  stopDriverLocationTracking();
+  stopMedianBackgroundLocation();
+  clearRouteAndNavigation();
 
+  await auth.signOut();
 
-    await auth.signOut();
 
         driverDashboard.classList.add("hidden");
     registerSection.classList.remove("hidden");
@@ -5029,6 +5041,7 @@ window.addEventListener("beforeunload", () => {
 
   // إيقاف تتبع الموقع + تنظيف الخريطة
   stopDriverLocationTracking();
+  stopMedianBackgroundLocation();
   clearRouteAndNavigation();
 
   stopNewCallSoundLoop(); // لإيقاف أي تايمر شغّال
