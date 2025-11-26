@@ -1003,8 +1003,6 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 const BASE_DELIVERY_FEE = 3.5; // EUR
-// Endpoint الخاص بخدمة Cloud Run التي تستقبل مواقع Median
-const MEDIAN_LOCATION_ENDPOINT = "https://median-location-test-186649231022.europe-west1.run.app";
 
 // أيقونة العميل (نقطة التسليم) من نفس مجلد الملف
 const CUSTOMER_MARKER_ICON_PATH = "kunde.png";
@@ -2176,97 +2174,6 @@ const orderCancelledSoundEl = document.getElementById("orderCancelledSound");
 let driverCurrentOnline = false;
 let driverUid = null;
 let activeDriverSessionId = null;
-// ===== جسر Median Background Location =====
-
-// دالة callback تستقبل المواقع عندما التطبيق في الواجهة (foreground)
-function handleMedianLocationCallback(data) {
-  try {
-    console.log("Median callback locations:", data);
-
-    if (!data || !Array.isArray(data.locations) || data.locations.length === 0) {
-      return;
-    }
-
-    // نأخذ آخر نقطة فقط
-    const latest = data.locations[data.locations.length - 1];
-    const lat = latest.latitude;
-    const lng = latest.longitude;
-
-    if (typeof lat !== "number" || typeof lng !== "number") return;
-
-    // اختياري: نحدّث ماركر السائق على الخريطة من نفس دالتك الحالية
-    try {
-      ensureDriverMarker(lat, lng, null);
-    } catch (e) {
-      console.warn("ensureDriverMarker from Median failed:", e);
-    }
-  } catch (e) {
-    console.warn("Error in handleMedianLocationCallback:", e);
-  }
-}
-
-// تشغيل التتبع بالخلفية عبر Median
-function startMedianBackgroundLocation() {
-  try {
-    // لو الصفحة ليست داخل Median webview ما نعمل شيء
-    if (
-      typeof window === "undefined" ||
-      !window.median ||
-      !window.median.backgroundLocation
-    ) {
-      console.log("Median backgroundLocation not available in this environment.");
-      return;
-    }
-
-    if (!driverUid) {
-      console.warn("Cannot start Median backgroundLocation: driverUid is not set yet.");
-      return;
-    }
-
-    // نربط uid مع الـ endpoint
-    const postUrl = MEDIAN_LOCATION_ENDPOINT + "?uid=" + encodeURIComponent(driverUid);
-
-    const locationRequest = {
-      callback: handleMedianLocationCallback,
-      postUrl: postUrl,
-
-      // إعدادات iOS
-      iosBackgroundIndicator: true,
-      iosPauseAutomatically: false,
-      iosDesiredAccuracy: "bestForNavigation",
-      iosActivityType: "automotiveNavigation",
-
-      // إعدادات Android
-      androidPriority: "highAccuracy",
-      androidInterval: 5000,        // نطلب تقريباً كل 5 ثواني
-      androidFastestInterval: 3000,
-      androidNotificationTitle: "Taussil Fahrer",
-      androidNotificationText: "Die App nutzt Ihren Standort für Lieferungen"
-    };
-
-    console.log("Starting Median backgroundLocation with postUrl:", postUrl);
-    window.median.backgroundLocation.start(locationRequest);
-  } catch (e) {
-    console.error("Error starting Median backgroundLocation:", e);
-  }
-}
-
-// إيقاف التتبع بالخلفية عبر Median
-function stopMedianBackgroundLocation() {
-  try {
-    if (
-      typeof window === "undefined" ||
-      !window.median ||
-      !window.median.backgroundLocation
-    ) {
-      return;
-    }
-    console.log("Stopping Median backgroundLocation");
-    window.median.backgroundLocation.stop();
-  } catch (e) {
-    console.error("Error stopping Median backgroundLocation:", e);
-  }
-}
 
 // بيانات/استماعات
 let driverMap;
@@ -2299,6 +2206,62 @@ let navigationMode = null; // "merchant" أو "customer" حسب الهدف ال�
 let locationWatchId = null;
 let lastLocationUpdateAt = 0;
 const LOCATION_UPDATE_MIN_INTERVAL_MS = 7000; // كل ~7 ثواني كحد أدنى بين كل تحديث والتالي
+// ====== جسر Median لتتبع الموقع في الخلفية ======
+const MEDIAN_BG_POST_URL = "https://median-location-test-186649231022.europe-west1.run.app";
+
+function startMedianBackgroundLocation() {
+  // لو الكود يعمل في متصفح عادي (خارج Median) لن يحدث شيء
+  if (!window.median || !median.backgroundLocation) {
+    console.warn("Median backgroundLocation bridge is not available in this environment.");
+    return;
+  }
+
+  if (!driverUid) {
+    console.warn("Cannot start Median background tracking: driverUid is not set yet.");
+    return;
+  }
+
+  const locationRequest = {
+    // نرسل بيانات الموقع إلى الفنكشن مع driverUid كـ query
+    postUrl:
+      MEDIAN_BG_POST_URL +
+      "?driverUid=" +
+      encodeURIComponent(driverUid),
+
+    // إعدادات iOS
+    iosBackgroundIndicator: true,
+    iosPauseAutomatically: false,
+    iosDesiredAccuracy: "bestForNavigation",
+    iosActivityType: "automotiveNavigation",
+
+    // إعدادات أندرويد
+    androidPriority: "highAccuracy",
+    androidInterval: 5000,         // كل 5 ثواني تقريباً
+    androidFastestInterval: 3000,  // أسرع شيء
+    androidSmallestDisplacement: 0,
+    androidNotificationTitle: "Navigation",
+    androidNotificationText: "Tap to return to app"
+  };
+
+  try {
+    median.backgroundLocation.start(locationRequest);
+    console.log("Median background location started", locationRequest);
+  } catch (e) {
+    console.error("Failed to start Median backgroundLocation:", e);
+  }
+}
+
+function stopMedianBackgroundLocation() {
+  if (!window.median || !median.backgroundLocation) return;
+
+  try {
+    median.backgroundLocation.stop();
+    console.log("Median background location stopped.");
+  } catch (e) {
+    console.error("Failed to stop Median backgroundLocation:", e);
+  }
+}
+// ====== نهاية جسر Median ======
 
 // نقاط المتجر والعميل
 let merchantMarker = null;
