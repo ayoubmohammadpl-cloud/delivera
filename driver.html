@@ -703,6 +703,39 @@ body.driver-mode .auth-lang-switcher {
     
 </style>
 </head>
+<!-- Median Background Location Debug Panel (يمكن حذفها بعد الإصلاح) -->
+<div id="median-debug-panel" style="
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 40vh;
+  overflow: auto;
+  background: rgba(0,0,0,0.88);
+  color: #0f0;
+  font-size: 11px;
+  font-family: monospace;
+  z-index: 9999;
+  padding: 6px 8px;
+">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+    <strong>Median Debug</strong>
+    <div>
+      <button type="button"
+        onclick="startMedianBackgroundLocationTest()"
+        style="font-size:11px;margin-inline-end:4px;">
+        تشغيل TEST
+      </button>
+      <button type="button"
+        onclick="document.getElementById('median-debug-panel').style.display='none'"
+        style="font-size:11px;">
+        إخفاء
+      </button>
+    </div>
+  </div>
+  <pre id="median-debug-log" style="white-space:pre-wrap;margin:4px 0 0;"></pre>
+</div>
+
 <body>
 
 <h2 id="mainHeader">نظام التوصيل — واجهة السائق</h2>
@@ -1006,41 +1039,93 @@ function getMedianCloudFunctionUrl(driverId) {
 }
 
 function startMedianBackgroundLocationForDriver(driverId) {
+  medianDebugLog('⚙️ startMedianBackgroundLocationForDriver()', { driverId: driverId });
+
+  if (!driverId) {
+    medianDebugLog('❌ لا يوجد driverId، لن يتم تشغيل Median');
+    return;
+  }
+
+  if (typeof median === 'undefined' ||
+      !median.backgroundLocation ||
+      typeof median.backgroundLocation.start !== 'function') {
+    medianDebugLog('❌ median.backgroundLocation غير متوفر (تأكد من تفعيل الـ Background Location Plugin في Median وأنك داخل التطبيق)');
+    return;
+  }
+
+  var url = getMedianCloudFunctionUrl(driverId);
+  medianDebugLog('ℹ️ Using postUrl', url);
+
+  var locationRequest = {
+    callback: taussilMedianLocationUpdated, // نفس callback الـ debug
+    postUrl: url,                           // رابط Cloud Function مع driverId
+    iosBackgroundIndicator: true,
+    iosPauseAutomatically: true,
+    iosDesiredAccuracy: 'bestForNavigation',
+    iosActivityType: 'automotiveNavigation',
+    androidPriority: 'highAccuracy',
+    androidNotificationTitle: 'Taussil – تتبّع الموقع',
+    androidNotificationText: 'اضغط للعودة إلى التطبيق'
+  };
+
   try {
-    if (!window.median || !median.backgroundLocation) {
-      console.log("⚠️ Median Background plugin غير متوفر (غالبًا من متصفح عادي)");
-      return;
-    }
-
-    if (!driverId) {
-      console.log("⚠️ لا يوجد driverId، لن نبدأ Median Background Location");
-      return;
-    }
-
-    if (medianTrackingActive && medianTrackingDriverId === driverId) {
-      console.log("ℹ️ Median Background Location يعمل مسبقاً لهذا السائق:", driverId);
-      return;
-    }
-
-    const postUrl = getMedianCloudFunctionUrl(driverId);
-
-    const request = {
-      postUrl,
-      iosBackgroundIndicator: true,
-      iosDesiredAccuracy: "bestForNavigation",
-      iosActivityType: "automotiveNavigation",
-      androidPriority: "highAccuracy",
-      androidNotificationTitle: "Taussil Driver",
-      androidNotificationText: "يتم تتبع موقعك أثناء العمل"
-      // ممكن نضيف intervals لاحقاً
-    };
-
-    median.backgroundLocation.start(request);
-    medianTrackingActive = true;
-    medianTrackingDriverId = driverId;
-    console.log("✅ Median Background Location بدأ الإرسال إلى:", postUrl);
+    median.backgroundLocation.start(locationRequest);
+    medianDebugLog('✅ median.backgroundLocation.start() تم استدعاؤها (حقيقي)', locationRequest);
   } catch (err) {
-    console.error("❌ خطأ في startMedianBackgroundLocationForDriver:", err);
+    medianDebugLog('💥 Error calling median.backgroundLocation.start()', String(err));
+  }
+}
+
+// ====== Median Background Location DEBUG ======
+
+function medianDebugLog(msg, data) {
+  try {
+    var el = document.getElementById('median-debug-log');
+    if (!el) return;
+    var line = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+    if (data !== undefined) {
+      try {
+        line += ' ' + JSON.stringify(data);
+      } catch (e) { /* ignore JSON errors */ }
+    }
+    el.textContent += line + '\n';
+    el.scrollTop = el.scrollHeight;
+  } catch (e) {
+    // تجاهل أي خطأ في الـ debug نفسه
+  }
+}
+
+// هذا الـ callback الذي من المفترض أن يستقبِل المواقع من Median
+function taussilMedianLocationUpdated(payload) {
+  medianDebugLog('📍 location callback from Median', payload);
+}
+
+// TEST: تشغيل البلَغِن بدون Cloud Function فقط لنتأكد أنه موجود ويعطينا مواقع
+function startMedianBackgroundLocationTest() {
+  medianDebugLog('▶️ startMedianBackgroundLocationTest()');
+
+  if (typeof median === 'undefined' ||
+      !median.backgroundLocation ||
+      typeof median.backgroundLocation.start !== 'function') {
+    medianDebugLog('❌ median.backgroundLocation غير متوفر في هذه الصفحة (تأكد أنك داخل تطبيق Median، وليس متصفح عادي)');
+    return;
+  }
+
+  var request = {
+    callback: taussilMedianLocationUpdated,
+    iosBackgroundIndicator: true,
+    iosDesiredAccuracy: 'bestForNavigation',
+    iosActivityType: 'automotiveNavigation',
+    androidPriority: 'highAccuracy',
+    androidNotificationTitle: 'Taussil – TEST',
+    androidNotificationText: 'Test background location'
+  };
+
+  try {
+    median.backgroundLocation.start(request);
+    medianDebugLog('✅ TEST median.backgroundLocation.start() تم استدعاؤها', request);
+  } catch (err) {
+    medianDebugLog('💥 Error in TEST median.backgroundLocation.start()', String(err));
   }
 }
 
