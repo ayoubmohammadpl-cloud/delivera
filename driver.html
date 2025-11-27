@@ -990,44 +990,50 @@ body.driver-mode .auth-lang-switcher {
 
 
 <script>
-/* 🔵 Median Background Location + Cloud Function 🔵 */
+<script>
+/* 🔵 Taussil Median Background Location 🔵 */
 
-// هذه الدالة يناديها Median في الواجهة الأمامية (foreground)
-// كلما وصلته إحداثيات جديدة
-function taussilMedianLocationTest(data) {
-  console.log("📍 Median location callback (foreground):", data);
+// لاحقًا سنربط driverId من تسجيل الدخول.
+// مؤقتًا سنستعمل قيمة اختبارية.
+const DRIVER_ID = "testDriver123";
+const CLOUD_FUNCTION_URL =
+  "https://europe-west1-delivera-7pq7jc.cloudfunctions.net/medianBackgroundLocation?driverId=" +
+  DRIVER_ID;
 
-  // لاحقًا ممكن نربط هذه البيانات مع الخريطة أو نرسلها لفايرستور من الواجهة الأمامية إذا أحببنا
-}
-
-// هذه الدالة تشغّل خدمة تتبع الموقع بالخلفية من طرف Median
 function startMedianBackgroundLocation() {
-  // نتأكد أننا داخل WebView الخاصة بـ Median وليس متصفح عادي
-  if (!window.median || !median.backgroundLocation) {
-    console.log("⚠️ median.backgroundLocation غير متوفر (غالباً فتح من متصفح عادي)");
-    return;
+  try {
+    if (!window.median || !median.backgroundLocation) {
+      console.log("⚠️ Median Background plugin غير متوفر (ربما من متصفح عادي)");
+      return;
+    }
+
+    const request = {
+      postUrl: CLOUD_FUNCTION_URL,
+      iosBackgroundIndicator: true,
+      iosDesiredAccuracy: "bestForNavigation",
+      iosActivityType: "automotiveNavigation",
+      androidPriority: "highAccuracy",
+      androidNotificationTitle: "Taussil Driver",
+      androidNotificationText: "يتم تتبع موقعك أثناء العمل",
+      // يمكن ضبط الفترات لاحقاً (intervals)
+    };
+
+    median.backgroundLocation.start(request);
+    console.log("✅ Median Background Location بدأ الإرسال إلى:", CLOUD_FUNCTION_URL);
+  } catch (err) {
+    console.error("❌ خطأ في startMedianBackgroundLocation:", err);
   }
-
-  // إعداد طلب الخلفية
-  var locationRequest = {
-    // اسم الدالة أعلاه بالضبط
-    callback: "taussilMedianLocationTest",
-
-    // عنوان Cloud Function التي نشرناها
-    postUrl: "https://europe-west1-delivera-7pq7jc.cloudfunctions.net/medianBackgroundLocation",
-
-    // خيار لطيف لإظهار مؤشر الخلفية في iOS
-    iosBackgroundIndicator: true
-  };
-
-  console.log("🚀 بدء Median Background Location مع Cloud Function...");
-  median.backgroundLocation.start(locationRequest);
 }
 
-// نبدأ التتبع بمجرد تحميل صفحة السائق داخل Median
-window.addEventListener("load", function () {
-  startMedianBackgroundLocation();
+// نبدأ الخدمة بعد تحميل الصفحة داخل تطبيق Median فقط
+window.addEventListener("load", () => {
+  if (window.median && median.backgroundLocation) {
+    setTimeout(startMedianBackgroundLocation, 2000);
+  } else {
+    console.log("⏳ في انتظار تطبيق Median لتوفير plugin الموقع...");
+  }
 });
+
 
 /* ========== إعداد Firebase ========== */
 const firebaseConfig = {
