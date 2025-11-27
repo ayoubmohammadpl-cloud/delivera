@@ -1017,20 +1017,6 @@ function stopMedianBackgroundLocation() {
     console.error("فشل استدعاء median.backgroundLocation.stop()", e);
   }
 }
-// ====== Median Background Location: تشغيل الخدمة عند الأونلاين ======
-function startMedianBackgroundLocation() {
-  try {
-    // هذه الدالة يعرّفها سكربت الـ Custom JavaScript في Median
-    if (typeof window.taussilStartMedianBackgroundLocation === "function") {
-      console.log("Calling taussilStartMedianBackgroundLocation() …");
-      window.taussilStartMedianBackgroundLocation();
-    } else {
-      console.log("taussilStartMedianBackgroundLocation غير متوفرة (غالباً ليس داخل Median).");
-    }
-  } catch (e) {
-    console.error("فشل استدعاء startMedianBackgroundLocation:", e);
-  }
-}
 
 // 👇 مهم لـ Median: تعريف متغيّر عالمي يحمل uid السائق الحالي
 window.TAUSSIL_DRIVER_ID = null;
@@ -2506,9 +2492,6 @@ toggleOnlineBtn.addEventListener("click", async () => {
 
             // ✅ بدء تتبع موقع السائق في الخلفية وتحديثه على Firestore
             startDriverLocationTracking();
-
-            // ✅ تشغيل Median Background Location (Android / iOS)
-            startMedianBackgroundLocation();
           },
           async (err) => {
             alert(t("alert_geo_failed_prefix") + err.message);
@@ -2530,9 +2513,6 @@ toggleOnlineBtn.addEventListener("click", async () => {
             playOnlineSoundNext = false;
 
             updateOnlineBtn();
-
-            // ✅ تشغيل Median حتى لو تعذر الحصول على lat/lng
-            startMedianBackgroundLocation();
           },
           geoOptions
         );
@@ -2556,11 +2536,8 @@ toggleOnlineBtn.addEventListener("click", async () => {
         playOnlineSoundNext = false;
 
         updateOnlineBtn();
-
-        // ✅ تشغيل Median Background Location في هذه الحالة أيضاً
-        startMedianBackgroundLocation();
       }
-    } else {
+        } else {
       await driverRef.update({
         online: false,
         busy: false
@@ -2571,7 +2548,7 @@ toggleOnlineBtn.addEventListener("click", async () => {
 
       // ⛔ إيقاف تتبع الموقع في الخلفية (Geolocation + Median)
       stopDriverLocationTracking();
-      stopMedianBackgroundLocation();   // مهم جداً إطفاء Median هنا
+      stopMedianBackgroundLocation();   // 👈 السطر الجديد المهم
 
       // أوقف أي توجيه حي (لو شغّال) → هذا سيعيد الخريطة للوضع العادي
       if (typeof stopGuidance === "function") {
