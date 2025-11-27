@@ -703,39 +703,6 @@ body.driver-mode .auth-lang-switcher {
     
 </style>
 </head>
-<!-- Median Background Location Debug Panel (يمكن حذفها بعد الإصلاح) -->
-<div id="median-debug-panel" style="
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  max-height: 40vh;
-  overflow: auto;
-  background: rgba(0,0,0,0.88);
-  color: #0f0;
-  font-size: 11px;
-  font-family: monospace;
-  z-index: 9999;
-  padding: 6px 8px;
-">
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-    <strong>Median Debug</strong>
-    <div>
-      <button type="button"
-        onclick="startMedianBackgroundLocationTest()"
-        style="font-size:11px;margin-inline-end:4px;">
-        تشغيل TEST
-      </button>
-      <button type="button"
-        onclick="document.getElementById('median-debug-panel').style.display='none'"
-        style="font-size:11px;">
-        إخفاء
-      </button>
-    </div>
-  </div>
-  <pre id="median-debug-log" style="white-space:pre-wrap;margin:4px 0 0;"></pre>
-</div>
-
 <body>
 
 <h2 id="mainHeader">نظام التوصيل — واجهة السائق</h2>
@@ -1039,93 +1006,41 @@ function getMedianCloudFunctionUrl(driverId) {
 }
 
 function startMedianBackgroundLocationForDriver(driverId) {
-  medianDebugLog('⚙️ startMedianBackgroundLocationForDriver()', { driverId: driverId });
-
-  if (!driverId) {
-    medianDebugLog('❌ لا يوجد driverId، لن يتم تشغيل Median');
-    return;
-  }
-
-  if (typeof median === 'undefined' ||
-      !median.backgroundLocation ||
-      typeof median.backgroundLocation.start !== 'function') {
-    medianDebugLog('❌ median.backgroundLocation غير متوفر (تأكد من تفعيل الـ Background Location Plugin في Median وأنك داخل التطبيق)');
-    return;
-  }
-
-  var url = getMedianCloudFunctionUrl(driverId);
-  medianDebugLog('ℹ️ Using postUrl', url);
-
-  var locationRequest = {
-    callback: taussilMedianLocationUpdated, // نفس callback الـ debug
-    postUrl: url,                           // رابط Cloud Function مع driverId
-    iosBackgroundIndicator: true,
-    iosPauseAutomatically: true,
-    iosDesiredAccuracy: 'bestForNavigation',
-    iosActivityType: 'automotiveNavigation',
-    androidPriority: 'highAccuracy',
-    androidNotificationTitle: 'Taussil – تتبّع الموقع',
-    androidNotificationText: 'اضغط للعودة إلى التطبيق'
-  };
-
   try {
-    median.backgroundLocation.start(locationRequest);
-    medianDebugLog('✅ median.backgroundLocation.start() تم استدعاؤها (حقيقي)', locationRequest);
-  } catch (err) {
-    medianDebugLog('💥 Error calling median.backgroundLocation.start()', String(err));
-  }
-}
-
-// ====== Median Background Location DEBUG ======
-
-function medianDebugLog(msg, data) {
-  try {
-    var el = document.getElementById('median-debug-log');
-    if (!el) return;
-    var line = '[' + new Date().toLocaleTimeString() + '] ' + msg;
-    if (data !== undefined) {
-      try {
-        line += ' ' + JSON.stringify(data);
-      } catch (e) { /* ignore JSON errors */ }
+    if (!window.median || !median.backgroundLocation) {
+      console.log("⚠️ Median Background plugin غير متوفر (غالبًا من متصفح عادي)");
+      return;
     }
-    el.textContent += line + '\n';
-    el.scrollTop = el.scrollHeight;
-  } catch (e) {
-    // تجاهل أي خطأ في الـ debug نفسه
-  }
-}
 
-// هذا الـ callback الذي من المفترض أن يستقبِل المواقع من Median
-function taussilMedianLocationUpdated(payload) {
-  medianDebugLog('📍 location callback from Median', payload);
-}
+    if (!driverId) {
+      console.log("⚠️ لا يوجد driverId، لن نبدأ Median Background Location");
+      return;
+    }
 
-// TEST: تشغيل البلَغِن بدون Cloud Function فقط لنتأكد أنه موجود ويعطينا مواقع
-function startMedianBackgroundLocationTest() {
-  medianDebugLog('▶️ startMedianBackgroundLocationTest()');
+    if (medianTrackingActive && medianTrackingDriverId === driverId) {
+      console.log("ℹ️ Median Background Location يعمل مسبقاً لهذا السائق:", driverId);
+      return;
+    }
 
-  if (typeof median === 'undefined' ||
-      !median.backgroundLocation ||
-      typeof median.backgroundLocation.start !== 'function') {
-    medianDebugLog('❌ median.backgroundLocation غير متوفر في هذه الصفحة (تأكد أنك داخل تطبيق Median، وليس متصفح عادي)');
-    return;
-  }
+    const postUrl = getMedianCloudFunctionUrl(driverId);
 
-  var request = {
-    callback: taussilMedianLocationUpdated,
-    iosBackgroundIndicator: true,
-    iosDesiredAccuracy: 'bestForNavigation',
-    iosActivityType: 'automotiveNavigation',
-    androidPriority: 'highAccuracy',
-    androidNotificationTitle: 'Taussil – TEST',
-    androidNotificationText: 'Test background location'
-  };
+    const request = {
+      postUrl,
+      iosBackgroundIndicator: true,
+      iosDesiredAccuracy: "bestForNavigation",
+      iosActivityType: "automotiveNavigation",
+      androidPriority: "highAccuracy",
+      androidNotificationTitle: "Taussil Driver",
+      androidNotificationText: "يتم تتبع موقعك أثناء العمل"
+      // ممكن نضيف intervals لاحقاً
+    };
 
-  try {
     median.backgroundLocation.start(request);
-    medianDebugLog('✅ TEST median.backgroundLocation.start() تم استدعاؤها', request);
+    medianTrackingActive = true;
+    medianTrackingDriverId = driverId;
+    console.log("✅ Median Background Location بدأ الإرسال إلى:", postUrl);
   } catch (err) {
-    medianDebugLog('💥 Error in TEST median.backgroundLocation.start()', String(err));
+    console.error("❌ خطأ في startMedianBackgroundLocationForDriver:", err);
   }
 }
 
@@ -2588,7 +2503,7 @@ loginForm.addEventListener("submit", async (e) => {
   }
 });
 
-/* ========== أونلاين / أوفلاين مع وميض وصوت عند الأونلاين ========== */
+/* ========== أونلاين / أوفلاين مع Median Background Location ========== */
 toggleOnlineBtn.addEventListener("click", async () => {
   if (!driverUid) return;
 
@@ -2599,6 +2514,7 @@ toggleOnlineBtn.addEventListener("click", async () => {
     const isBusy = !!(data && data.busy);
     const hasActiveJob = driverHasActiveJob();
 
+    // ممنوع تنزل أوفلاين وفي طلب شغّال
     if (driverCurrentOnline && (isBusy || hasActiveJob)) {
       alert(t("alert_toggle_offline_with_active"));
       return;
@@ -2610,16 +2526,17 @@ toggleOnlineBtn.addEventListener("click", async () => {
     const geoOptions = {
       enableHighAccuracy: true,
       timeout: 15000,
-      maximumAge: 5000
+      maximumAge: 5000,
     };
 
-    // ✅ لو نحنا رايحين أونلاين، فعّل الوميض وجهّز الصوت
+    // وميض الزر + تجهيز صوت الأونلاين
     if (goingOnline && toggleOnlineBtn) {
       playOnlineSoundNext = true;
       toggleOnlineBtn.classList.add("blink");
     }
 
     if (goingOnline) {
+      // 🔵 الذهاب إلى أونلاين
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           async (position) => {
@@ -2630,10 +2547,10 @@ toggleOnlineBtn.addEventListener("click", async () => {
               online: true,
               lat,
               lng,
-              lastOnline: firebase.firestore.FieldValue.serverTimestamp()
+              lastOnline: firebase.firestore.FieldValue.serverTimestamp(),
             });
 
-            // إيقاف الوميض وتشغيل الصوت داخل التحديث
+            // إيقاف الوميض + تشغيل صوت الأونلاين (مرّة وحده)
             toggleOnlineBtn.classList.remove("blink");
             if (playOnlineSoundNext && onlineSoundEl) {
               try {
@@ -2647,25 +2564,24 @@ toggleOnlineBtn.addEventListener("click", async () => {
 
             updateOnlineBtn();
 
-            // بعد أن يصبح أونلاين، أظهر موقعه على الخريطة مع الهالة
+            // إظهار موقع السائق على الخريطة
             if (driverMap) {
               ensureDriverMarker(lat, lng, null);
             }
 
-            // ✅ بدء تتبع موقع السائق في الخلفية وتحديثه على Firestore
+            // تتبع الموقع العادي (Firestore)
             startDriverLocationTracking();
 
-            // ✅ تشغيل Median Background للسائق الحالي
-            if (window.median && median.backgroundLocation) {
-              startMedianBackgroundLocationForDriver(driverUid);
-            }
+            // 🔵 تشغيل Median Background Location لهذا السائق
+            startMedianBackgroundLocationForDriver(driverUid);
           },
           async (err) => {
             alert(t("alert_geo_failed_prefix") + err.message);
 
+            // حتى لو فشل geo، نخليه أونلاين (بدون lat/lng)
             await driverRef.update({
               online: true,
-              lastOnline: firebase.firestore.FieldValue.serverTimestamp()
+              lastOnline: firebase.firestore.FieldValue.serverTimestamp(),
             });
 
             toggleOnlineBtn.classList.remove("blink");
@@ -2681,10 +2597,8 @@ toggleOnlineBtn.addEventListener("click", async () => {
 
             updateOnlineBtn();
 
-            // حتى لو navigator فشل، Median يقدر يشتغل
-            if (window.median && median.backgroundLocation) {
-              startMedianBackgroundLocationForDriver(driverUid);
-            }
+            // 🔵 برضو نبدأ Median حتى لو ما قدرنا نجيب إحداثية أولى من المتصفح
+            startMedianBackgroundLocationForDriver(driverUid);
           },
           geoOptions
         );
@@ -2693,7 +2607,7 @@ toggleOnlineBtn.addEventListener("click", async () => {
 
         await driverRef.update({
           online: true,
-          lastOnline: firebase.firestore.FieldValue.serverTimestamp()
+          lastOnline: firebase.firestore.FieldValue.serverTimestamp(),
         });
 
         toggleOnlineBtn.classList.remove("blink");
@@ -2709,45 +2623,41 @@ toggleOnlineBtn.addEventListener("click", async () => {
 
         updateOnlineBtn();
 
-        // ✅ Median حتى لو ما في geolocation
-        if (window.median && median.backgroundLocation) {
-          startMedianBackgroundLocationForDriver(driverUid);
-        }
+        // 🔵 ما دام طلع أونلاين، شغّل Median
+        startMedianBackgroundLocationForDriver(driverUid);
       }
     } else {
+      // 🔴 الذهاب إلى أوفلاين
       await driverRef.update({
         online: false,
-        busy: false
+        busy: false,
       });
 
-      driverCurrentOnline = false; // تأكيد الحالة
+      driverCurrentOnline = false;
       updateOnlineBtn();
 
-      // ⛔ إيقاف Median Background
-      if (window.median && median.backgroundLocation) {
-        stopMedianBackgroundLocation();
-      }
-
-      // ⛔ إيقاف تتبع الموقع في الخلفية
+      // ⛔ إيقاف تتبع الموقع (Firestore)
       stopDriverLocationTracking();
 
-      // أوقف أي توجيه حي (لو شغّال) → هذا سيعيد الخريطة للوضع العادي
+      // ⛔ إيقاف Median Background Location
+      stopMedianBackgroundLocation();
+
+      // ⛔ إيقاف أي توجيه حي
       if (typeof stopGuidance === "function") {
         stopGuidance();
       }
 
-      // احتياط: امسح ماركر السائق (لو موجود)
+      // مسح ماركر السائق
       if (driverMarker) {
         driverMarker.setMap(null);
         driverMarker = null;
       }
 
-      // 🧽 مسح الهالة بالكامل (الداخلية + الخارجية + الأنيميشن)
+      // مسح الهالة المتوهجة
       if (typeof stopDriverGlow === "function") {
         stopDriverGlow();
       }
     }
-
   } catch (err) {
     alert(t("alert_status_update_failed") + err.message);
   }
