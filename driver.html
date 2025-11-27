@@ -1003,11 +1003,25 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 const BASE_DELIVERY_FEE = 3.5; // EUR
+// ====== Median Background Location: إيقاف الخدمة عند الأوفلاين / تسجيل الخروج ======
+function stopMedianBackgroundLocation() {
+  try {
+    // لو سكربت Median غير محمّل (متصفح عادي مثلاً) ما نعمل شيء
+    if (!window.median || !median.backgroundLocation || !median.backgroundLocation.stop) {
+      console.log("Median backgroundLocation.stop() غير متوفر — تم التجاهل.");
+      return;
+    }
+    console.log("Calling median.backgroundLocation.stop() …");
+    median.backgroundLocation.stop();
+  } catch (e) {
+    console.error("فشل استدعاء median.backgroundLocation.stop()", e);
+  }
+}
 
 // 👇 مهم لـ Median: تعريف متغيّر عالمي يحمل uid السائق الحالي
 window.TAUSSIL_DRIVER_ID = null;
 
-// 👇 اختياري: مزامنة المتغيّر مع حالة الدخول في Firebase
+// 👇 مزامنة متغيّر السائق مع حالة الدخول في Firebase
 auth.onAuthStateChanged(function (user) {
   if (user) {
     window.TAUSSIL_DRIVER_ID = user.uid;
@@ -1015,6 +1029,9 @@ auth.onAuthStateChanged(function (user) {
   } else {
     window.TAUSSIL_DRIVER_ID = null;
     console.log("TAUSSIL_DRIVER_ID cleared (no user)");
+
+    // عند عدم وجود مستخدم، نتأكد أن Median توقفت
+    stopMedianBackgroundLocation();
   }
 });
 
@@ -2520,7 +2537,7 @@ toggleOnlineBtn.addEventListener("click", async () => {
 
         updateOnlineBtn();
       }
-    } else {
+        } else {
       await driverRef.update({
         online: false,
         busy: false
@@ -2529,8 +2546,9 @@ toggleOnlineBtn.addEventListener("click", async () => {
       driverCurrentOnline = false; // تأكيد الحالة
       updateOnlineBtn();
 
-      // ⛔ إيقاف تتبع الموقع في الخلفية
+      // ⛔ إيقاف تتبع الموقع في الخلفية (Geolocation + Median)
       stopDriverLocationTracking();
+      stopMedianBackgroundLocation();   // 👈 السطر الجديد المهم
 
       // أوقف أي توجيه حي (لو شغّال) → هذا سيعيد الخريطة للوضع العادي
       if (typeof stopGuidance === "function") {
@@ -2618,11 +2636,12 @@ driverLogoutBtn.addEventListener("click", async () => {
       return;
     }
 
-    // 🔓 تنظيف جلسة السائق في Firestore
+        // 🔓 تنظيف جلسة السائق في Firestore
     await releaseDriverSession();
 
     // إيقاف تتبع الموقع بالكامل
     stopDriverLocationTracking();
+    stopMedianBackgroundLocation();   // 👈 السطر الجديد
     clearRouteAndNavigation();
 
     await auth.signOut();
@@ -4955,6 +4974,7 @@ window.addEventListener("beforeunload", () => {
 
   // إيقاف تتبع الموقع + تنظيف الخريطة
   stopDriverLocationTracking();
+  stopMedianBackgroundLocation();   // 👈 هنا أيضاً
   clearRouteAndNavigation();
 
   stopNewCallSoundLoop(); // لإيقاف أي تايمر شغّال
