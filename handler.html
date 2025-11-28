@@ -579,6 +579,26 @@ html[dir="ltr"] .toast {
   margin-bottom:4px;
   font-size:11px;
 }
+.merchant-approved-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  background: var(--card, #ffffff);
+  color: var(--ink-strong, #0f172a);
+  padding: 12px 18px;
+  border-radius: 999px;
+  box-shadow: 0 15px 30px rgba(15, 23, 42, 0.25);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 9999;
+}
+
+.merchant-approved-banner.hidden {
+  display: none;
+}
 
 </style>
 </head>
@@ -798,9 +818,13 @@ html[dir="ltr"] .toast {
 
 <audio id="merchantCallSound" src="send.mp3" preload="auto"></audio>
 <audio id="customerDeliveredSound" src="Geliefert.mp3" preload="auto"></audio>
+<audio id="merchantOnlineSound" src="online1.mp3" preload="auto"></audio>
 
 <!-- Toast notifications -->
 <div id="toastContainer" class="toast-container"></div>
+<div id="merchantApprovedBanner" class="merchant-approved-banner hidden">
+  <span id="merchantApprovedBannerText"></span>
+</div>
 
 <!-- Google Maps API -->
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCUMgXQwwe7afBlRpp6zrXunbTVSCXfSqQ&libraries=geometry"></script>
@@ -1627,9 +1651,11 @@ const driverOnWaySoundEl      = document.getElementById("driverOnWaySound");
 const driverNearSoundEl       = document.getElementById("driverNearSound");
 // صوت تسليم الطلب (لرحلة العميل)
 const customerDeliveredSoundEl = document.getElementById("customerDeliveredSound");
-
+let merchantApprovalStatus = "pending";
+let merchantUnsubscribe = null;
 let merchantCurrentOnline = false;
 let playMerchantOnlineSoundNext = false;
+let hasSeenApprovedBanner = false;
 /* ========== متغيّرات الخريطة والسائقين ========== */
 let map;
 let driverMarkers = {};
@@ -1759,10 +1785,31 @@ if (merchantOnlineToggle) {
       return;
     }
 
+    // 🔒 لا نسمح أونلاين إذا الحساب غير معتمد
+    if (merchantApprovalStatus !== "approved") {
+      let msg;
+      switch (currentLang) {
+        case "en":
+          msg = "Your account is still under review by the admin.";
+          break;
+        case "de":
+          msg = "Dein Konto wird noch vom Admin geprüft.";
+          break;
+        case "tr":
+          msg = "Hesabın hâlâ yönetici tarafından inceleniyor.";
+          break;
+        default:
+          msg = "حسابك ما زال قيد المراجعة من الأدمن.";
+      }
+      showToast(msg, "error");
+      return;
+    }
+
     const goingOnline = !merchantCurrentOnline;
     merchantCurrentOnline = goingOnline;
 
     if (goingOnline) {
+      // 🎧 هنا نفعّل الصوت (يتشغّل داخل updateMerchantOnlineBtn)
       playMerchantOnlineSoundNext = true;
       merchantOnlineToggle.classList.add("blink");
     }
@@ -1777,10 +1824,18 @@ if (merchantOnlineToggle) {
             online: false
           };
 
+      // ✅ أول مرة يضغط أونلاين بعد الاعتماد → نخفي البانر ولا نرجّعه أبداً
+      if (goingOnline && !hasSeenApprovedBanner) {
+        hideApprovedBanner();
+        hasSeenApprovedBanner = true;
+        updateData.approvedBannerDismissed = true;
+      }
+
       await db.collection("merchants").doc(currentMerchantId).update(updateData);
 
       updateMerchantOnlineBtn();
     } catch (err) {
+      // رجّع الحالة القديمة لو صار خطأ
       merchantCurrentOnline = !goingOnline;
       playMerchantOnlineSoundNext = false;
       merchantOnlineToggle.classList.remove("blink");
@@ -1788,7 +1843,80 @@ if (merchantOnlineToggle) {
     }
   });
 
+  // تهيئة الزر حسب حالة المتغيرات الحالية
   updateMerchantOnlineBtn();
+}
+
+function getApprovedBannerText() {
+  switch (currentLang) {
+    case "en":
+      return "Your account has been approved. You can start delivering orders with available drivers.";
+    case "de":
+      return "Dein Konto wurde freigeschaltet. Du kannst jetzt mit verfügbaren Fahrern Bestellungen ausliefern.";
+    case "tr":
+      return "Hesabın onaylandı. Artık uygun sürücülerle sipariş teslimatına başlayabilirsin.";
+    default:
+      return "تم اعتماد حسابك، يمكنك بدء توصيل طلباتك مع السائقين المتاحين.";
+  }
+}
+
+function showApprovedBanner() {
+  const banner = document.getElementById("merchantApprovedBanner");
+  const textEl = document.getElementById("merchantApprovedBannerText");
+  if (!banner || !textEl) return;
+  textEl.textContent = getApprovedBannerText();
+  banner.classList.remove("hidden");
+}
+
+function hideApprovedBanner() {
+  const banner = document.getElementById("merchantApprovedBanner");
+  if (!banner) return;
+  banner.classList.add("hidden");
+}
+
+function maybeShowApprovedBanner() {
+  if (
+    merchantApprovalStatus === "approved" &&
+    !merchantCurrentOnline &&
+    !hasSeenApprovedBanner
+  ) {
+    showApprovedBanner();
+  }
+}
+
+function subscribeToMerchantDoc(merchantId) {
+  if (!merchantId) return;
+
+  // إلغاء أي listener قديم
+  if (merchantUnsubscribe) {
+    merchantUnsubscribe();
+    merchantUnsubscribe = null;
+  }
+
+  merchantUnsubscribe = db.collection("merchants").doc(merchantId).onSnapshot(
+    (doc) => {
+      if (!doc.exists) return;
+      const data = doc.data();
+
+      merchantApprovalStatus = data.approvalStatus || "pending";
+      hasSeenApprovedBanner = !!data.approvedBannerDismissed;
+
+      const firestoreOnline = !!data.online;
+      merchantCurrentOnline =
+        merchantApprovalStatus === "approved" && firestoreOnline;
+
+      updateMerchantOnlineBtn();
+
+      if (!hasSeenApprovedBanner) {
+        maybeShowApprovedBanner(); // يُظهر الرسالة لو تم الاعتماد ولم يذهب أونلاين بعد
+      } else {
+        hideApprovedBanner(); // لو مخفية نهائياً لا نعرضها
+      }
+    },
+    (error) => {
+      console.error("Merchant onSnapshot error:", error);
+    }
+  );
 }
 
 /* ========== تبويبات التسجيل/الدخول ========== */
@@ -1824,16 +1952,19 @@ merchantForm.addEventListener("submit", async (e) => {
     );
     const uid = userCredential.user.uid;
     await db.collection("merchants").doc(uid).set({
-      storeName,
-      storeAddress,
-      storeCity,
-      storePhone,
-      contactName,
-      contactPhone,
-      contactEmail,
-      role: "merchant",
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+  storeName,
+  storeAddress,
+  storeCity,
+  storePhone,
+  contactName,
+  contactPhone,
+  contactEmail,
+  role: "merchant",
+  approvalStatus: "pending",        // ⬅ جديد
+  online: false,                    // ⬅ جديد (يبدأ أوفلاين)
+  createdAt: firebase.firestore.FieldValue.serverTimestamp()
+});
+
     alert("تم تسجيل التاجر بنجاح!");
     merchantForm.reset();
   } catch (err) {
@@ -1856,17 +1987,28 @@ loginForm.addEventListener("submit", async (e) => {
 
     const merchantDoc = await db.collection("merchants").doc(uid).get();
 
-    if (merchantDoc.exists) {
+            if (merchantDoc.exists) {
       const merchantData = merchantDoc.data();
+
+      currentMerchantId = uid;
+      hasSeenApprovedBanner = !!merchantData.approvedBannerDismissed; // من Firestore لو كان مخزّن
+
       merchantNameEl.textContent =
         merchantData.storeName || merchantData.contactName || "تاجر";
 
       merchantCityEl.textContent =
         merchantData.storeAddress || merchantData.storeCity || "";
 
-      merchantCurrentOnline = !!merchantData.online;
+      // حالة الاعتماد من Firestore (افتراضي pending لو الحقل غير موجود)
+      merchantApprovalStatus = merchantData.approvalStatus || "pending";
+
+      // لا نسمح أونلاين إلا إذا الحساب approved
+      merchantCurrentOnline =
+        merchantApprovalStatus === "approved" && !!merchantData.online;
+
       updateMerchantOnlineBtn();
 
+      // إظهار لوحة التاجر
       registerSection.classList.add("hidden");
       loginSection.classList.add("hidden");
       merchantDashboard.classList.remove("hidden");
@@ -1877,7 +2019,40 @@ loginForm.addEventListener("submit", async (e) => {
       if (betaFooterEl) betaFooterEl.classList.add("hidden");
 
       initMapAndData(uid);
+      subscribeToMerchantDoc(uid);
       document.body.classList.add("merchant-mode");
+
+      // لو الحساب approved ولم يدخل أونلاين من قبل ولم تُخف الرسالة
+      if (
+        merchantApprovalStatus === "approved" &&
+        !merchantCurrentOnline &&
+        !hasSeenApprovedBanner
+      ) {
+        showApprovedBanner();
+      }
+
+      // لو الحساب غير معتمد → توست تنبيهي كالسابق
+      if (merchantApprovalStatus !== "approved") {
+        let msg;
+        switch (currentLang) {
+          case "en":
+            msg =
+              "Your account is under review by the admin. You cannot go online yet.";
+            break;
+          case "de":
+            msg =
+              "Dein Konto wird vom Admin geprüft. Du kannst noch nicht online gehen.";
+            break;
+          case "tr":
+            msg =
+              "Hesabın yönetici tarafından inceleniyor. Henüz çevrimiçi olamazsın.";
+            break;
+          default:
+            msg =
+              "حسابك قيد المراجعة من الأدمن، ولا يمكنك تفعيل أونلاين حتى يتم اعتماده.";
+        }
+        showToast(msg, "error");
+      }
     } else {
       await auth.signOut();
       alert("هذه الواجهة مخصصة للتجار فقط. يرجى استخدام رابط واجهة السائق إن كنت سائقاً.");
@@ -1891,8 +2066,17 @@ loginForm.addEventListener("submit", async (e) => {
 
 /* ========== تسجيل خروج التاجر ========== */
 logoutBtn.addEventListener("click", async () => {
+  // إلغاء listener لو موجود
+  if (merchantUnsubscribe) {
+    merchantUnsubscribe();
+    merchantUnsubscribe = null;
+  }
+  currentMerchantId = null;
+
   await auth.signOut();
 
+  // رجّع الحالة المحلية لقيم آمنة
+  merchantApprovalStatus = "pending";
   merchantCurrentOnline = false;
   updateMerchantOnlineBtn();
 
@@ -1903,7 +2087,7 @@ logoutBtn.addEventListener("click", async () => {
   document.getElementById("authTabs").classList.remove("hidden");
   const langSwitcher = document.getElementById("langSwitcher");
   if (langSwitcher) langSwitcher.classList.remove("hidden");
-    if (betaFooterEl) betaFooterEl.classList.remove("hidden");
+  if (betaFooterEl) betaFooterEl.classList.remove("hidden");
 
   document.body.classList.remove("merchant-mode");
 });
