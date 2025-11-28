@@ -1238,7 +1238,14 @@ const translations = {
     vehicleType_car: "Car",
     vehicleType_motorcycle: "Motorbike",
     vehicleType_bicycle: "Bicycle",
-    vehicleType_required: "Please choose your vehicle type.",
+        vehicleType_required: "Please choose your vehicle type.",
+
+    // ✅ جديد: رسائل عدم الاعتماد
+    driver_not_approved_status_btn: "Awaiting approval",
+    driver_not_approved_hint:
+      "Your account is pending approval from the platform. You can go online once it is approved.",
+    alert_driver_not_approved:
+      "You cannot go online yet because your account has not been approved. Please wait until the admin approves you.",
 
   },
 
@@ -1420,7 +1427,14 @@ const translations = {
     vehicleType_car: "Auto",
     vehicleType_motorcycle: "Motorrad",
     vehicleType_bicycle: "Fahrrad",
-    vehicleType_required: "Bitte wähle deinen Fahrzeugtyp.",
+        vehicleType_required: "Bitte wähle deinen Fahrzeugtyp.",
+
+    // ✅ جديد
+    driver_not_approved_status_btn: "Freigabe ausstehend",
+    driver_not_approved_hint:
+      "Dein Konto wartet noch auf Freigabe durch die Plattform. Du kannst erst online gehen, wenn es freigegeben wurde.",
+    alert_driver_not_approved:
+      "Dein Konto wurde noch nicht freigegeben. Bitte warte, bis der Admin dich freischaltet.",
 
   },
 
@@ -1598,7 +1612,14 @@ const translations = {
     vehicleType_car: "سيارة",
     vehicleType_motorcycle: "دراجة نارية",
     vehicleType_bicycle: "دراجة هوائية",
-    vehicleType_required: "رجاءً اختر نوع المركبة.",
+        vehicleType_required: "رجاءً اختر نوع المركبة.",
+
+    // ✅ جديد
+    driver_not_approved_status_btn: "بانتظار اعتماد الحساب",
+    driver_not_approved_hint:
+      "حسابك قيد المراجعة من قِبل الإدارة. لن تتمكن من تفعيل الأونلاين قبل اعتماد الحساب.",
+    alert_driver_not_approved:
+      "لا يمكنك تفعيل الأونلاين لأن حسابك لم يتم اعتماده بعد. الرجاء الانتظار حتى يتم اعتمادك.",
 
   },
     tr: {
@@ -1783,8 +1804,14 @@ const translations = {
     vehicleType_car: "Araba",
     vehicleType_motorcycle: "Motosiklet",
     vehicleType_bicycle: "Bisiklet",
-    vehicleType_required: "Lütfen araç tipinizi seçin.",
+        vehicleType_required: "Lütfen araç tipinizi seçin.",
 
+    // ✅ جديد
+    driver_not_approved_status_btn: "Onay bekleniyor",
+    driver_not_approved_hint:
+      "Hesabınız platform tarafından onay bekliyor. Onaylandıktan sonra çevrimiçi olabilirsiniz.",
+    alert_driver_not_approved:
+      "Hesabınız henüz onaylanmadı. Lütfen yönetici tarafından onaylanmasını bekleyin.",
 
   }
 
@@ -2219,7 +2246,8 @@ const orderCancelledSoundEl = document.getElementById("orderCancelledSound");
 let driverCurrentOnline = false;
 let driverUid = null;
 let activeDriverSessionId = null;
-
+// ✅ جديد: حالة اعتماد السائق من الأدمن
+let driverApprovalStatus = "pending";
 // بيانات/استماعات
 let driverMap;
 let currentDriverData = null;
@@ -2378,27 +2406,30 @@ driverForm.addEventListener("submit", async (e) => {
     );
     const uid = userCredential.user.uid;
         await db.collection("drivers").doc(uid).set({
-      firstName,
-      lastName,
-      address,
-      city,
-      email,
-      phone,
-      vehicleType,        // ✅ نوع المركبة
-      role: "driver",
+  firstName,
+  lastName,
+  address,
+  city,
+  email,
+  phone,
+  vehicleType,        // ✅ نوع المركبة
+  role: "driver",
 
-      online: false,
-      busy: false,
-      lat: null,
-      lng: null,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  // ⬅️⬅️ جديد: الحالة الافتراضية للموافقة
+  approvalStatus: "pending",
 
-      pricePerKmDelivery: null,
-      includeToMerchantSegment: false,
-      useSamePriceForBoth: true,
-      pricePerKmToMerchant: null,
-      freeKm: 0
-    });
+  online: false,
+  busy: false,
+  lat: null,
+  lng: null,
+  createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+
+  pricePerKmDelivery: null,
+  includeToMerchantSegment: false,
+  useSamePriceForBoth: true,
+  pricePerKmToMerchant: null,
+  freeKm: 0
+});
 
     alert(t("alert_driver_register_success"));
 
@@ -2444,8 +2475,15 @@ loginForm.addEventListener("submit", async (e) => {
 toggleOnlineBtn.addEventListener("click", async () => {
   if (!driverUid) return;
 
+  // ⛔ حساب غير معتمد → ممنوع أونلاين
+  if (driverApprovalStatus !== "approved") {
+    alert(t("alert_driver_not_approved"));
+    return;
+  }
+
   try {
     const driverRef = db.collection("drivers").doc(driverUid);
+
     const snap = await driverRef.get();
     const data = snap.exists ? snap.data() : {};
     const isBusy = !!(data && data.busy);
@@ -2598,7 +2636,24 @@ toggleOnlineBtn.addEventListener("click", async () => {
 function updateOnlineBtn() {
   if (!toggleOnlineBtn) return;
 
-  // نص الزر (مترجم)
+  const isApproved = driverApprovalStatus === "approved";
+  toggleOnlineBtn.disabled = !isApproved;
+
+  // ⛔ حساب غير معتمد
+  if (!isApproved) {
+    toggleOnlineBtn.classList.remove("blink");
+    playOnlineSoundNext = false;
+    toggleOnlineBtn.textContent = t("driver_not_approved_status_btn");
+    toggleOnlineBtn.style.backgroundColor = "#6c757d";
+
+    // نص الكبسولة السفلية: الحساب قيد المراجعة
+    if (driverStatusTextEl) {
+      driverStatusTextEl.textContent = t("driver_not_approved_hint");
+    }
+    return;
+  }
+
+  // ✅ حساب معتمد: نستخدم منطق الأونلاين/أوفلاين العادي
   toggleOnlineBtn.textContent = driverCurrentOnline
     ? t("online_btn_online")
     : t("online_btn_offline");
@@ -2615,11 +2670,9 @@ function updateOnlineBtn() {
       onlineSoundEl.currentTime = 0;
       onlineSoundEl.play();
     } catch (e) {
-      // نتجاهل أي خطأ تشغيل (مثلاً المتصفح مانع التشغيل التلقائي)
       console.warn("تعذر تشغيل صوت الأونلاين:", e);
     }
   }
-  // إعادة الفلاج للحالة الطبيعية
   playOnlineSoundNext = false;
 
   // نص الكبسولة السفلية فقط إذا ما في طلبات نشطة
@@ -2786,6 +2839,13 @@ async function showDriverDashboard(uid) {
 
   currentDriverData = driverData || {};
   driverUid = uid;
+// ✅ نقرأ حالة الاعتماد من الوثيقة (افتراضيًا pending)
+  driverApprovalStatus = currentDriverData.approvalStatus || "pending";
+  const isApproved = driverApprovalStatus === "approved";
+
+  // ✅ الأونلاين مسموح فقط إذا كان Approved
+  driverCurrentOnline = isApproved && !!driverData.online;
+  updateOnlineBtn();
 
   driverCurrentOnline = !!driverData.online;
   updateOnlineBtn();
@@ -2821,8 +2881,11 @@ async function showDriverDashboard(uid) {
 driverOrdersInitialLoaded = false;
   listenDriverOrders(uid);
   listenDriverCalls(uid);
+  // ✅ مهم: السائق غير المعتمد لا يستمع لنداءات جديدة
+  if (isApproved) {
+    listenDriverCalls(uid);
 }
-
+}
 /* ========== Utilities ========== */
 // تحديث حقل lat/lng في وثيقة السائق على Firestore مع Throttle
 function handleDriverLocationUpdate(lat, lng) {
@@ -4420,9 +4483,12 @@ if (driverEarningsFloatingEl) {
     });
   });
 
-  // نص الكبسولة السفلية (مترجم)
+    // نص الكبسولة السفلية (مترجم)
   if (driverStatusTextEl) {
-    if (active.length > 0) {
+    // ⛔ لو الحساب غير معتمد → نعرض رسالة الانتظار دائماً
+    if (driverApprovalStatus !== "approved") {
+      driverStatusTextEl.textContent = t("driver_not_approved_hint");
+    } else if (active.length > 0) {
       if (active.length === 1) {
         driverStatusTextEl.textContent = t("status_active_one");
       } else {
@@ -4438,7 +4504,6 @@ if (driverEarningsFloatingEl) {
     }
   }
 }
-
 
 /* ========== تفاصيل الطلب (من calls) للسائق ========== */
 window.viewDriverCallDetails = async function (callId) {
