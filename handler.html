@@ -805,6 +805,26 @@ html[dir="ltr"] .toast {
   </div>
 </div>
 
+<!-- مودال تفعيل حساب التاجر (الاعتماد) -->
+<div id="merchantApprovedModal" class="hidden">
+  <div class="modal-backdrop" id="merchantApprovedBackdrop" style="display:none;">
+    <div class="modal">
+      <div class="flex-between">
+        <h3 id="merchantApprovedTitle">تم تفعيل حسابك</h3>
+      </div>
+      <div id="merchantApprovedMessage" style="margin-top:12px; font-size:13px; line-height:1.7;">
+        لقد تم تفعيل حسابك للخدمة التوصيل السريع.<br/>
+        يمكنك الآن بدء إرسال أوامر التوصيل للسائقين.
+      </div>
+      <div class="btn-row">
+        <button type="button" id="merchantApprovedStartBtn" class="primary">
+          ابدأ
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- صوت عند التحول إلى أونلاين للتاجر -->
 <audio id="merchantOnlineSound" src="online1.mp3" preload="auto"></audio>
 <!-- صوت عند قبول الطلب من السائق -->
@@ -819,6 +839,8 @@ html[dir="ltr"] .toast {
 <audio id="merchantCallSound" src="send.mp3" preload="auto"></audio>
 <audio id="customerDeliveredSound" src="Geliefert.mp3" preload="auto"></audio>
 <audio id="merchantOnlineSound" src="online1.mp3" preload="auto"></audio>
+<!-- صوت عند تفعيل حساب التاجر (الاعتماد) -->
+<audio id="merchantApprovedSound" src="unterwegs.mp3" preload="auto"></audio>
 
 <!-- Toast notifications -->
 <div id="toastContainer" class="toast-container"></div>
@@ -869,7 +891,13 @@ const I18N = {
     exportCsv: "تصدير CSV",
     print: "طباعة",
     logout: "تسجيل خروج",
+    merchantApprovalPendingToast: "حسابك قيد المراجعة من قبل فريق Taussil. لا يمكنك تفعيل وضع أونلاين قبل الاعتماد.",
+    merchantApprovedTitle: "تم تفعيل حسابك",
+    merchantApprovedMessageLine1: "لقد تم تفعيل حسابك لخدمة التوصيل السريع.",
+    merchantApprovedMessageLine2: "يمكنك الآن بدء إرسال أوامر التوصيل للسائقين المتاحين.",
+    merchantApprovedStartBtn: "ابدأ",
         callStatusLabel: "حالة النداء",
+
 		cancelActiveOrderConfirm:
       "السائق الذي اخترته في طريقه إليك.\n\nهل تريد بالفعل حذف هذا الطلب؟\nإذا قمت بحذف الطلب سيتم احتساب المسافة التي قطعها السائق بناءً على أسعار السائق.",
     toastNoMerchant: "لا يمكن إرسال نداء: لم يتم تحديد التاجر الحالي.",
@@ -1011,8 +1039,13 @@ printNoOrdersForDriver: "لا توجد طلبات سابقة لهذا السائ
     exportCsv: "Export CSV",
     print: "Print",
     logout: "Logout",
-    
+    merchantApprovalPendingToast: "Your account is still under review by the Taussil team. You can't go online until it has been approved.",
+    merchantApprovedTitle: "Your account has been activated",
+    merchantApprovedMessageLine1: "Your account has been activated for the express delivery service.",
+    merchantApprovedMessageLine2: "You can now start sending delivery orders to available drivers.",
+    merchantApprovedStartBtn: "Start",
 	    callStatusLabel: "Call status",
+
 		cancelActiveOrderConfirm:
       "The driver you selected is already on the way to you.\n\nDo you really want to cancel this order?\nIf you cancel, the distance the driver has already travelled will be charged according to the driver's pricing.",
     toastNoMerchant: "Cannot send a call: current merchant is not set.",
@@ -1154,7 +1187,13 @@ printNoOrdersForDriver: "No past orders for this driver to print.",
     exportCsv: "CSV exportieren",
     print: "Drucken",
     logout: "Abmelden",
+    merchantApprovalPendingToast: "Dein Konto wird noch vom Taussil-Team geprüft. Du kannst erst online gehen, wenn es freigeschaltet wurde.",
+    merchantApprovedTitle: "Dein Konto wurde aktiviert",
+    merchantApprovedMessageLine1: "Dein Konto wurde für den Schnell-Lieferservice freigeschaltet.",
+    merchantApprovedMessageLine2: "Du kannst jetzt Lieferaufträge an verfügbare Fahrer senden.",
+    merchantApprovedStartBtn: "Start",
         callStatusLabel: "Anfragestatus",
+
 		    cancelActiveOrderConfirm:
       "Der von dir ausgewählte Fahrer ist bereits auf dem Weg zu dir.\n\nMöchtest du diese Bestellung wirklich stornieren?\nWenn du stornierst, wird die bereits gefahrene Strecke gemäß der Preisgestaltung des Fahrers berechnet.",
     toastNoMerchant: "Anfrage kann nicht gesendet werden: aktueller Händler ist nicht festgelegt.",
@@ -1296,7 +1335,13 @@ printNoOrdersForDriver: "Es gibt keine vergangenen Bestellungen für diesen Fahr
     exportCsv: "CSV dışa aktar",
     print: "Yazdır",
     logout: "Çıkış yap",
+    merchantApprovalPendingToast: "Hesabın hâlâ Taussil ekibi tarafından inceleniyor. Onaylanmadan çevrimiçi moda geçemezsin.",
+    merchantApprovedTitle: "Hesabın aktifleştirildi",
+    merchantApprovedMessageLine1: "Hesabın hızlı teslimat servisi için aktifleştirildi.",
+    merchantApprovedMessageLine2: "Artık uygun sürücülere teslimat çağrıları göndermeye başlayabilirsin.",
+    merchantApprovedStartBtn: "Başla",
         callStatusLabel: "Çağrı durumu",
+
 		cancelActiveOrderConfirm:
       "Seçtiğiniz sürücü şu anda size doğru geliyor.\n\nBu siparişi gerçekten iptal etmek istiyor musunuz?\nİptal ederseniz, sürücünün şimdiye kadar kat ettiği mesafe sürücünün fiyatlandırmasına göre ücretlendirilir.",
     toastNoMerchant: "Çağrı gönderilemiyor: geçerli işletme tanımlı değil.",
@@ -1565,6 +1610,10 @@ const betaLegalBtn = document.getElementById("betaLegalBtn");
 const betaLegalModal = document.getElementById("betaLegalModal");
 const betaLegalBackdrop = document.getElementById("betaLegalBackdrop");
 const betaLegalCloseBtn = document.getElementById("betaLegalClose");
+// مودال تفعيل حساب التاجر
+const merchantApprovedModal     = document.getElementById("merchantApprovedModal");
+const merchantApprovedBackdrop  = document.getElementById("merchantApprovedBackdrop");
+const merchantApprovedStartBtn  = document.getElementById("merchantApprovedStartBtn");
 
 /* ========== Toast helper ========== */
 const toastContainer = document.getElementById("toastContainer");
@@ -1615,6 +1664,100 @@ function closeBetaLegalModal() {
   betaLegalBackdrop.style.display = "none";
   betaLegalModal.classList.add("hidden");
 }
+/* مودال تفعيل حساب التاجر */
+function openMerchantApprovedModal() {
+  if (!merchantApprovedModal || !merchantApprovedBackdrop) return;
+
+  merchantApprovedModal.classList.remove("hidden");
+  merchantApprovedBackdrop.style.display = "flex";
+
+  // تشغيل صوت الاعتماد
+  if (merchantApprovedSoundEl) {
+    try {
+      merchantApprovedSoundEl.currentTime = 0;
+      merchantApprovedSoundEl.play();
+    } catch (e) {
+      console.warn("تعذر تشغيل صوت تفعيل التاجر:", e);
+    }
+  }
+
+  // نصوص بحسب اللغة
+  const titleEl = document.getElementById("merchantApprovedTitle");
+  const msgEl   = document.getElementById("merchantApprovedMessage");
+  const btnEl   = document.getElementById("merchantApprovedStartBtn");
+
+  if (titleEl) titleEl.textContent = t("merchantApprovedTitle");
+  if (msgEl) {
+    msgEl.innerHTML =
+      `${escapeHtml(t("merchantApprovedMessageLine1"))}<br/>` +
+      `${escapeHtml(t("merchantApprovedMessageLine2"))}`;
+  }
+  if (btnEl) btnEl.textContent = t("merchantApprovedStartBtn");
+}
+
+function closeMerchantApprovedModal() {
+  if (!merchantApprovedModal || !merchantApprovedBackdrop) return;
+  merchantApprovedBackdrop.style.display = "none";
+  merchantApprovedModal.classList.add("hidden");
+}
+
+// زر "ابدأ" → يفعّل أونلاين لأول مرة + ما يرجع يظهر المنبثق
+if (merchantApprovedStartBtn) {
+  merchantApprovedStartBtn.addEventListener("click", async () => {
+    if (!currentMerchantId) {
+      closeMerchantApprovedModal();
+      return;
+    }
+
+    try {
+      playMerchantOnlineSoundNext = true;
+
+      await db.collection("merchants")
+        .doc(currentMerchantId)
+        .update({
+          online: true,
+          approvalWelcomeShown: true,
+          lastOnline: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+      merchantCurrentOnline = true;
+      updateMerchantOnlineBtn();
+    } catch (err) {
+      console.error("Error going online from approval modal:", err);
+    } finally {
+      closeMerchantApprovedModal();
+    }
+  });
+}
+
+// زر "ابدأ" → يفعّل أونلاين لأول مرة + ما يرجع يظهر المنبثق
+if (merchantApprovedStartBtn) {
+  merchantApprovedStartBtn.addEventListener("click", async () => {
+    if (!currentMerchantId) {
+      closeMerchantApprovedModal();
+      return;
+    }
+
+    try {
+      playMerchantOnlineSoundNext = true;
+
+      await db.collection("merchants")
+        .doc(currentMerchantId)
+        .update({
+          online: true,
+          approvalWelcomeShown: true,
+          lastOnline: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+      merchantCurrentOnline = true;
+      updateMerchantOnlineBtn();
+    } catch (err) {
+      console.error("Error going online from approval modal:", err);
+    } finally {
+      closeMerchantApprovedModal();
+    }
+  });
+}
 
 if (betaLegalBtn) {
   betaLegalBtn.addEventListener("click", openBetaLegalModal);
@@ -1647,6 +1790,7 @@ const closeSidePanelBtn = document.getElementById("closeSidePanel");
 const merchantOnlineSoundEl = document.getElementById("merchantOnlineSound");
 const merchantCallSoundEl   = document.getElementById("merchantCallSound");
 const callAcceptedSoundEl     = document.getElementById("callAcceptedSound");
+const merchantApprovedSoundEl = document.getElementById("merchantApprovedSound");
 const driverOnWaySoundEl      = document.getElementById("driverOnWaySound");
 const driverNearSoundEl       = document.getElementById("driverNearSound");
 // صوت تسليم الطلب (لرحلة العميل)
@@ -1663,9 +1807,14 @@ let merchantMarker = null;
 let ordersListenerUnsub = null;
 let driversListenerUnsub = null;
 let merchantCallsListenerUnsub = null;
+let merchantDocUnsub = null;
 let currentMerchantId = null;
 let cachedDrivers = {}; // id -> data
 let lastCallsCache = [];
+// إعداد جلسة التاجر (مدة صلاحية استئناف الجلسة بعد إغلاق تام)
+const MERCHANT_SESSION_KEY = "taussil_merchant_last_close";
+const MERCHANT_SESSION_MAX_AGE_MS = 5 * 60 * 1000; // 5 دقائق
+
 function hasActiveCallForDriver(driverId) {
   const completedStatuses = [
     "rejected",
@@ -1778,6 +1927,7 @@ function updateMerchantOnlineBtn() {
   }
 }
 
+// زر أونلاين / أوفلاين للتاجر
 if (merchantOnlineToggle) {
   merchantOnlineToggle.addEventListener("click", async () => {
     if (!currentMerchantId) {
@@ -1785,23 +1935,9 @@ if (merchantOnlineToggle) {
       return;
     }
 
-    // 🔒 لا نسمح أونلاين إذا الحساب غير معتمد
+    // لو الحساب لسه مش معتمد → ما نسمح أونلاين، بس نعرض توست
     if (merchantApprovalStatus !== "approved") {
-      let msg;
-      switch (currentLang) {
-        case "en":
-          msg = "Your account is still under review by the admin.";
-          break;
-        case "de":
-          msg = "Dein Konto wird noch vom Admin geprüft.";
-          break;
-        case "tr":
-          msg = "Hesabın hâlâ yönetici tarafından inceleniyor.";
-          break;
-        default:
-          msg = "حسابك ما زال قيد المراجعة من الأدمن.";
-      }
-      showToast(msg, "error");
+      showToast(t("merchantApprovalPendingToast"), "error");
       return;
     }
 
@@ -1809,7 +1945,6 @@ if (merchantOnlineToggle) {
     merchantCurrentOnline = goingOnline;
 
     if (goingOnline) {
-      // 🎧 هنا نفعّل الصوت (يتشغّل داخل updateMerchantOnlineBtn)
       playMerchantOnlineSoundNext = true;
       merchantOnlineToggle.classList.add("blink");
     }
@@ -1824,18 +1959,12 @@ if (merchantOnlineToggle) {
             online: false
           };
 
-      // ✅ أول مرة يضغط أونلاين بعد الاعتماد → نخفي البانر ولا نرجّعه أبداً
-      if (goingOnline && !hasSeenApprovedBanner) {
-        hideApprovedBanner();
-        hasSeenApprovedBanner = true;
-        updateData.approvedBannerDismissed = true;
-      }
-
-      await db.collection("merchants").doc(currentMerchantId).update(updateData);
+      await db.collection("merchants")
+        .doc(currentMerchantId)
+        .update(updateData);
 
       updateMerchantOnlineBtn();
     } catch (err) {
-      // رجّع الحالة القديمة لو صار خطأ
       merchantCurrentOnline = !goingOnline;
       playMerchantOnlineSoundNext = false;
       merchantOnlineToggle.classList.remove("blink");
@@ -1843,7 +1972,6 @@ if (merchantOnlineToggle) {
     }
   });
 
-  // تهيئة الزر حسب حالة المتغيرات الحالية
   updateMerchantOnlineBtn();
 }
 
@@ -1971,6 +2099,108 @@ merchantForm.addEventListener("submit", async (e) => {
     alert("خطأ: " + err.message);
   }
 });
+// محاولة استئناف جلسة التاجر إذا رجع خلال ٥ دقائق بعد إغلاق تام
+auth.onAuthStateChanged(async (user) => {
+  // لو ما في مستخدم → نترك واجهة الدخول كما هي
+  if (!user) {
+    currentMerchantId = null;
+    return;
+  }
+
+  // نقرأ وقت آخر إغلاق مسجّل (إن وجد)
+  let lastClose = null;
+  try {
+    const raw = localStorage.getItem(MERCHANT_SESSION_KEY);
+    if (raw) {
+      lastClose = parseInt(raw, 10);
+    }
+  } catch (e) {
+    // نتجاهل مشاكل localStorage
+  }
+
+  // لو ما في وقت إغلاق مسجل → هذا غالباً تسجيل دخول عادي الآن، نترك الأمر لفورم تسجيل الدخول
+  if (!lastClose) {
+    return;
+  }
+
+  const now = Date.now();
+  const diff = now - lastClose;
+
+  // لو مرّ أكثر من ٥ دقائق → نخرج من الجلسة تلقائياً
+  if (diff > MERCHANT_SESSION_MAX_AGE_MS) {
+    try {
+      await auth.signOut();
+    } catch (e) {
+      console.error("Error auto signOut after session expire", e);
+    }
+
+    try {
+      localStorage.removeItem(MERCHANT_SESSION_KEY);
+    } catch (e) {}
+
+    currentMerchantId = null;
+
+    // إعادة واجهة الدخول
+    merchantDashboard.classList.add("hidden");
+    registerSection.classList.remove("hidden");
+    loginSection.classList.remove("hidden");
+    document.getElementById("mainHeader").classList.remove("hidden");
+    document.getElementById("authTabs").classList.remove("hidden");
+    const langSwitcher = document.getElementById("langSwitcher");
+    if (langSwitcher) langSwitcher.classList.remove("hidden");
+    if (betaFooterEl) betaFooterEl.classList.remove("hidden");
+    document.body.classList.remove("merchant-mode");
+
+    return;
+  }
+
+  // لو أقل من أو يساوي ٥ دقائق → استئناف الجلسة تلقائياً وفتح لوحة التاجر
+  try {
+    const uid = user.uid;
+    const merchantDoc = await db.collection("merchants").doc(uid).get();
+
+    if (!merchantDoc.exists) {
+      // مستخدم ليس تاجر في هذا الواجهة
+      await auth.signOut();
+      try {
+        localStorage.removeItem(MERCHANT_SESSION_KEY);
+      } catch (e) {}
+      currentMerchantId = null;
+      return;
+    }
+
+    const merchantData = merchantDoc.data();
+
+    merchantNameEl.textContent =
+      merchantData.storeName || merchantData.contactName || "تاجر";
+
+    merchantCityEl.textContent =
+      merchantData.storeAddress || merchantData.storeCity || "";
+
+    merchantApprovalStatus = merchantData.approvalStatus || "pending";
+    merchantCurrentOnline =
+      merchantApprovalStatus === "approved" && !!merchantData.online;
+
+    updateMerchantOnlineBtn();
+
+    registerSection.classList.add("hidden");
+    loginSection.classList.add("hidden");
+    merchantDashboard.classList.remove("hidden");
+    document.getElementById("mainHeader").classList.add("hidden");
+    document.getElementById("authTabs").classList.add("hidden");
+    const langSwitcher = document.getElementById("langSwitcher");
+    if (langSwitcher) langSwitcher.classList.add("hidden");
+    if (betaFooterEl) betaFooterEl.classList.add("hidden");
+
+    currentMerchantId = uid;
+    document.body.classList.add("merchant-mode");
+
+    // إعادة تهيئة الخريطة والبيانات للتاجر الحالي
+    initMapAndData(uid);
+  } catch (e) {
+    console.error("Error restoring merchant session", e);
+  }
+});
 
 /* ========== تسجيل الدخول (تاجر فقط) ========== */
 loginForm.addEventListener("submit", async (e) => {
@@ -2066,20 +2296,23 @@ loginForm.addEventListener("submit", async (e) => {
 
 /* ========== تسجيل خروج التاجر ========== */
 logoutBtn.addEventListener("click", async () => {
-  // إلغاء listener لو موجود
-  if (merchantUnsubscribe) {
-    merchantUnsubscribe();
-    merchantUnsubscribe = null;
+  try {
+    await auth.signOut();
+  } catch (e) {
+    console.error("Error on merchant logout", e);
   }
-  currentMerchantId = null;
 
-  await auth.signOut();
-
-  // رجّع الحالة المحلية لقيم آمنة
+  // تنظيف بيانات الجلسة المحلية
   merchantApprovalStatus = "pending";
   merchantCurrentOnline = false;
+  currentMerchantId = null;
   updateMerchantOnlineBtn();
 
+  try {
+    localStorage.removeItem(MERCHANT_SESSION_KEY);
+  } catch (e) {}
+
+  // إعادة واجهة الدخول
   merchantDashboard.classList.add("hidden");
   registerSection.classList.remove("hidden");
   loginSection.classList.remove("hidden");
@@ -2768,8 +3001,55 @@ function getRouteDistanceKm(origin, destination) {
 function initMapAndData(merchantId) {
   currentMerchantId = merchantId;
 
+  // مراقبة وثيقة التاجر نفسه (approvalStatus + online + عرض منبثق الاعتماد)
+  if (merchantDocUnsub) merchantDocUnsub();
+  merchantDocUnsub = db
+    .collection("merchants")
+    .doc(merchantId)
+    .onSnapshot((doc) => {
+      if (!doc.exists) return;
+      const data = doc.data() || {};
+
+      const oldStatus = merchantApprovalStatus;
+      const oldOnline = merchantCurrentOnline;
+
+      merchantApprovalStatus = data.approvalStatus || "pending";
+
+      // لو معتمد → نقرأ online من الوثيقة، لو مش معتمد نجبره أوفلاين
+      if (merchantApprovalStatus === "approved") {
+        merchantCurrentOnline = !!data.online;
+      } else {
+        merchantCurrentOnline = false;
+      }
+
+      updateMerchantOnlineBtn();
+
+      const justApproved =
+        oldStatus !== "approved" && merchantApprovalStatus === "approved";
+      const hasWelcome = !!data.approvalWelcomeShown;
+
+      // أول مرة يتحول من pending → approved والتاجر لسه أوفلاين
+      if (justApproved && !merchantCurrentOnline && !hasWelcome) {
+        openMerchantApprovedModal();
+      }
+
+      // أول مرة يصير أونلاين بعد الاعتماد → نعلّم إننا عرضنا الترحيب
+      if (
+        merchantApprovalStatus === "approved" &&
+        merchantCurrentOnline &&
+        !hasWelcome &&
+        currentMerchantId
+      ) {
+        db.collection("merchants")
+          .doc(currentMerchantId)
+          .update({ approvalWelcomeShown: true })
+          .catch(() => {});
+      }
+    });
+
   if (!map) {
     const geocoder = new google.maps.Geocoder();
+
     const merchantAddress =
       merchantNameEl.textContent + ", " + merchantCityEl.textContent;
 
@@ -5172,10 +5452,29 @@ window.addEventListener("beforeunload", () => {
   if (ordersListenerUnsub) ordersListenerUnsub();
   if (driversListenerUnsub) driversListenerUnsub();
   if (merchantCallsListenerUnsub) merchantCallsListenerUnsub();
+  if (merchantDocUnsub) merchantDocUnsub();
 });
 
 /* تشغيل i18n بعد تحميل السكربت */
 initLanguage();
+// عند إغلاق التام للواجهة (إغلاق تبويب / المتصفح)
+// نحفظ وقت الإغلاق فقط إذا كان التاجر مسجل دخول (currentMerchantId موجود)
+window.addEventListener("beforeunload", () => {
+  try {
+    if (currentMerchantId) {
+      localStorage.setItem(
+        MERCHANT_SESSION_KEY,
+        Date.now().toString()
+      );
+    } else {
+      // لو مافي تاجر حالي، نتأكد من عدم وجود وقت إغلاق قديم
+      localStorage.removeItem(MERCHANT_SESSION_KEY);
+    }
+  } catch (e) {
+    // نتجاهل أي مشكلة في localStorage
+  }
+});
+
 </script>
 </body>
 </html>
