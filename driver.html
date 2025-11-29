@@ -699,6 +699,54 @@ body.driver-mode .auth-lang-switcher {
         cursor:pointer;
         white-space:nowrap;
     }
+    /* منبثق اعتماد السائق */
+    .driver-approval-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.65);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    }
+.driver-approval-overlay.hidden {
+    display: none !important;
+}
+
+    .driver-approval-modal {
+        background: #ffffff;
+        border-radius: 18px;
+        padding: 20px 18px 18px;
+        width: 90%;
+        max-width: 420px;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+
+    .driver-approval-modal h3 {
+        margin: 0 0 8px;
+        font-size: 18px;
+    }
+
+    .driver-approval-modal p {
+        margin: 0 0 14px;
+        font-size: 14px;
+        color: #444;
+        line-height: 1.5;
+    }
+
+    .driver-approval-start-btn {
+        width: 100%;
+        border-radius: 999px;
+        padding: 10px 0;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        background: #22c55e;
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(34,197,94,0.35);
+    }
 
     
 </style>
@@ -975,6 +1023,18 @@ body.driver-mode .auth-lang-switcher {
         </div>
     </div>
 </div>
+<!-- منبثق اعتماد السائق (لا يُغلق إلا بزر إبدأ) -->
+<div id="driverApprovalOverlay" class="driver-approval-overlay hidden">
+  <div class="driver-approval-modal">
+    <h3 id="driverApprovalTitle">تم تفعيل حسابك</h3>
+    <p id="driverApprovalMessage">
+      لقد تم تفعيل حسابك بنجاح ويمكنك بدء تقديم الرحلات وخدمة التوصيل مباشرة.
+    </p>
+    <button id="driverApprovalStartBtn" class="driver-approval-start-btn">
+      إبدأ
+    </button>
+  </div>
+</div>
 
 <footer>Der Dienst befindet sich in der Erprobungsphase und kann technische Fehler oder Einschränkungen enthalten. Die Nutzung erfolgt auf eigene Verantwortung.</footer>
 <!-- صوت نداء جديد -->
@@ -985,6 +1045,9 @@ body.driver-mode .auth-lang-switcher {
 <audio id="onlineSound" src="online1.mp3" preload="auto"></audio>
 <!-- 🔊 صوت إلغاء الطلب من التاجر -->
 <audio id="orderCancelledSound" src="cancel.mp3" preload="auto"></audio>
+<!-- 🔊 صوت منبثق اعتماد السائق (غيّر اسم الملف لما ترفعه) -->
+<audio id="driverApprovalSound" src="unterwegs.mp3" preload="auto"></audio>
+
 <!-- Google Maps API -->
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCUMgXQwwe7afBlRpp6zrXunbTVSCXfSqQ&libraries=geometry,places&language=ar"></script>
 
@@ -1003,6 +1066,8 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 const BASE_DELIVERY_FEE = 3.5; // EUR
+const DRIVER_SESSION_MAX_IDLE_MS = 5 * 60 * 1000; // 5 دقائق بالميلي ثانية
+
 // ====== Median Background Location: إيقاف الخدمة عند الأوفلاين / تسجيل الخروج ======
 function stopMedianBackgroundLocation() {
   try {
@@ -1035,11 +1100,68 @@ function startMedianBackgroundLocation() {
 // 👇 مهم لـ Median: تعريف متغيّر عالمي يحمل uid السائق الحالي
 window.TAUSSIL_DRIVER_ID = null;
 
-// 👇 مزامنة متغيّر السائق مع حالة الدخول في Firebase
+function maybeRestoreDriverSessionFromAuth(user) {
+  if (!user) return;
+  if (driverDashboardShownOnce || isManualLoginInProgress) return;
+
+  let lastUid = null;
+  let lastClosedAt = null;
+
+  try {
+    lastUid = localStorage.getItem("driverLastUid");
+    const ts = localStorage.getItem("driverLastClosedAt");
+    lastClosedAt = ts ? parseInt(ts, 10) : null;
+  } catch (e) {}
+
+  const now = Date.now();
+
+  // ⬅️ لا توجد جلسة سابقة مخزّنة → لا نفعل شيئاً (لا استعادة ولا signOut)
+  if (!lastUid || !lastClosedAt) {
+    return;
+  }
+
+  // ✅ جلسة حديثة لنفس السائق (≤ ٥ دقائق) → استعادة تلقائية
+  if (lastUid === user.uid && now - lastClosedAt <= DRIVER_SESSION_MAX_IDLE_MS) {
+    showDriverDashboard(user.uid)
+      .then(() => {
+        driverDashboardShownOnce = true;
+      })
+      .catch((err) => {
+        console.error("فشل في استعادة جلسة السائق تلقائياً:", err);
+      });
+    return;
+  }
+
+  // ⚠️ جلسة قديمة لنفس السائق → تسجيل خروج وتنظيف التخزين
+  if (lastUid === user.uid) {
+    auth
+      .signOut()
+      .catch((err) => {
+        console.warn("تعذر تسجيل الخروج التلقائي للسائق:", err);
+      });
+
+    try {
+      localStorage.removeItem("driverLastUid");
+      localStorage.removeItem("driverLastClosedAt");
+    } catch (e) {}
+
+    return;
+  }
+
+  // حالة: lastUid لسائق آخر → نمسح القيم فقط بدون إزعاج المستخدم الحالي
+  try {
+    localStorage.removeItem("driverLastUid");
+    localStorage.removeItem("driverLastClosedAt");
+  } catch (e) {}
+}
+
+// 👇 مزامنة متغيّر السائق مع حالة الدخول في Firebase + منطق ٥ دقائق
 auth.onAuthStateChanged(function (user) {
   if (user) {
     window.TAUSSIL_DRIVER_ID = user.uid;
     console.log("TAUSSIL_DRIVER_ID (auth state):", user.uid);
+
+    maybeRestoreDriverSessionFromAuth(user);
   } else {
     window.TAUSSIL_DRIVER_ID = null;
     console.log("TAUSSIL_DRIVER_ID cleared (no user)");
@@ -1246,6 +1368,10 @@ const translations = {
       "Your account is pending approval from the platform. You can go online once it is approved.",
     alert_driver_not_approved:
       "You cannot go online yet because your account has not been approved. Please wait until the admin approves you.",
+    driverApprovalModal_title: "Account activated",
+    driverApprovalModal_message:
+      "Your driver account has been approved. You can now start offering trips and delivery services.",
+    driverApprovalModal_button: "Start",
 
   },
 
@@ -1435,6 +1561,10 @@ const translations = {
       "Dein Konto wartet noch auf Freigabe durch die Plattform. Du kannst erst online gehen, wenn es freigegeben wurde.",
     alert_driver_not_approved:
       "Dein Konto wurde noch nicht freigegeben. Bitte warte, bis der Admin dich freischaltet.",
+    driverApprovalModal_title: "Konto freigeschaltet",
+    driverApprovalModal_message:
+      "Dein Fahrer-Konto wurde freigeschaltet. Du kannst jetzt Fahrten und Lieferungen übernehmen.",
+    driverApprovalModal_button: "Starten",
 
   },
 
@@ -1620,6 +1750,10 @@ const translations = {
       "حسابك قيد المراجعة من قِبل الإدارة. لن تتمكن من تفعيل الأونلاين قبل اعتماد الحساب.",
     alert_driver_not_approved:
       "لا يمكنك تفعيل الأونلاين لأن حسابك لم يتم اعتماده بعد. الرجاء الانتظار حتى يتم اعتمادك.",
+    driverApprovalModal_title: "تم تفعيل حسابك",
+    driverApprovalModal_message:
+      "لقد تم تفعيل حسابك بنجاح ويمكنك بدء تقديم الرحلات وخدمة التوصيل مباشرة.",
+    driverApprovalModal_button: "إبدأ",
 
   },
     tr: {
@@ -1812,6 +1946,10 @@ const translations = {
       "Hesabınız platform tarafından onay bekliyor. Onaylandıktan sonra çevrimiçi olabilirsiniz.",
     alert_driver_not_approved:
       "Hesabınız henüz onaylanmadı. Lütfen yönetici tarafından onaylanmasını bekleyin.",
+    driverApprovalModal_title: "Hesabınız aktifleştirildi",
+    driverApprovalModal_message:
+      "Sürücü hesabınız onaylandı. Artık yolculuk ve teslimat hizmeti vermeye başlayabilirsiniz.",
+    driverApprovalModal_button: "Başlat",
 
   }
 
@@ -2098,6 +2236,19 @@ function applyTranslations(lang) {
       }
     }
   }
+  // منبثق اعتماد السائق
+  const driverApprovalTitleEl = document.getElementById("driverApprovalTitle");
+  if (driverApprovalTitleEl && dict.driverApprovalModal_title) {
+    driverApprovalTitleEl.textContent = dict.driverApprovalModal_title;
+  }
+  const driverApprovalMessageEl = document.getElementById("driverApprovalMessage");
+  if (driverApprovalMessageEl && dict.driverApprovalModal_message) {
+    driverApprovalMessageEl.textContent = dict.driverApprovalModal_message;
+  }
+  const driverApprovalStartBtnEl = document.getElementById("driverApprovalStartBtn");
+  if (driverApprovalStartBtnEl && dict.driverApprovalModal_button) {
+    driverApprovalStartBtnEl.textContent = dict.driverApprovalModal_button;
+  }
 
   // تحديث زر الحالة / الكبسولة السفلية
   updateOnlineBtn();
@@ -2221,9 +2372,15 @@ const startCustomerNavBtn = document.getElementById("startCustomerNavBtn");
 // كرت الطلب النشط + كرت الأرباح العائم
 const driverCurrentOrderEl = document.getElementById("driverCurrentOrder");
 
+
+
 const driverEarningsFloatingEl = document.getElementById("driverEarningsFloating");
 
+const driverApprovalOverlay = document.getElementById("driverApprovalOverlay");
+const driverApprovalStartBtn = document.getElementById("driverApprovalStartBtn");
+
 const modalBackdrop = document.getElementById("modalBackdrop");
+
 const modalContent = document.getElementById("modalContent");
 const closeModal = document.getElementById("closeModal");
 const orderModalEl = document.getElementById("orderModal");
@@ -2241,11 +2398,17 @@ let playOnlineSoundNext = false;
 const callSoundEl = document.getElementById("callSound");
 // 🔊 صوت إلغاء الطلب من التاجر
 const orderCancelledSoundEl = document.getElementById("orderCancelledSound");
+// 🔊 صوت منبثق اعتماد السائق
+const driverApprovalSoundEl = document.getElementById("driverApprovalSound");
 
 // حالة السائق
 let driverCurrentOnline = false;
 let driverUid = null;
 let activeDriverSessionId = null;
+
+let driverDashboardShownOnce = false;
+let isManualLoginInProgress = false;
+
 // ✅ جديد: حالة اعتماد السائق من الأدمن
 let driverApprovalStatus = "pending";
 // بيانات/استماعات
@@ -2253,7 +2416,9 @@ let driverMap;
 let currentDriverData = null;
 let driverOrdersListener = null;
 let driverCallsListener = null;
+let driverDocListener = null;
 let driverOrdersInitialLoaded = false;
+
 let lastDriverCalls = [];
 let driverCallsCache = [];
 let directionsService = null;
@@ -2400,46 +2565,47 @@ driverForm.addEventListener("submit", async (e) => {
   if (!vehicleType) return alert(t("vehicleType_required"));
 
   try {
-    const userCredential = await auth.createUserWithEmailAndPassword(
-      email,
-      password
-    );
-    const uid = userCredential.user.uid;
-        await db.collection("drivers").doc(uid).set({
-  firstName,
-  lastName,
-  address,
-  city,
-  email,
-  phone,
-  vehicleType,        // ✅ نوع المركبة
-  role: "driver",
+  const userCredential = await auth.createUserWithEmailAndPassword(
+    email,
+    password
+  );
+  const uid = userCredential.user.uid;
 
-  // ⬅️⬅️ جديد: الحالة الافتراضية للموافقة
-  approvalStatus: "pending",
+  await db.collection("drivers").doc(uid).set({
+    firstName,
+    lastName,
+    address,
+    city,
+    email,
+    phone,
+    vehicleType,
+    role: "driver",
+    approvalStatus: "pending",
+    online: false,
+    busy: false,
+    lat: null,
+    lng: null,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    pricePerKmDelivery: null,
+    includeToMerchantSegment: false,
+    useSamePriceForBoth: true,
+    pricePerKmToMerchant: null,
+    freeKm: 0
+  });
 
-  online: false,
-  busy: false,
-  lat: null,
-  lng: null,
-  createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  // ✅ افتح لوحة السائق مباشرة بعد التسجيل
+  await showDriverDashboard(uid);
+  driverDashboardShownOnce = true;
 
-  pricePerKmDelivery: null,
-  includeToMerchantSegment: false,
-  useSamePriceForBoth: true,
-  pricePerKmToMerchant: null,
-  freeKm: 0
-});
+  alert(t("alert_driver_register_success"));
 
-    alert(t("alert_driver_register_success"));
+  driverForm.reset();
+  setVehicleSelectValue("");
 
-    driverForm.reset();
-	    setVehicleSelectValue(""); // يرجّع الدروبداون للحالة الافتراضية
+} catch (err) {
+  alert(t("alert_generic_error_prefix") + err.message);
+}
 
-  } catch (err) {
-    alert(t("alert_generic_error_prefix") + err.message);
-
-  }
 });
 
 /* ========== تسجيل الدخول (سائق فقط) ========== */
@@ -2449,6 +2615,8 @@ loginForm.addEventListener("submit", async (e) => {
   const password = document.getElementById("loginPassword").value;
 
   try {
+    isManualLoginInProgress = true;
+
     const userCredential = await auth.signInWithEmailAndPassword(
       email,
       password
@@ -2459,15 +2627,17 @@ loginForm.addEventListener("submit", async (e) => {
 
     if (driverDoc.exists) {
       await showDriverDashboard(uid);
+      driverDashboardShownOnce = true;
     } else {
       await auth.signOut();
       alert(t("alert_login_driver_only"));
-
     }
 
     loginForm.reset();
   } catch (err) {
     alert("خطأ: " + err.message);
+  } finally {
+    isManualLoginInProgress = false;
   }
 });
 
@@ -2695,6 +2865,51 @@ function updateOnlineBtn() {
     }
   }
 }
+function hasDriverApprovalModalBeenShown(uid) {
+  if (!uid) return false;
+  try {
+    return localStorage.getItem("driverApprovalShown_" + uid) === "1";
+  } catch (e) {
+    return false;
+  }
+}
+
+function markDriverApprovalModalShown(uid) {
+  if (!uid) return;
+  try {
+    localStorage.setItem("driverApprovalShown_" + uid, "1");
+  } catch (e) {}
+}
+
+function showDriverApprovalModal() {
+  if (!driverApprovalOverlay) return;
+
+  driverApprovalOverlay.classList.remove("hidden");
+
+  if (driverApprovalSoundEl) {
+    try {
+      driverApprovalSoundEl.currentTime = 0;
+      const p = driverApprovalSoundEl.play();
+      if (p && typeof p.catch === "function") {
+        p.catch((err) => {
+          console.warn("تعذر تشغيل صوت اعتماد السائق:", err);
+        });
+      }
+    } catch (e) {
+      console.warn("خطأ أثناء تشغيل صوت اعتماد السائق:", e);
+    }
+  }
+}
+
+// زر "إبدأ" في منبثق اعتماد السائق
+if (driverApprovalStartBtn && driverApprovalOverlay) {
+  driverApprovalStartBtn.addEventListener("click", () => {
+    driverApprovalOverlay.classList.add("hidden");
+    if (driverUid) {
+      markDriverApprovalModalShown(driverUid);
+    }
+  });
+}
 
 /* ========== تسجيل خروج السائق ========== */
 driverLogoutBtn.addEventListener("click", async () => {
@@ -2712,18 +2927,38 @@ driverLogoutBtn.addEventListener("click", async () => {
       return;
     }
 
-        // 🔓 تنظيف جلسة السائق في Firestore
+    // 🔓 تنظيف جلسة السائق في Firestore
     await releaseDriverSession();
 
     // إيقاف تتبع الموقع بالكامل
     stopDriverLocationTracking();
-    stopMedianBackgroundLocation();   // 👈 السطر الجديد
+    stopMedianBackgroundLocation();
     clearRouteAndNavigation();
+
+    // إيقاف أي مستمعات Realtime
+    if (driverOrdersListener) {
+      driverOrdersListener();
+      driverOrdersListener = null;
+    }
+    if (driverCallsListener) {
+      driverCallsListener();
+      driverCallsListener = null;
+    }
+    if (driverDocListener) {
+      driverDocListener();
+      driverDocListener = null;
+    }
 
     await auth.signOut();
 
     // 👇 تنظيف متغيّر Median
     window.TAUSSIL_DRIVER_ID = null;
+
+    // تنظيف مفاتيح الجلسة من localStorage
+    try {
+      localStorage.removeItem("driverLastUid");
+      localStorage.removeItem("driverLastClosedAt");
+    } catch (e) {}
 
     driverDashboard.classList.add("hidden");
     registerSection.classList.remove("hidden");
@@ -2733,6 +2968,10 @@ driverLogoutBtn.addEventListener("click", async () => {
     if (footerEl) footerEl.classList.remove("hidden");
     if (authLangSwitcher) authLangSwitcher.classList.remove("hidden");
     document.body.classList.remove("driver-mode");
+
+    driverUid = null;
+    driverCurrentOnline = false;
+    driverDashboardShownOnce = false;
 
   } catch (err) {
     alert(t("alert_logout_failed") + err.message);
@@ -2827,44 +3066,44 @@ async function showDriverDashboard(uid) {
 
   // 🔒 أولاً: نحجز جلسة حصرية لهذا السائق
   const sessionId = await claimSingleDriverSession(uid);
-
   if (!sessionId) {
     // لم نستطع حجز الجلسة (نشطة على جهاز آخر)
     return;
   }
 
-  const driverDoc = await db.collection("drivers").doc(uid).get();
-  if (!driverDoc.exists) return alert("حساب السائق غير موجود");
-  const driverData = driverDoc.data();
+  const driverRef = db.collection("drivers").doc(uid);
+  const driverDoc = await driverRef.get();
+  if (!driverDoc.exists) {
+    alert("حساب السائق غير موجود");
+    return;
+  }
+  const driverData = driverDoc.data() || {};
 
-  currentDriverData = driverData || {};
+  currentDriverData = driverData;
   driverUid = uid;
-// ✅ نقرأ حالة الاعتماد من الوثيقة (افتراضيًا pending)
-  driverApprovalStatus = currentDriverData.approvalStatus || "pending";
+
+  // ✅ نقرأ حالة الاعتماد من الوثيقة (افتراضيًا pending)
+  driverApprovalStatus = driverData.approvalStatus || "pending";
   const isApproved = driverApprovalStatus === "approved";
 
   // ✅ الأونلاين مسموح فقط إذا كان Approved
   driverCurrentOnline = isApproved && !!driverData.online;
   updateOnlineBtn();
 
-  driverCurrentOnline = !!driverData.online;
-  updateOnlineBtn();
-  driverNameEl.textContent =
-    (driverData.firstName || "") +
-    " " +
-    (driverData.lastName || "");
-  driverNameEl.textContent =
-    (driverData.firstName || "") +
-    " " +
-    (driverData.lastName || "");
+  // اسم السائق
+  if (driverNameEl) {
+    driverNameEl.textContent =
+      (driverData.firstName || "") + " " + (driverData.lastName || "");
+  }
 
   // ✅ تحديث صورة المركبة في القائمة الجانبية
   updateDriverVehicleIcon(driverData.vehicleType || "");
 
+  // إظهار واجهة السائق
   registerSection.classList.add("hidden");
   loginSection.classList.add("hidden");
 
-    if (mainHeader) mainHeader.classList.add("hidden");
+  if (mainHeader) mainHeader.classList.add("hidden");
   if (authTabs) authTabs.classList.add("hidden");
   if (footerEl) footerEl.classList.add("hidden");
   if (authLangSwitcher) authLangSwitcher.classList.add("hidden"); // ✅ إخفاء شريط اللغة العلوي
@@ -2872,46 +3111,62 @@ async function showDriverDashboard(uid) {
   driverDashboard.classList.remove("hidden");
   document.body.classList.add("driver-mode");
 
-
   // تهيئة خريطة السائق
   initDriverMap();
 
   // تعبئة نموذج التسعير من بيانات السائق الحالية
   populatePricingFormFromData();
-driverOrdersInitialLoaded = false;
+
+  driverOrdersInitialLoaded = false;
   listenDriverOrders(uid);
-  listenDriverCalls(uid);
-  // ✅ مهم: السائق غير المعتمد لا يستمع لنداءات جديدة
+
+  // ✅ استماع لنداءات جديدة فقط إذا الحساب معتمد
   if (isApproved) {
     listenDriverCalls(uid);
-}
-}
-/* ========== Utilities ========== */
-// تحديث حقل lat/lng في وثيقة السائق على Firestore مع Throttle
-function handleDriverLocationUpdate(lat, lng) {
-  if (!driverUid || !driverCurrentOnline) return;
-
-  const now = Date.now();
-  // من غير المعقول نكتب أكثر من مرة كل 7 ثواني
-  if (now - lastLocationUpdateAt < LOCATION_UPDATE_MIN_INTERVAL_MS) {
-    return;
+  } else if (driverCallsListener) {
+    driverCallsListener();
+    driverCallsListener = null;
   }
-  lastLocationUpdateAt = now;
 
-  try {
-    const driverRef = db.collection("drivers").doc(driverUid);
-    driverRef
-      .update({
-        lat,
-        lng,
-        lastLocationAt: firebase.firestore.FieldValue.serverTimestamp()
-      })
-      .catch((err) => {
-        console.warn("تعذر تحديث موقع السائق في Firestore:", err);
-      });
-  } catch (e) {
-    console.warn("تعذر تحديث موقع السائق في Firestore:", e);
+  // منبثق اعتماد السائق لو الحساب معتمد ولم يظهر من قبل
+  if (isApproved && !hasDriverApprovalModalBeenShown(uid)) {
+    showDriverApprovalModal();
   }
+
+  // 🔄 استماع حي لتغييرات وثيقة السائق (حالة الاعتماد / الأونلاين ...)
+  if (driverDocListener) {
+    driverDocListener();
+    driverDocListener = null;
+  }
+
+  driverDocListener = driverRef.onSnapshot((snap) => {
+    if (!snap.exists) return;
+
+    const data = snap.data() || {};
+    currentDriverData = data;
+
+    const prevApproval = driverApprovalStatus;
+    driverApprovalStatus = data.approvalStatus || "pending";
+    const isApprovedNow = driverApprovalStatus === "approved";
+    const wasApproved = prevApproval === "approved";
+
+    // مزامنة حالة الأونلاين مع Firestore (فقط لو الحساب معتمد)
+    driverCurrentOnline = isApprovedNow && !!data.online;
+    updateOnlineBtn();
+
+    // أول مرة يتحول فيها الحساب إلى approved أثناء الجلسة
+    if (!wasApproved && isApprovedNow && !hasDriverApprovalModalBeenShown(uid)) {
+      showDriverApprovalModal();
+    }
+
+    // إدارة استماع النداءات حسب حالة الاعتماد
+    if (isApprovedNow && !driverCallsListener) {
+      listenDriverCalls(uid);
+    } else if (!isApprovedNow && driverCallsListener) {
+      driverCallsListener();
+      driverCallsListener = null;
+    }
+  });
 }
 
 // تشغيل تتبع الموقع في الخلفية (watchPosition مستقل عن التوجيه)
@@ -5057,8 +5312,26 @@ if (authLangSelect) {
 
 /* ========== Clean up when leave ========== */
 window.addEventListener("beforeunload", () => {
-  if (driverOrdersListener) driverOrdersListener();
-  if (driverCallsListener) driverCallsListener();
+  if (driverOrdersListener) {
+    driverOrdersListener();
+    driverOrdersListener = null;
+  }
+  if (driverCallsListener) {
+    driverCallsListener();
+    driverCallsListener = null;
+  }
+  if (driverDocListener) {
+    driverDocListener();
+    driverDocListener = null;
+  }
+
+  // حفظ وقت إغلاق الواجهة لاستعادة الجلسة خلال ٥ دقائق فقط
+  if (driverUid && driverDashboard && !driverDashboard.classList.contains("hidden")) {
+    try {
+      localStorage.setItem("driverLastUid", driverUid);
+      localStorage.setItem("driverLastClosedAt", Date.now().toString());
+    } catch (e) {}
+  }
 
   // إيقاف تتبع الموقع + تنظيف الخريطة
   stopDriverLocationTracking();
@@ -5066,6 +5339,7 @@ window.addEventListener("beforeunload", () => {
   clearRouteAndNavigation();
 
   stopNewCallSoundLoop(); // لإيقاف أي تايمر شغّال
+
   // نحاول تنظيف الجلسة (قد لا تكتمل دائماً، بس تساعد)
   releaseDriverSession();
 });
