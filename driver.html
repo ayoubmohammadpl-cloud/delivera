@@ -747,8 +747,97 @@ body.driver-mode .auth-lang-switcher {
         color: #fff;
         box-shadow: 0 4px 12px rgba(34,197,94,0.35);
     }
+/* كرت طلب كاش: إطار أحمر + توهج */
+.order-card-cash {
+  border: 2px solid #ff3b30;
+  box-shadow: 0 0 10px rgba(255, 59, 48, 0.8);
+}
 
-    
+/* الكرت السفلي (الطلب النشط) عند الكاش */
+.driver-current-order.cash-current-order {
+  border: 2px solid #ff3b30;
+  box-shadow: 0 0 12px rgba(255, 59, 48, 0.9);
+}
+
+/* تمييز مبلغ الكاش / السعر */
+.cash-amount-highlight {
+  
+  font-weight: 700;
+}
+
+    .pricing-info-link {
+  margin-top: 6px;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #007bff;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.cash-floating-badge {
+  position: absolute;
+  top: 140px;
+  left: 10px;
+  z-index: 6;                  /* أعلى من الخريطة، وأقل أو مساوي لصناديق أخرى */
+  min-width: 64px;
+  min-height: 64px;
+  padding: 8px;
+  border-radius: 999px;        /* دائرة */
+  background: #cc0000;         /* خلفية حمراء */
+  color: #ffffff;              /* نص أبيض */
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;    /* لا يعطل تفاعل الخريطة */
+  background: rgba(255, 255, 255, 0.5);
+
+}
+
+.cash-floating-badge.hidden {
+  display: none;
+}
+
+.cash-floating-badge-inner {
+  position: relative;
+  z-index: 2;
+}
+
+/* وميض أحمر منتشر خلف الصندوق الدائري */
+.cash-floating-badge::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.9);
+  animation: cashPulse 1.4s infinite;
+  z-index: 1;
+}
+
+@keyframes cashPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.9);
+  }
+  70% {
+    transform: scale(1.28);
+    opacity: 0;
+    box-shadow: 0 0 0 16px rgba(220, 38, 38, 0);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+  }
+}
+
 </style>
 </head>
 <body>
@@ -777,6 +866,21 @@ body.driver-mode .auth-lang-switcher {
         <input type="text" id="lastName" placeholder="الاسم الثاني" required />
         <input type="text" id="address" placeholder="العنوان" required />
 <input type="text" id="city" placeholder="المدينة" required />
+<!-- نوع السائق -->
+<div class="driver-type-select">
+  <label id="driverTypeLabel">نوع السائق</label>
+  <select id="driverType" required>
+    <option value="" id="driverTypePlaceholder" selected disabled>
+      اختر نوع السائق
+    </option>
+    <option value="independent" id="driverTypeOptionIndependent">
+      سائق مستقل
+    </option>
+    <option value="employee" id="driverTypeOptionEmployee">
+      سائق موظف لدى Taussil
+    </option>
+  </select>
+</div>
 
 <!-- نوع المركبة -->
 <div class="vehicle-select">
@@ -869,11 +973,15 @@ body.driver-mode .auth-lang-switcher {
     </div>
 
     <div class="driver-top-left">
-        <!-- صندوق الأرباح مدمج في الشريط من اليسار -->
-        <div id="driverEarningsFloating" class="driver-earnings-floating">
-            الأرباح<br><strong>0</strong>
-        </div>
-    </div>
+  <!-- ✅ شارة الكاش العائمة -->
+  <div id="cashFloatingBadge" class="cash-floating-badge hidden"></div>
+
+  <!-- صندوق الأرباح -->
+  <div id="driverEarningsFloating" class="driver-earnings-floating">
+    الأرباح<br><strong>0</strong>
+  </div>
+</div>
+
 </div>
 
     <!-- كرت الطلب النشط (إدارة من الواجهة الأساسية) -->
@@ -955,51 +1063,72 @@ body.driver-mode .auth-lang-switcher {
                 <span>ضبط تكاليف التوصيل</span>
             </button>
             <div id="driverPricingPane" class="driver-side-pane">
-                <div class="card driver-side-card">
-                    <div id="pricingIntroText" class="small" style="margin-bottom:6px;">
-                        قم بضبط تسعيرة التوصيل ليتم احتساب تكلفة كل رحلة تلقائياً.
-                    </div>
+  <div class="card driver-side-card">
+    <div id="pricingIntroText" class="small" style="margin-bottom:6px;">
+      قم بضبط تسعيرة التوصيل ليتم احتساب تكلفة كل رحلة تلقائياً.
+    </div>
 
-                    <label id="pricingDeliveryLabel" class="small">
-                        سعر الكيلومتر من التاجر إلى نقطة التسليم (€)
-                    </label>
-                    <input id="pricePerKmDelivery" type="number" step="0.01" min="0" />
+    <!-- ✅ اختيار طريقة التسعير -->
+    <label id="pricingModeLabel" class="small">
+      طريقة حساب تكلفة التوصيل
+    </label>
+    <select id="pricingModeSelect">
+  <option value="per_km" id="pricingModePerKmOption">
+    تسعيرة خاصة
+  </option>
+  <option value="independent_tiered" id="pricingModeIndependentOption">
+    تسعيرة Taussil
+  </option>
+</select>
+<!-- 🔗 سطر اللينك التعريفي -->
+<div class="pricing-info-link">
+  <button type="button" id="pricingInfoLink" class="link-button small">
+    شرح تسعيرة Taussil
+  </button>
+</div>
+    <!-- ✅ إعدادات النظام القديم (بالكيلومتر) يمكن إخفاؤها -->
+    <div id="perKmSettingsBox">
+      <label id="pricingDeliveryLabel" class="small">
+        سعر الكيلومتر من التاجر إلى نقطة التسليم (€)
+      </label>
+      <input id="pricePerKmDelivery" type="number" step="0.01" min="0" />
 
-                    <label style="display:flex; align-items:center; gap:6px; margin-top:8px;">
-                        <input id="includeToMerchantSegment" type="checkbox" />
-                        <span id="pricingIncludeLabel" class="small">
-                            احتساب المسافة من موقعي إلى التاجر
-                        </span>
-                    </label>
+      <label style="display:flex; align-items:center; gap:6px; margin-top:8px;">
+        <input id="includeToMerchantSegment" type="checkbox" />
+        <span id="pricingIncludeLabel" class="small">
+          احتساب المسافة من موقعي إلى التاجر
+        </span>
+      </label>
 
-                    <div style="margin-right:4px; margin-top:6px;">
-                        <label class="small" style="display:flex; align-items:center; gap:6px;">
-                            <input id="useSamePriceForBoth" type="checkbox" />
-                            <span id="pricingSamePriceLabel" class="small">
-                                استخدام نفس السعر للمسارين
-                            </span>
-                        </label>
-                    </div>
+      <div style="margin-right:4px; margin-top:6px;">
+        <label class="small" style="display:flex; align-items:center; gap:6px;">
+          <input id="useSamePriceForBoth" type="checkbox" />
+          <span id="pricingSamePriceLabel" class="small">
+            استخدام نفس السعر للمسارين
+          </span>
+        </label>
+      </div>
 
-                    <div id="toMerchantRow" style="margin-top:6px;">
-                        <label id="pricingToMerchantLabel" class="small">
-                            سعر الكيلومتر من موقعي إلى التاجر (€)
-                        </label>
-                        <input id="pricePerKmToMerchant" type="number" step="0.01" min="0" />
-                    </div>
+      <div id="toMerchantRow" style="margin-top:6px;">
+        <label id="pricingToMerchantLabel" class="small">
+          سعر الكيلومتر من موقعي إلى التاجر (€)
+        </label>
+        <input id="pricePerKmToMerchant" type="number" step="0.01" min="0" />
+      </div>
 
-                    <label id="pricingFreeKmLabel" class="small" style="margin-top:8px;">
-                        عدد الكيلومترات المجانية الأولى
-                    </label>
-                    <input id="freeKmInput" type="number" step="0.1" min="0" />
+      <label id="pricingFreeKmLabel" class="small" style="margin-top:8px;">
+        عدد الكيلومترات المجانية الأولى
+      </label>
+      <input id="freeKmInput" type="number" step="0.1" min="0" />
+    </div>
 
-                    <div class="btn-row">
-                        <button id="savePricingBtn">حفظ</button>
-                    </div>
+    <div class="btn-row">
+      <button id="savePricingBtn">حفظ</button>
+    </div>
 
-                    <div class="small" id="pricingBaseFeeHint" style="margin-top:4px;"></div>
-                </div>
-            </div>
+    <div class="small" id="pricingBaseFeeHint" style="margin-top:4px;"></div>
+  </div>
+</div>
 
             <!-- ✅ زر يفتح منبثق قانوني -->
             <button id="driverLegalBtn" class="driver-side-link">
@@ -1205,6 +1334,11 @@ const translations = {
     driverPhone_placeholder: "Phone number",
     driverPassword_placeholder: "Password (6+ characters)",
     register_submit: "Register driver",
+    driverType_label: "Driver type",
+    driverType_placeholder: "Select driver type",
+    driverType_independent: "Independent driver",
+    driverType_employee: "Driver employed by Taussil",
+    driverType_required: "Please choose your driver type.",
 
     // Login
     driver_login_title: "Driver login",
@@ -1233,9 +1367,12 @@ const translations = {
     logout: "Log out",
 
     // Stats
-    summary_active_orders: "Active orders",
+    summary_active_orders: "Cash",
     summary_completed_orders: "Previous orders",
     summary_earnings: "Earnings",
+
+summary_orders_count: "orders",
+summary_total_km: "Total distance",
 
     // Pricing (delivery settings)
     pricing_intro:
@@ -1254,6 +1391,35 @@ const translations = {
     pricing_error_to_merchant_price:
       "Please enter a valid price per kilometer from your location to the merchant.",
     pricing_saved_success: "Pricing settings saved successfully.",
+    pricing_mode_label: "Pricing model",
+    pricing_mode_per_km: "Custom pricing (per km)",
+pricing_mode_independent: "Taussil pricing (recommended)",
+pricing_mode_note_independent_only:
+  "Taussil pricing is the standard company model used for employed drivers. Custom pricing is mainly intended for independent drivers.",
+
+pricing_info_link_label: "How is the Taussil pricing calculated?",
+pricing_taussil_info_title: "Taussil pricing formula",
+pricing_taussil_info_intro:
+  "This pricing is the standard model used by Taussil for employed drivers and is also recommended in general. Independent drivers can still use it if they want. The cost is based on the order value and on the distance from merchant to customer only (driver → merchant distance is not counted).",
+
+pricing_taussil_info_example1:
+  "Example 1 – order value 20 € and distance 5 km:\n" +
+  "- Base fee (Grundgebühr): 3.50 € (because order ≤ 25 €)\n" +
+  "- First 5 km: 5 × 0.50 € = 2.50 €\n" +
+  "- Distance cost: 2.50 €\n" +
+  "- Total delivery cost: 3.50 € + 2.50 € = 6.00 €",
+
+pricing_taussil_info_example2:
+  "Example 2 – order value 40 € and distance 15 km:\n" +
+  "- Base fee (Grundgebühr): 40 € × 14% = 5.60 € (because order > 25 €)\n" +
+  "- First 7 km: 7 × 0.50 € = 3.50 €\n" +
+  "- Next 5 km (7–12 km): 5 × 0.80 € = 4.00 €\n" +
+  "- Remaining 3 km (> 12 km): 3 × 1.00 € = 3.00 €\n" +
+  "- Distance cost: 3.50 € + 4.00 € + 3.00 € = 10.50 €\n" +
+  "- Total delivery cost: 5.60 € + 10.50 € = 16.10 €",
+
+pricing_taussil_info_note:
+  "When you select \"Taussil pricing\", this formula is applied automatically for every completed order. No additional manual base fees or surcharges are added on top.",
 
     // Footer
     footer_text:
@@ -1287,6 +1453,11 @@ const translations = {
     orderDetails_deliveryCost: "Delivery fee",
     orderDetails_notes: "Notes",
     orderDetails_closeBtn: "Close",
+    orderDetails_paymentType: "Payment type",
+    orderDetails_cashAmount: "Cash amount",
+    paymentType_cash: "Cash payment",
+    paymentType_online: "Online payment",
+    paymentType_unknown: "Payment",
 
     // New call modal
     newCall_title: "New call from merchant",
@@ -1389,6 +1560,11 @@ const translations = {
     driverPhone_placeholder: "Telefonnummer",
     driverPassword_placeholder: "Passwort (mind. 6 Zeichen)",
     register_submit: "Fahrer registrieren",
+    driverType_label: "Fahrertyp",
+    driverType_placeholder: "Fahrertyp wählen",
+    driverType_independent: "Selbstständiger Fahrer",
+    driverType_employee: "Angestellter Fahrer bei Taussil",
+    driverType_required: "Bitte wähle deinen Fahrertyp.",
 
     driver_login_title: "Fahrer-Login",
     loginEmail_placeholder: "E-Mail",
@@ -1413,9 +1589,12 @@ const translations = {
     pricing_section_btn: "Lieferpreis-Einstellungen",
     logout: "Abmelden",
 
-    summary_active_orders: "Aktive Bestellungen",
+    summary_active_orders: "Bar",
     summary_completed_orders: "Frühere Bestellungen",
     summary_earnings: "Einnahmen",
+
+summary_orders_count: "Bestellungen",
+summary_total_km: "Gesamtstrecke",
 
     pricing_intro:
       "Lege deine Lieferpreise fest, damit jede Fahrt automatisch berechnet wird.",
@@ -1437,6 +1616,35 @@ const translations = {
       "Bitte gib einen gültigen Preis pro Kilometer von deinem Standort zum Händler ein.",
     pricing_saved_success:
       "Preis-Einstellungen wurden erfolgreich gespeichert.",
+    pricing_mode_label: "Berechnungsmodell",
+    pricing_mode_per_km: "Eigener Tarif (pro km)",
+pricing_mode_independent: "Taussil-Tarif (empfohlen)",
+pricing_mode_note_independent_only:
+  "Der Taussil-Tarif ist das Standardmodell für angestellte Fahrer von Taussil. Der eigene Tarif ist vor allem für selbstständige Fahrer gedacht.",
+
+pricing_info_link_label: "Wie wird der Taussil-Tarif berechnet?",
+pricing_taussil_info_title: "Taussil-Tarif – Berechnungsformel",
+pricing_taussil_info_intro:
+  "Dieser Tarif ist das Standardmodell von Taussil für angestellte Fahrer und wird generell empfohlen. Selbstständige Fahrer können ihn ebenfalls nutzen, wenn sie möchten. Die Kosten hängen vom Bestellwert und von der Strecke Händler → Kunde ab (die Strecke Fahrer → Händler wird nicht berechnet).",
+
+pricing_taussil_info_example1:
+  "Beispiel 1 – Bestellwert 20 € und Strecke 5 km:\n" +
+  "- Grundgebühr: 3,50 € (weil Bestellung ≤ 25 €)\n" +
+  "- Erste 5 km: 5 × 0,50 € = 2,50 €\n" +
+  "- Entfernungskosten: 2,50 €\n" +
+  "- Gesamte Liefergebühr: 3,50 € + 2,50 € = 6,00 €",
+
+pricing_taussil_info_example2:
+  "Beispiel 2 – Bestellwert 40 € und Strecke 15 km:\n" +
+  "- Grundgebühr: 40 € × 14 % = 5,60 € (weil Bestellung > 25 €)\n" +
+  "- Erste 7 km: 7 × 0,50 € = 3,50 €\n" +
+  "- Nächste 5 km (7–12 km): 5 × 0,80 € = 4,00 €\n" +
+  "- Verbleibende 3 km (> 12 km): 3 × 1,00 € = 3,00 €\n" +
+  "- Entfernungskosten: 3,50 € + 4,00 € + 3,00 € = 10,50 €\n" +
+  "- Gesamte Liefergebühr: 5,60 € + 10,50 € = 16,10 €",
+
+pricing_taussil_info_note:
+  "Wenn du den „Taussil-Tarif“ auswählst, wird diese Formel für jede abgeschlossene Bestellung automatisch angewendet. Es werden keine zusätzlichen manuellen Grundgebühren oder Zuschläge oben drauf gelegt.",
 
     footer_text:
       "Taussil e.K. – Beta-Version im Testbetrieb. Nutzung auf eigene Verantwortung.",
@@ -1470,6 +1678,12 @@ const translations = {
     orderDetails_deliveryCost: "Liefergebühr",
     orderDetails_notes: "Notizen",
     orderDetails_closeBtn: "Schließen",
+    orderDetails_paymentType: "Zahlungsart",
+    orderDetails_cashAmount: "Barbetrag",
+
+    paymentType_cash: "Barzahlung",
+    paymentType_online: "Onlinezahlung",
+    paymentType_unknown: "Zahlung",
 
     // New call modal
     newCall_title: "Neuer Auftrag vom Händler",
@@ -1582,6 +1796,11 @@ const translations = {
     driverPhone_placeholder: "رقم الهاتف",
     driverPassword_placeholder: "كلمة السر (6+ حروف)",
     register_submit: "تسجيل السائق",
+    driverType_label: "نوع السائق",
+    driverType_placeholder: "اختر نوع السائق",
+    driverType_independent: "سائق مستقل",
+    driverType_employee: "سائق موظف لدى Taussil",
+    driverType_required: "رجاءً اختر نوع السائق.",
 
     driver_login_title: "تسجيل الدخول (سائق)",
     loginEmail_placeholder: "البريد الإلكتروني",
@@ -1607,9 +1826,12 @@ const translations = {
     pricing_section_btn: "ضبط تكاليف التوصيل",
     logout: "تسجيل خروج",
 
-    summary_active_orders: "الطلبات الحالية",
+    summary_active_orders: "الكاش",
     summary_completed_orders: "الطلبات السابقة",
     summary_earnings: "الأرباح",
+
+summary_orders_count: "الطلبات",
+summary_total_km: "إجمالي المسافة المقطوعة",
 
     pricing_intro:
       "قم بضبط تسعيرة التوصيل ليتم احتساب تكلفة كل رحلة تلقائياً.",
@@ -1630,6 +1852,38 @@ const translations = {
     pricing_error_to_merchant_price:
       "رجاءً أدخل سعرًا صالحًا لكل كيلومتر من موقعك إلى التاجر.",
     pricing_saved_success: "تم حفظ إعدادات التسعير بنجاح.",
+    pricing_mode_label: "نموذج احتساب التكلفة",
+    pricing_mode_per_km: "تسعيرة خاصة",
+pricing_mode_independent: "تسعيرة Taussil (مستحسنة)",
+pricing_mode_note_independent_only:
+  "تسعيرة Taussil هي التسعيرة القياسية المعتمدة لموظفي Taussil، بينما التسعيرة الخاصة موجّهة بالدرجة الأولى للسائقين المستقلين.",
+
+pricing_info_link_label: "شرح تسعيرة Taussil",
+pricing_taussil_info_title: "معادلة تسعيرة Taussil",
+pricing_taussil_info_intro:
+  "هذه التسعيرة هي التسعيرة القياسية المعتمدة من Taussil لموظفي الشركة، وهي الموصى بها بشكل عام. ويمكن أيضاً للسائقين المستقلين استخدامها إذا رغبوا. يتم احتساب التكلفة بناءً على قيمة الطلب، وعلى مسافة المتجر → العميل فقط (مسافة السائق → المتجر لا تدخل في الحساب).",
+
+pricing_taussil_info_example1:
+  "مثال 1 – طلب بقيمة 20 € ومسافة 5 كم:\n" +
+  "- الرسم الأساسي (Grundgebühr): 3,50 € (لأن قيمة الطلب ≤ 25 €)\n" +
+  "- أول 5 كم: 5 × 0,50 € = 2,50 €\n" +
+  "- تكلفة المسافة: 2,50 €\n" +
+  "- إجمالي تكلفة التوصيل: 3,50 € + 2,50 € = 6,00 €",
+
+pricing_taussil_info_example2:
+  "مثال 2 – طلب بقيمة 40 € ومسافة 15 كم:\n" +
+  "- الرسم الأساسي (Grundgebühr): 40 € × ‎14‎% = 5,60 € (لأن قيمة الطلب > 25 €)\n" +
+  "- أول 7 كم: 7 × 0,50 € = 3,50 €\n" +
+  "- الـ 5 كم التالية (من 7 إلى 12): 5 × 0,80 € = 4,00 €\n" +
+  "- الـ 3 كم المتبقية (فوق 12 كم): 3 × 1,00 € = 3,00 €\n" +
+  "- تكلفة المسافة: 3,50 € + 4,00 € + 3,00 € = 10,50 €\n" +
+  "- إجمالي تكلفة التوصيل: 5,60 € + 10,50 € = 16,10 €",
+
+pricing_taussil_info_note:
+  "عند اختيار «تسعيرة Taussil» يتم تطبيق هذه المعادلة تلقائياً على كل طلب مكتمل، بدون إضافة رسوم ثابتة أو زيادات يدوية إضافية فوقها.",
+
+    pricing_mode_note_independent_only:
+  "تسعيرة Taussil مخصصة للسائقين المستقلين فقط.",
 
     footer_text:
       "Taussil e.K. – Beta-Version im Testbetrieb. Nutzung auf eigene Verantwortung.",
@@ -1663,6 +1917,12 @@ const translations = {
     orderDetails_deliveryCost: "تكلفة التوصيل",
     orderDetails_notes: "ملاحظات",
     orderDetails_closeBtn: "إغلاق",
+    orderDetails_paymentType: "طريقة الدفع",
+    orderDetails_cashAmount: "مبلغ الكاش",
+
+    paymentType_cash: "دفع نقدي",
+    paymentType_online: "دفع أونلاين",
+    paymentType_unknown: "دفع",
 
     // New call modal
     newCall_title: "نداء جديد من التاجر",
@@ -1772,6 +2032,11 @@ const translations = {
     driverPhone_placeholder: "Telefon numarası",
     driverPassword_placeholder: "Şifre (en az 6 karakter)",
     register_submit: "Sürücüyü kaydet",
+    driverType_label: "Sürücü tipi",
+    driverType_placeholder: "Sürücü tipi seçin",
+    driverType_independent: "Bağımsız sürücü",
+    driverType_employee: "Taussil çalışanı sürücü",
+    driverType_required: "Lütfen sürücü tipinizi seçin.",
 
     // Login
     driver_login_title: "Sürücü girişi",
@@ -1800,9 +2065,12 @@ const translations = {
     logout: "Çıkış yap",
 
     // Stats
-    summary_active_orders: "Aktif siparişler",
+    summary_active_orders: "Nakit",
     summary_completed_orders: "Geçmiş siparişler",
     summary_earnings: "Kazançlar",
+
+summary_orders_count: "sipariş",
+summary_total_km: "Toplam mesafe",
 
     // Pricing (delivery settings)
     pricing_intro:
@@ -1821,6 +2089,35 @@ const translations = {
     pricing_error_to_merchant_price:
       "Lütfen konumunuzdan işletmeye km başına geçerli bir fiyat girin.",
     pricing_saved_success: "Fiyatlandırma ayarları başarıyla kaydedildi.",
+    pricing_mode_label: "Fiyatlandırma modeli",
+    pricing_mode_per_km: "Özel fiyatlandırma (km bazlı)",
+pricing_mode_independent: "Taussil fiyatlandırması (önerilen)",
+pricing_mode_note_independent_only:
+  "Taussil fiyatlandırması, Taussil'e bağlı çalışan sürücüler için standart modeldir. Özel fiyatlandırma ise ağırlıklı olarak bağımsız sürücüler içindir.",
+
+pricing_info_link_label: "Taussil fiyatlandırması nasıl hesaplanır?",
+pricing_taussil_info_title: "Taussil fiyatlandırma formülü",
+pricing_taussil_info_intro:
+  "Bu fiyatlandırma, Taussil'in kadrolu sürücüleri için kullanılan standart modeldir ve genel olarak tavsiye edilir. Bağımsız sürücüler isterlerse bunu da kullanabilir. Ücret, sipariş tutarına ve yalnızca işletmeden müşteriye olan mesafeye göre hesaplanır (sürücü → işletme mesafesi hesaba katılmaz).",
+
+pricing_taussil_info_example1:
+  "Örnek 1 – Sipariş tutarı 20 € ve mesafe 5 km:\n" +
+  "- Temel ücret (Grundgebühr): 3,50 € (sipariş ≤ 25 € olduğu için)\n" +
+  "- İlk 5 km: 5 × 0,50 € = 2,50 €\n" +
+  "- Mesafe ücreti: 2,50 €\n" +
+  "- Toplam teslimat ücreti: 3,50 € + 2,50 € = 6,00 €",
+
+pricing_taussil_info_example2:
+  "Örnek 2 – Sipariş tutarı 40 € ve mesafe 15 km:\n" +
+  "- Temel ücret (Grundgebühr): 40 € × %14 = 5,60 € (sipariş > 25 € olduğu için)\n" +
+  "- İlk 7 km: 7 × 0,50 € = 3,50 €\n" +
+  "- Sonraki 5 km (7–12 km): 5 × 0,80 € = 4,00 €\n" +
+  "- Kalan 3 km (> 12 km): 3 × 1,00 € = 3,00 €\n" +
+  "- Mesafe ücreti: 3,50 € + 4,00 € + 3,00 € = 10,50 €\n" +
+  "- Toplam teslimat ücreti: 5,60 € + 10,50 € = 16,10 €",
+
+pricing_taussil_info_note:
+  "\"Taussil fiyatlandırmasını\" seçtiğinizde bu formül, tamamlanan her sipariş için otomatik olarak uygulanır. Üzerine ek manuel temel ücret veya ilave zam eklenmez.",
 
     // Footer
     footer_text:
@@ -1854,6 +2151,12 @@ const translations = {
     orderDetails_deliveryCost: "Teslimat ücreti",
     orderDetails_notes: "Notlar",
     orderDetails_closeBtn: "Kapat",
+    orderDetails_paymentType: "Ödeme türü",
+    orderDetails_cashAmount: "Nakit tutar",
+
+    paymentType_cash: "Nakit ödeme",
+    paymentType_online: "Online ödeme",
+    paymentType_unknown: "Ödeme",
 
     // New call modal
     newCall_title: "İşletmeden yeni çağrı",
@@ -2066,6 +2369,24 @@ function applyTranslations(lang) {
   if (cityInput && dict.city_placeholder) {
     cityInput.placeholder = dict.city_placeholder;
   }
+    const driverTypeLabelEl = document.getElementById("driverTypeLabel");
+  const driverTypePlaceholderEl = document.getElementById("driverTypePlaceholder");
+  const driverTypeOptionIndependentEl = document.getElementById("driverTypeOptionIndependent");
+  const driverTypeOptionEmployeeEl = document.getElementById("driverTypeOptionEmployee");
+
+  if (driverTypeLabelEl && dict.driverType_label) {
+    driverTypeLabelEl.textContent = dict.driverType_label;
+  }
+  if (driverTypePlaceholderEl && dict.driverType_placeholder) {
+    driverTypePlaceholderEl.textContent = dict.driverType_placeholder;
+  }
+  if (driverTypeOptionIndependentEl && dict.driverType_independent) {
+    driverTypeOptionIndependentEl.textContent = dict.driverType_independent;
+  }
+  if (driverTypeOptionEmployeeEl && dict.driverType_employee) {
+    driverTypeOptionEmployeeEl.textContent = dict.driverType_employee;
+  }
+
     const vehicleTypeLabelEl = document.getElementById("vehicleTypeLabel");
   if (vehicleTypeLabelEl && dict.vehicleType_label) {
     vehicleTypeLabelEl.textContent = dict.vehicleType_label;
@@ -2173,6 +2494,29 @@ function applyTranslations(lang) {
   if (pricingIntroEl && dict.pricing_intro) {
     pricingIntroEl.textContent = dict.pricing_intro;
   }
+  const pricingModeLabelEl = document.getElementById("pricingModeLabel");
+  const pricingModePerKmOptionEl = document.getElementById("pricingModePerKmOption");
+  const pricingModeIndependentOptionEl = document.getElementById("pricingModeIndependentOption");
+  const pricingModeNoteEl = document.getElementById("pricingModeNote");
+  const pricingInfoLinkEl = document.getElementById("pricingInfoLink");
+  if (pricingInfoLinkEl && dict.pricing_info_link_label) {
+    pricingInfoLinkEl.textContent = dict.pricing_info_link_label;
+  }
+
+  if (pricingModeLabelEl && dict.pricing_mode_label) {
+    pricingModeLabelEl.textContent = dict.pricing_mode_label;
+  }
+  if (pricingModePerKmOptionEl && dict.pricing_mode_per_km) {
+    pricingModePerKmOptionEl.textContent = dict.pricing_mode_per_km;
+  }
+  if (pricingModeIndependentOptionEl && dict.pricing_mode_independent) {
+    pricingModeIndependentOptionEl.textContent = dict.pricing_mode_independent;
+  }
+  if (pricingModeNoteEl && dict.pricing_mode_note_independent_only) {
+  pricingModeNoteEl.textContent = dict.pricing_mode_note_independent_only;
+}
+
+ 
 
   const pricingDeliveryLabel = document.getElementById("pricingDeliveryLabel");
   if (pricingDeliveryLabel && dict.pricing_label_delivery) {
@@ -2219,6 +2563,9 @@ function applyTranslations(lang) {
   if (Array.isArray(lastDriverCalls) && typeof renderDriverOrders === "function") {
     renderDriverOrders(lastDriverCalls);
   } else {
+    const isEmployee =
+      currentDriverData && currentDriverData.driverType === "employee";
+
     if (driverActiveCountEl) {
       driverActiveCountEl.innerHTML =
         t("summary_active_orders") + "<br><strong>0</strong>";
@@ -2227,15 +2574,37 @@ function applyTranslations(lang) {
       driverCompletedCountEl.innerHTML =
         t("summary_completed_orders") + "<br><strong>0</strong>";
     }
+
+    // صندوق القائمة الجانبية
     if (driverEarningsEl) {
-      const earningsText =
-        t("summary_earnings") + "<br><strong>0</strong>";
-      driverEarningsEl.innerHTML = earningsText;
-      if (driverEarningsFloatingEl) {
-        driverEarningsFloatingEl.innerHTML = earningsText;
+      driverEarningsEl.style.display = "";
+      const unit = t("distance_km_short");
+
+      if (isEmployee) {
+        driverEarningsEl.innerHTML =
+          t("summary_total_km") +
+          "<br><strong>0 " +
+          unit +
+          "</strong>";
+      } else {
+        const earningsText =
+          t("summary_earnings") + "<br><strong>0 €</strong>";
+        driverEarningsEl.innerHTML = earningsText;
+      }
+    }
+
+    // الشريط العلوي فوق الخريطة
+    if (driverEarningsFloatingEl) {
+      if (isEmployee) {
+        driverEarningsFloatingEl.innerHTML =
+          t("summary_orders_count") + "<br><strong>0</strong>";
+      } else {
+        driverEarningsFloatingEl.innerHTML =
+          t("summary_earnings") + "<br><strong>0 €</strong>";
       }
     }
   }
+
   // منبثق اعتماد السائق
   const driverApprovalTitleEl = document.getElementById("driverApprovalTitle");
   if (driverApprovalTitleEl && dict.driverApprovalModal_title) {
@@ -2350,6 +2719,10 @@ if (driverLegalBtn) {
 
 const pricingSettingsBtn = document.getElementById("pricingSettingsBtn");
 const toggleOnlineBtn = document.getElementById("toggleOnlineBtn");
+const pricingInfoLink = document.getElementById("pricingInfoLink");
+if (pricingInfoLink) {
+  pricingInfoLink.addEventListener("click", showTaussilPricingInfoModal);
+}
 
 // خريطة + قائمة جانبية
 const driverMapContainer = document.getElementById("driverMap");
@@ -2375,6 +2748,7 @@ const driverCurrentOrderEl = document.getElementById("driverCurrentOrder");
 
 
 const driverEarningsFloatingEl = document.getElementById("driverEarningsFloating");
+const cashFloatingBadgeEl = document.getElementById("cashFloatingBadge");
 
 const driverApprovalOverlay = document.getElementById("driverApprovalOverlay");
 const driverApprovalStartBtn = document.getElementById("driverApprovalStartBtn");
@@ -2444,6 +2818,27 @@ let navigationMode = null; // "merchant" أو "customer" حسب الهدف ال�
 let locationWatchId = null;
 let lastLocationUpdateAt = 0;
 const LOCATION_UPDATE_MIN_INTERVAL_MS = 7000; // كل ~7 ثواني كحد أدنى بين كل تحديث والتالي
+async function handleDriverLocationUpdate(lat, lng) {
+  // لو مافي سائق حالياً لا نعمل شيء
+  if (!driverUid) return;
+
+  const now = Date.now();
+  // ثروتل بسيط عشان ما نقصف Firestore بتحديثات كل ثانية
+  if (now - lastLocationUpdateAt < LOCATION_UPDATE_MIN_INTERVAL_MS) {
+    return;
+  }
+  lastLocationUpdateAt = now;
+
+  try {
+    await db.collection("drivers").doc(driverUid).update({
+      lat,
+      lng,
+      lastLocation: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (e) {
+    console.warn("تعذر تحديث موقع السائق في Firestore:", e);
+  }
+}
 
 // نقاط المتجر والعميل
 let merchantMarker = null;
@@ -2559,39 +2954,50 @@ driverForm.addEventListener("submit", async (e) => {
   const email = document.getElementById("driverEmail").value.trim();
   const phone = document.getElementById("driverPhone").value.trim();
   const password = document.getElementById("driverPassword").value;
-  const vehicleType = document.getElementById("vehicleType").value;
+    const vehicleType = document.getElementById("vehicleType").value;
+  const driverType = document.getElementById("driverType").value;
 
   if (password.length < 6) return alert(t("alert_password_too_short"));
-  if (!vehicleType) return alert(t("vehicleType_required"));
+  if (!driverType)   return alert(t("driverType_required"));
+  if (!vehicleType)  return alert(t("vehicleType_required"));
 
   try {
-  const userCredential = await auth.createUserWithEmailAndPassword(
-    email,
-    password
-  );
-  const uid = userCredential.user.uid;
+    const userCredential = await auth.createUserWithEmailAndPassword(
+      email,
+      password
+    );
+    const uid = userCredential.user.uid;
 
-  await db.collection("drivers").doc(uid).set({
-    firstName,
-    lastName,
-    address,
-    city,
-    email,
-    phone,
-    vehicleType,
-    role: "driver",
-    approvalStatus: "pending",
-    online: false,
-    busy: false,
-    lat: null,
-    lng: null,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-    pricePerKmDelivery: null,
-    includeToMerchantSegment: false,
-    useSamePriceForBoth: true,
-    pricePerKmToMerchant: null,
-    freeKm: 0
-  });
+    // 👇 اختيار نوع التسعيرة الابتدائي حسب نوع السائق
+    const initialPricingMode =
+      driverType === "employee" ? "independent_tiered" : "per_km";
+
+    await db.collection("drivers").doc(uid).set({
+      firstName,
+      lastName,
+      address,
+      city,
+      email,
+      phone,
+      vehicleType,
+      driverType, // ✅ نخزّن نوع السائق في الوثيقة
+      role: "driver",
+      approvalStatus: "pending",
+      online: false,
+      busy: false,
+      lat: null,
+      lng: null,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+
+      // ✅ تسعيرة ابتدائية حسب نوع السائق
+      pricingMode: initialPricingMode,
+
+      pricePerKmDelivery: null,
+      includeToMerchantSegment: false,
+      useSamePriceForBoth: true,
+      pricePerKmToMerchant: null,
+      freeKm: 0
+    });
 
   // ✅ افتح لوحة السائق مباشرة بعد التسجيل
   await showDriverDashboard(uid);
@@ -3078,6 +3484,17 @@ async function showDriverDashboard(uid) {
     return;
   }
   const driverData = driverDoc.data() || {};
+// 🧩 لو السائق "موظف لدى Taussil" نضمن أن التسعيرة = تسعيرة Taussil دائماً
+  if (driverData.driverType === "employee") {
+    if (driverData.pricingMode !== "independent_tiered") {
+      try {
+        await driverRef.update({ pricingMode: "independent_tiered" });
+        driverData.pricingMode = "independent_tiered";
+      } catch (e) {
+        console.warn("تعذر تحديث تسعيرة الموظف إلى Taussil:", e);
+      }
+    }
+  }
 
   currentDriverData = driverData;
   driverUid = uid;
@@ -3110,7 +3527,14 @@ async function showDriverDashboard(uid) {
 
   driverDashboard.classList.remove("hidden");
   document.body.classList.add("driver-mode");
-
+// زر إعداد تكاليف التوصيل: يظهر فقط للسائق المستقل
+  if (pricingSettingsBtn) {
+    if (driverData.driverType === "employee") {
+      pricingSettingsBtn.style.display = "none";
+    } else {
+      pricingSettingsBtn.style.display = "";
+    }
+  }
   // تهيئة خريطة السائق
   initDriverMap();
 
@@ -3216,6 +3640,59 @@ function escapeHtml(s) {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
   });
 }
+function getPaymentTypeLabel(o) {
+  const pt = (o && o.paymentType)
+    ? String(o.paymentType).toLowerCase()
+    : "";
+
+  if (pt === "cash") return t("paymentType_cash");
+  if (pt === "online") return t("paymentType_online");
+  return t("paymentType_unknown");
+}
+
+function formatCashAmount(o) {
+  if (!o) return "";
+  let amount = null;
+
+  if (typeof o.cashAmount === "number") {
+    amount = o.cashAmount;
+  } else if (typeof o.orderPrice === "number") {
+    amount = o.orderPrice;
+  }
+
+  if (amount == null || isNaN(amount)) return "";
+  return amount.toFixed(2) + " €";
+}
+function getCashAmountNumeric(o) {
+  if (!o) return 0;
+  if (!isCashOrder(o)) return 0;
+
+  // أولوية: cashAmount إن كانت موجودة رقمياً
+  if (typeof o.cashAmount === "number") {
+    return o.cashAmount;
+  }
+
+  // بديل: orderPrice لو الطلب الكاش بدون cashAmount مستقل
+  if (typeof o.orderPrice === "number") {
+    return o.orderPrice;
+  }
+
+  return 0;
+}
+
+function isCashOrder(o) {
+  if (!o) return false;
+
+  if (typeof o.paymentType === "string" &&
+      o.paymentType.toLowerCase() === "cash") {
+    return true;
+  }
+
+  if (o.collectCash === true) return true;
+
+  return false;
+}
+
 // تشغيل صوت عند وصول نداء جديد
 function playNewCallSound() {
   if (!callSoundEl) return;
@@ -4154,17 +4631,52 @@ function getCurrentActiveCall() {
 
 /* ========== إعدادات تسعير التوصيل (داخل القائمة الجانبية) ========== */
 function updatePricingFormUi() {
+  const pricingModeSelect = document.getElementById("pricingModeSelect");
+  const perKmBox = document.getElementById("perKmSettingsBox");
   const includeCheckbox = document.getElementById("includeToMerchantSegment");
   const useSameCheckbox = document.getElementById("useSamePriceForBoth");
   const toMerchantRow = document.getElementById("toMerchantRow");
+  const baseFeeHint = document.getElementById("pricingBaseFeeHint");
+
+  // 👇 سطر اللينك: شرح تسعيرة Taussil (الديف الذي أعطيتني إياه)
+  const taussilInfoRow = document.querySelector(".pricing-info-link");
+
+  const mode = pricingModeSelect ? pricingModeSelect.value : "per_km";
+
+  // 1) إظهار/إخفاء بلوك إعدادات الكيلومتر (النظام الحالي)
+  if (perKmBox) {
+    perKmBox.style.display = mode === "per_km" ? "block" : "none";
+  }
+
+  // 2) سطر "الرسم الأساسي الثابت لكل طلب يتم تسليمه: 3.50 €"
+  //    يظهر فقط مع "تسعيرة خاصة" (per_km)
+  if (baseFeeHint) {
+    baseFeeHint.style.display = mode === "per_km" ? "block" : "none";
+  }
+
+  // 3) سطر لينك "شرح تسعيرة Taussil" يظهر فقط مع "تسعيرة Taussil" (independent_tiered)
+  if (taussilInfoRow) {
+    taussilInfoRow.style.display =
+      mode === "independent_tiered" ? "block" : "none";
+  }
+
+  // 4) منطق صف "سعر من موقعي إلى التاجر"
   if (!includeCheckbox || !useSameCheckbox || !toMerchantRow) return;
 
+  // في تسعيرة Taussil لا نستخدم هذا الصف إطلاقاً
+  if (mode !== "per_km") {
+    toMerchantRow.style.display = "none";
+    return;
+  }
+
+  // في "تسعيرة خاصة" يبقى المنطق كما كان
   if (!includeCheckbox.checked) {
     useSameCheckbox.disabled = true;
     toMerchantRow.style.display = "none";
   } else {
     useSameCheckbox.disabled = false;
-    toMerchantRow.style.display = useSameCheckbox.checked ? "none" : "block";
+    toMerchantRow.style.display =
+      useSameCheckbox.checked ? "none" : "block";
   }
 }
 
@@ -4176,6 +4688,13 @@ function populatePricingFormFromData() {
   const toMerchantInput = document.getElementById("pricePerKmToMerchant");
   const freeKmInput = document.getElementById("freeKmInput");
   const baseFeeHint = document.getElementById("pricingBaseFeeHint");
+  const pricingModeSelect = document.getElementById("pricingModeSelect");
+
+  // ✅ ضبط نوع التسعير (افتراضي per_km)
+  const mode = d.pricingMode || "per_km";
+  if (pricingModeSelect) {
+    pricingModeSelect.value = mode;
+  }
 
   if (!deliveryInput || !includeCheckbox || !useSameCheckbox || !toMerchantInput || !freeKmInput) {
     return;
@@ -4189,8 +4708,8 @@ function populatePricingFormFromData() {
     d.pricePerKmToMerchant != null ? d.pricePerKmToMerchant : "";
   freeKmInput.value = d.freeKm != null ? d.freeKm : 0;
 
-    if (baseFeeHint) {
-    const template = t("pricing_base_fee_hint"); // فيها {fee}
+  if (baseFeeHint) {
+    const template = t("pricing_base_fee_hint");
     const feeText = BASE_DELIVERY_FEE.toFixed(2);
     baseFeeHint.textContent = template.replace("{fee}", feeText);
   }
@@ -4199,53 +4718,74 @@ function populatePricingFormFromData() {
 }
 
 async function savePricingSettings() {
+  const pricingModeSelect = document.getElementById("pricingModeSelect");
   const deliveryInput = document.getElementById("pricePerKmDelivery");
   const includeCheckbox = document.getElementById("includeToMerchantSegment");
   const useSameCheckbox = document.getElementById("useSamePriceForBoth");
   const toMerchantInput = document.getElementById("pricePerKmToMerchant");
   const freeKmInput = document.getElementById("freeKmInput");
 
-  let deliveryPrice = parseFloat(
-    (deliveryInput.value || "").replace(",", ".")
-  );
-  if (isNaN(deliveryPrice) || deliveryPrice <= 0) {
-alert(t("pricing_error_delivery_price"));
-    return;
-  }
+  const mode = pricingModeSelect ? pricingModeSelect.value || "per_km" : "per_km";
 
-  const includeToMerchant = includeCheckbox.checked;
-  const useSameForBoth = includeToMerchant
-    ? useSameCheckbox.checked
-    : false;
-
-  let toMerchantPrice = null;
-  if (includeToMerchant) {
-    if (useSameForBoth) {
-      toMerchantPrice = deliveryPrice;
-    } else {
-      let raw = parseFloat(
-        (toMerchantInput.value || "").replace(",", ".")
-      );
-      if (isNaN(raw) || raw < 0) {
-        alert(t("pricing_error_to_merchant_price"));
-        return;
-      }
-      toMerchantPrice = raw;
-    }
-  }
-
-  let freeKm = parseFloat(
-    (freeKmInput.value || "").replace(",", ".")
-  );
-  if (isNaN(freeKm) || freeKm < 0) freeKm = 0;
-
-  const updateData = {
-    pricePerKmDelivery: deliveryPrice,
-    includeToMerchantSegment: includeToMerchant,
-    useSamePriceForBoth: useSameForBoth,
-    pricePerKmToMerchant: includeToMerchant ? toMerchantPrice : null,
-    freeKm: freeKm
+  let updateData = {
+    pricingMode: mode
   };
+
+  if (mode === "independent_tiered") {
+    // ✅ النموذج الجديد: لا نحتاج أسعار الكيلومتر
+    updateData = {
+      pricingMode: "independent_tiered",
+      pricePerKmDelivery: null,
+      includeToMerchantSegment: false,
+      useSamePriceForBoth: true,
+      pricePerKmToMerchant: null,
+      freeKm: 0
+    };
+  } else {
+    // 🔁 النموذج القديم per_km كما كان
+    let deliveryPrice = parseFloat(
+      (deliveryInput.value || "").replace(",", ".")
+    );
+    if (isNaN(deliveryPrice) || deliveryPrice <= 0) {
+      alert(t("pricing_error_delivery_price"));
+      return;
+    }
+
+    const includeToMerchant = includeCheckbox.checked;
+    const useSameForBoth = includeToMerchant
+      ? useSameCheckbox.checked
+      : false;
+
+    let toMerchantPrice = null;
+    if (includeToMerchant) {
+      if (useSameForBoth) {
+        toMerchantPrice = deliveryPrice;
+      } else {
+        let raw = parseFloat(
+          (toMerchantInput.value || "").replace(",", ".")
+        );
+        if (isNaN(raw) || raw < 0) {
+          alert(t("pricing_error_to_merchant_price"));
+          return;
+        }
+        toMerchantPrice = raw;
+      }
+    }
+
+    let freeKm = parseFloat(
+      (freeKmInput.value || "").replace(",", ".")
+    );
+    if (isNaN(freeKm) || freeKm < 0) freeKm = 0;
+
+    updateData = {
+      pricingMode: "per_km",
+      pricePerKmDelivery: deliveryPrice,
+      includeToMerchantSegment: includeToMerchant,
+      useSamePriceForBoth: useSameForBoth,
+      pricePerKmToMerchant: includeToMerchant ? toMerchantPrice : null,
+      freeKm: freeKm
+    };
+  }
 
   try {
     await db.collection("drivers").doc(driverUid).update(updateData);
@@ -4259,16 +4799,23 @@ alert(t("pricing_error_delivery_price"));
   }
 }
 
+
+
 const savePricingBtn = document.getElementById("savePricingBtn");
 if (savePricingBtn) {
   savePricingBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    savePricingSettings();
+    e.preventDefault();          // يمنع أي submit/reload
+    savePricingSettings();       // هنا يتم الحفظ فعلياً
   });
 }
 
 const includeCheckboxElm = document.getElementById("includeToMerchantSegment");
 const useSameCheckboxElm = document.getElementById("useSamePriceForBoth");
+const pricingModeSelect = document.getElementById("pricingModeSelect");
+if (pricingModeSelect) {
+  pricingModeSelect.addEventListener("change", updatePricingFormUi);
+}
+
 if (includeCheckboxElm && useSameCheckboxElm) {
   includeCheckboxElm.addEventListener("change", updatePricingFormUi);
   useSameCheckboxElm.addEventListener("change", updatePricingFormUi);
@@ -4373,6 +4920,44 @@ function showOrderCancelledByMerchantModal(call) {
       );
     };
   }
+}
+function showTaussilPricingInfoModal() {
+  if (!modalContent || !modalBackdrop) return;
+
+  function nl2brEsc(str) {
+    return escapeHtml(str || "").replace(/\n/g, "<br>");
+  }
+
+  const title = t("pricing_taussil_info_title");
+  const intro = t("pricing_taussil_info_intro");
+  const ex1 = t("pricing_taussil_info_example1");
+  const ex2 = t("pricing_taussil_info_example2");
+  const note = t("pricing_taussil_info_note");
+
+  modalContent.innerHTML = `
+    <div><strong>${escapeHtml(title)}</strong></div>
+    <div class="small" style="margin-top:8px;">
+      ${nl2brEsc(intro)}
+    </div>
+    <div class="small" style="margin-top:10px;">
+      ${nl2brEsc(ex1)}
+    </div>
+    <div class="small" style="margin-top:10px;">
+      ${nl2brEsc(ex2)}
+    </div>
+    <div class="small" style="margin-top:10px;">
+      ${nl2brEsc(note)}
+    </div>
+    <div class="btn-row" style="margin-top:14px;">
+      <button class="secondary" onclick="closeOrderModal()">
+        ${t("orderDetails_closeBtn")}
+      </button>
+    </div>
+  `;
+
+  if (orderModalEl) orderModalEl.classList.remove("hidden");
+  modalBackdrop.style.display = "flex";
+  window.scrollTo(0, 0);
 }
 
 /* ========== استماع لطلبات السائق من drivers/{driverId}/calls ========== */
@@ -4491,28 +5076,36 @@ async function updateDriverCallAndMerchant(callId, dataPatch) {
 function renderDriverCurrentOrder(call) {
   if (!driverCurrentOrderEl) return;
 
-  // لا يوجد طلب نشط → إخفاء الكرت تماماً
+  const isEmployee =
+    currentDriverData && currentDriverData.driverType === "employee";
+
+  // لا يوجد طلب نشط → إخفاء الكرت
   if (!call) {
     driverCurrentOrderEl.classList.add("hidden");
     driverCurrentOrderEl.innerHTML = "";
     driverCurrentOrderEl.classList.remove("collapsed");
+    driverCurrentOrderEl.classList.remove("cash-current-order");
     currentOrderCollapsed = false;
     return;
   }
 
   const statusLabel = escapeHtml(getStatusLabel(call.status));
-  const feeLabel =
-    call.cost && typeof call.cost.totalFee === "number"
-      ? call.cost.totalFee.toFixed(2) + " €"
-      : call.deliveryFee != null
-      ? escapeHtml(call.deliveryFee) + ""
-      : "—";
+  const isCash = isCashOrder(call);
+
+  let feeValue = "—";
+  if (call.cost && typeof call.cost.totalFee === "number") {
+    feeValue = call.cost.totalFee.toFixed(2) + " €";
+  } else if (call.deliveryFee != null) {
+    feeValue = String(call.deliveryFee);
+  }
+
+  const feeHtml = isCash
+    ? `<span class="cash-amount-highlight">${escapeHtml(feeValue)}</span>`
+    : escapeHtml(feeValue);
 
   let buttonsHtml = "";
   const statusCode = (call.status || "accepted").toLowerCase();
 
-  // ✅ من لحظة قبول الطلب (accepted / in_progress / heading_to_customer)
-  // يظهر فقط زر "تم التسليم" داخل الكرت
   if (
     statusCode === "accepted" ||
     statusCode === "in_progress" ||
@@ -4525,7 +5118,12 @@ function renderDriverCurrentOrder(call) {
     `;
   }
 
-  // ❌ لا نضيف زر "التوجه إلى التاجر" هنا نهائياً (هذا صار من زر القبول)
+  // سطر التكلفة يظهر فقط لغير الموظف
+  const costLineHtml = !isEmployee
+    ? `<div class="small">
+         ${t("currentOrder_expectedCost")}: ${feeHtml}
+       </div>`
+    : "";
 
   driverCurrentOrderEl.innerHTML = `
     <div class="driver-current-order-header">
@@ -4533,33 +5131,36 @@ function renderDriverCurrentOrder(call) {
         <div><strong>#${call.id}</strong> — ${escapeHtml(call.merchantName || "")}</div>
         <span class="small">${statusLabel}</span>
       </div>
-      <button type="button" class="driver-current-order-toggle" onclick="toggleCurrentOrderPanel()">▼</button>
+      <button type="button"
+              class="driver-current-order-toggle"
+              onclick="window.toggleCurrentOrderPanel && window.toggleCurrentOrderPanel()">
+        ▼
+      </button>
     </div>
     <div class="driver-current-order-body">
       <div class="small">
-        ${escapeHtml(call.deliveryAddress || "-")}<br/>
-        ${t("currentOrder_expectedCost")}: ${feeLabel}
+        ${escapeHtml(call.deliveryAddress || "-")}
       </div>
+      ${costLineHtml}
       <div class="btn-row">
         ${buttonsHtml}
       </div>
     </div>
   `;
 
-  // 🔒 دائماً: الكرت يظهر في وضع "مغلق"
+  driverCurrentOrderEl.classList.toggle("cash-current-order", isCash);
+
   driverCurrentOrderEl.classList.remove("hidden");
   driverCurrentOrderEl.classList.add("collapsed");
   currentOrderCollapsed = true;
 
   const toggleBtn = driverCurrentOrderEl.querySelector(".driver-current-order-toggle");
   if (toggleBtn) {
-    // بما أن الكرت مغلق → نعرض سهم لأعلى (لفتحه)
     toggleBtn.textContent = "▲";
   }
 }
 
-// زر طيّ/إظهار بطاقة الطلب النشط (Bottom Sheet)
-window.toggleCurrentOrderPanel = function (forceCollapse) {
+function toggleCurrentOrderPanel(forceCollapse) {
   if (!driverCurrentOrderEl || driverCurrentOrderEl.classList.contains("hidden")) return;
 
   if (typeof forceCollapse === "boolean") {
@@ -4576,9 +5177,45 @@ window.toggleCurrentOrderPanel = function (forceCollapse) {
 
   const toggleBtn = driverCurrentOrderEl.querySelector(".driver-current-order-toggle");
   if (toggleBtn) {
+    // لما يكون الكرت مطوي نعرض سهم لأعلى لفتحه
     toggleBtn.textContent = currentOrderCollapsed ? "▲" : "▼";
   }
-};
+}
+
+// نضمن وجودها أيضاً على window لو احتجت
+window.toggleCurrentOrderPanel = toggleCurrentOrderPanel;
+function updateCashFloatingBadge(call) {
+  if (!cashFloatingBadgeEl) return;
+
+  // لا يوجد طلب نشط أو الطلب ليس كاش → إخفاء الشارة
+  if (!call || !isCashOrder(call)) {
+    cashFloatingBadgeEl.classList.add("hidden");
+    cashFloatingBadgeEl.textContent = "";
+    return;
+  }
+
+  // حساب مبلغ الكاش
+  let amount = null;
+
+  if (typeof call.cashAmount === "number") {
+    amount = call.cashAmount;
+  } else if (typeof call.orderPrice === "number") {
+    amount = call.orderPrice;
+  }
+
+  if (amount == null || isNaN(amount) || amount <= 0) {
+    cashFloatingBadgeEl.classList.add("hidden");
+    cashFloatingBadgeEl.textContent = "";
+    return;
+  }
+
+  const formatted = amount.toFixed(2) + " €";
+
+  cashFloatingBadgeEl.innerHTML = `
+    <span class="cash-floating-badge-inner">${escapeHtml(formatted)}</span>
+  `;
+  cashFloatingBadgeEl.classList.remove("hidden");
+}
 
 /* ========== عرض طلبات السائق (من calls) + الإحصاءات ========== */
 function renderDriverOrders(allCalls) {
@@ -4602,14 +5239,28 @@ function renderDriverOrders(allCalls) {
     );
   });
 
-  // الإحصاءات العلوية
-  if (driverActiveCountEl) {
-    driverActiveCountEl.innerHTML =
-      t("summary_active_orders") +
-      "<br><strong>" +
-      active.length +
-      "</strong>";
-  }
+  const isEmployee =
+    currentDriverData && currentDriverData.driverType === "employee";
+
+  // 1) الإحصاءات العلوية (عدد الطلبات الحالية والسابقة)
+  // إجمالي الكاش في الطلبات الحالية
+const activeCashTotal = active.reduce((sum, c) => {
+  return sum + getCashAmountNumeric(c);
+}, 0);
+
+if (driverActiveCountEl) {
+  // مجموع الكاش لكل الطلبات الكاش (نشطة + سابقة)
+  const totalCashAll = lastDriverCalls.reduce((sum, c) => {
+    return sum + getCashAmountNumeric(c);
+  }, 0);
+
+  driverActiveCountEl.innerHTML =
+    t("summary_active_orders") +
+    "<br><strong>" +
+    totalCashAll.toFixed(2) +
+    " €</strong>";
+}
+
   if (driverCompletedCountEl) {
     driverCompletedCountEl.innerHTML =
       t("summary_completed_orders") +
@@ -4618,41 +5269,75 @@ function renderDriverOrders(allCalls) {
       "</strong>";
   }
 
+  // 2) إجمالي الكيلومترات من الطلبات المكتملة
+  const totalKmAll = completed.reduce((sum, c) => {
+    if (c.distance && typeof c.distance.totalKm === "number") {
+      return sum + c.distance.totalKm;
+    }
+    return sum;
+  }, 0);
+  const totalKmText = totalKmAll.toFixed(2);
+  const unit = t("distance_km_short");
+
+  // 3) إجمالي الأرباح (لغير الموظف فقط)
   const totalEarnings = completed.reduce((sum, c) => {
-  if (c.cost && typeof c.cost.totalFee === "number") {
-    return sum + c.cost.totalFee;
+    if (c.cost && typeof c.cost.totalFee === "number") {
+      return sum + c.cost.totalFee;
+    }
+    return sum + (c.deliveryFee || 0);
+  }, 0);
+  const earningsValue = totalEarnings.toFixed(2);
+
+  // 4) صندوق القائمة الجانبية: موظف → إجمالي كم، غير موظف → أرباح
+  if (driverEarningsEl) {
+    driverEarningsEl.style.display = "";
+    if (isEmployee) {
+      driverEarningsEl.innerHTML =
+        t("summary_total_km") +
+        "<br><strong>" +
+        totalKmText +
+        " " +
+        unit +
+        "</strong>";
+    } else {
+      driverEarningsEl.innerHTML =
+        t("summary_earnings") +
+        "<br><strong>" +
+        earningsValue +
+        " €</strong>";
+    }
   }
-  return sum + (c.deliveryFee || 0);
-}, 0);
 
-const earningsValue = totalEarnings.toFixed(2);
+  // 5) الشريط العلوي فوق الخريطة: موظف → عدد الطلبات، غير موظف → أرباح
+  const ordersCount = (allCalls || []).length;
+  if (driverEarningsFloatingEl) {
+    if (isEmployee) {
+      driverEarningsFloatingEl.innerHTML =
+        t("summary_orders_count") +
+        "<br><strong>" +
+        ordersCount +
+        "</strong>";
+    } else {
+      driverEarningsFloatingEl.innerHTML =
+        t("summary_earnings") +
+        "<br><strong>" +
+        earningsValue +
+        " €</strong>";
+    }
+  }
 
-// الإحصائية داخل القائمة الجانبية (بدون € أو مع، حسب رغبتك)
-if (driverEarningsEl) {
-  driverEarningsEl.innerHTML =
-    t("summary_earnings") +
-    "<br><strong>" +
-    earningsValue +
-    "€</strong>";
-}
-
-// الشريط العلوي العائم للأرباح (مع €)
-if (driverEarningsFloatingEl) {
-  driverEarningsFloatingEl.innerHTML =
-    t("summary_earnings") +
-    "<br><strong>" +
-    earningsValue +
-    " €</strong>";
-}
-
-
-  // الطلب النشط في الكرت العائم
+  // 6) كرت الطلب النشط (أسفل الشاشة)
     const currentActiveCall = getCurrentActiveCall();
+
+  // كرت الطلب النشط أسفل الشاشة
   renderDriverCurrentOrder(currentActiveCall);
+
+  // ✅ تحديث شارة الكاش العائمة على الخريطة
+  updateCashFloatingBadge(currentActiveCall);
+
   const currentActiveId = currentActiveCall ? currentActiveCall.id : null;
 
-
-  // إظهار/إخفاء كبسولة الحالة السفلية
+  // 7) إظهار/إخفاء كبسولة الحالة السفلية
   if (driverBottomStatusEl) {
     if (active.length > 0) {
       driverBottomStatusEl.classList.add("hidden");
@@ -4661,35 +5346,54 @@ if (driverEarningsFloatingEl) {
     }
   }
 
+  // 8) تفريغ القوائم
   if (driverActiveOrdersEl) driverActiveOrdersEl.innerHTML = "";
   if (driverCompletedOrdersEl) driverCompletedOrdersEl.innerHTML = "";
 
   const statusLabelTitle = t("orderCard_status");
   const addressLabelTitle = t("orderCard_address");
   const expectedCostTitle = t("orderCard_expectedCost");
+  const totalDistanceTitle = t("orderCard_totalDistance");
+  const finalCostTitle = t("orderCard_finalCost");
 
-    // الطلبات الحالية
+  // 9) الطلبات الحالية (Active)
   active.forEach((c) => {
     const card = document.createElement("div");
     const isCurrent = currentActiveId && c.id === currentActiveId;
-    card.className = "order-card" + (isCurrent ? " order-card-current" : "");
+    const isCash = isCashOrder(c);
+
+    card.className =
+      "order-card" +
+      (isCurrent ? " order-card-current" : "") +
+      (isCash ? " order-card-cash" : "");
 
     const statusLabel = escapeHtml(getStatusLabel(c.status));
-    const feeLabel =
-      c.cost && typeof c.cost.totalFee === "number"
-        ? c.cost.totalFee.toFixed(2) + " €"
-        : c.deliveryFee != null
-        ? escapeHtml(c.deliveryFee) + ""
-        : "—";
+
+    let feeValue = "—";
+    if (c.cost && typeof c.cost.totalFee === "number") {
+      feeValue = c.cost.totalFee.toFixed(2) + " €";
+    } else if (c.deliveryFee != null) {
+      feeValue = String(c.deliveryFee);
+    }
+
+    const feeHtml = isCash
+      ? `<span class="cash-amount-highlight">${escapeHtml(feeValue)}</span>`
+      : escapeHtml(feeValue);
+
+    // سطر التكلفة يظهر فقط لغير الموظف
+    const costLineActive = !isEmployee
+      ? `${expectedCostTitle}: ${feeHtml}<br/>`
+      : "";
 
     card.innerHTML = `
       <div>
         <strong>#${c.id}</strong><br/>
         <span class="small">${statusLabelTitle}: ${statusLabel}</span><br/>
         ${addressLabelTitle}: ${escapeHtml(c.deliveryAddress || "-")}<br/>
-        ${expectedCostTitle}: ${feeLabel}
+        ${costLineActive}
       </div>
     `;
+
     if (driverActiveOrdersEl) {
       driverActiveOrdersEl.appendChild(card);
     }
@@ -4699,36 +5403,45 @@ if (driverEarningsFloatingEl) {
     });
   });
 
-  // الطلبات السابقة
-  const distanceUnit = t("distance_km_short");
-  const totalDistanceTitle = t("orderCard_totalDistance");
-  const finalCostTitle = t("orderCard_finalCost");
-
+  // 10) الطلبات السابقة (Completed)
   completed.forEach((c) => {
     const card = document.createElement("div");
-    card.className = "order-card";
+    const isCash = isCashOrder(c);
+    card.className = "order-card" + (isCash ? " order-card-cash" : "");
 
     const statusLabel = escapeHtml(getStatusLabel(c.status));
-    const totalKm =
+
+    const totalKmLabel =
       c.distance && typeof c.distance.totalKm === "number"
-        ? c.distance.totalKm.toFixed(2) + " " + distanceUnit
+        ? c.distance.totalKm.toFixed(2) + " " + unit
         : "—";
-    const feeLabel =
-      c.cost && typeof c.cost.totalFee === "number"
-        ? c.cost.totalFee.toFixed(2) + " €"
-        : c.deliveryFee != null
-        ? escapeHtml(c.deliveryFee) + ""
-        : "—";
+
+    let feeValue = "—";
+    if (c.cost && typeof c.cost.totalFee === "number") {
+      feeValue = c.cost.totalFee.toFixed(2) + " €";
+    } else if (c.deliveryFee != null) {
+      feeValue = String(c.deliveryFee);
+    }
+
+    const feeHtml = isCash
+      ? `<span class="cash-amount-highlight">${escapeHtml(feeValue)}</span>`
+      : escapeHtml(feeValue);
+
+    // سطر التكلفة يظهر فقط لغير الموظف
+    const costLineCompleted = !isEmployee
+      ? `${finalCostTitle}: ${feeHtml}<br/>`
+      : "";
 
     card.innerHTML = `
       <div>
         <strong>#${c.id}</strong><br/>
         <span class="small">${statusLabelTitle}: ${statusLabel}</span><br/>
         ${addressLabelTitle}: ${escapeHtml(c.deliveryAddress || "-")}<br/>
-        ${totalDistanceTitle}: ${totalKm}<br/>
-        ${finalCostTitle}: ${feeLabel}
+        ${totalDistanceTitle}: ${totalKmLabel}<br/>
+        ${costLineCompleted}
       </div>
     `;
+
     if (driverCompletedOrdersEl) {
       driverCompletedOrdersEl.appendChild(card);
     }
@@ -4738,9 +5451,8 @@ if (driverEarningsFloatingEl) {
     });
   });
 
-    // نص الكبسولة السفلية (مترجم)
+  // 11) نص الكبسولة السفلية (كما كان، فقط يعتمد على حالة الحساب والطلبات)
   if (driverStatusTextEl) {
-    // ⛔ لو الحساب غير معتمد → نعرض رسالة الانتظار دائماً
     if (driverApprovalStatus !== "approved") {
       driverStatusTextEl.textContent = t("driver_not_approved_hint");
     } else if (active.length > 0) {
@@ -4766,6 +5478,9 @@ window.viewDriverCallDetails = async function (callId) {
     alert(t("alert_currentDriverNotSet"));
     return;
   }
+
+  const isEmployee =
+    currentDriverData && currentDriverData.driverType === "employee";
 
   try {
     const doc = await db
@@ -4797,7 +5512,7 @@ window.viewDriverCallDetails = async function (callId) {
       html += `<div class="small">${t("orderDetails_deliveredAt")}: ${formatDate(o.deliveredAt.toDate())}</div>`;
     }
 
-    const distanceLabel =
+const distanceLabel =
       o.distance && typeof o.distance.totalKm === "number"
         ? o.distance.totalKm.toFixed(2) + " " + distanceUnit
         : "—";
@@ -4809,12 +5524,27 @@ window.viewDriverCallDetails = async function (callId) {
       feeLabel = escapeHtml(o.deliveryFee) + "";
     }
 
+    // ✅ بيانات الكاش لعرضها
+    const paymentTypeLabel = getPaymentTypeLabel(o);
+    const cashAmountStr = formatCashAmount(o);
+
     html += `<div style="margin-top:8px;">`;
     html += `<div>${t("orderDetails_merchant")}: ${escapeHtml(o.merchantName || "-")} (${escapeHtml(o.merchantCity || "-")})</div>`;
     html += `<div>${t("orderDetails_customerName")}: ${escapeHtml(o.customerName || "-")}</div>`;
     html += `<div>${t("orderDetails_address")}: ${escapeHtml(o.deliveryAddress || "-")}</div>`;
+
+    if (paymentTypeLabel) {
+      html += `<div>${t("orderDetails_paymentType")}: ${escapeHtml(paymentTypeLabel)}</div>`;
+    }
+  if (cashAmountStr) {
+    html += `<div class="small">${t("orderDetails_cashAmount")}: <span class="cash-amount-highlight">${escapeHtml(cashAmountStr)}</span></div>`;
+  }
+
     html += `<div>${t("orderDetails_totalDistance")}: ${distanceLabel}</div>`;
-    html += `<div>${t("orderDetails_deliveryCost")}: ${feeLabel}</div>`;
+    // سطر تكلفة التوصيل يظهر فقط لغير الموظفين
+    if (!isEmployee) {
+      html += `<div>${t("orderDetails_deliveryCost")}: ${feeLabel}</div>`;
+    }
     html += `<div>${t("orderDetails_notes")}: ${escapeHtml(o.notes || "-")}</div>`;
     html += `</div>`;
 
@@ -4838,11 +5568,25 @@ function showCallModalForDriver(call) {
       ? formatDate(call.createdAt.toDate())
       : "";
 
+  const paymentTypeLabel = getPaymentTypeLabel(call);
+  const cashAmountStr = formatCashAmount(call);
+
   let html = `
     <div><strong>${t("newCall_title")}</strong></div>
     <div class="small">${t("newCall_merchant")}: ${escapeHtml(call.merchantName || "")}</div>
     <div class="small">${t("newCall_city")}: ${escapeHtml(call.merchantCity || "")}</div>
     <div class="small">${t("newCall_time")}: ${when}</div>
+  `;
+
+  if (paymentTypeLabel) {
+    html += `<div class="small">${t("orderDetails_paymentType")}: ${escapeHtml(paymentTypeLabel)}</div>`;
+  }
+    if (cashAmountStr) {
+    html += `<div class="small">${t("orderDetails_cashAmount")}: <span class="cash-amount-highlight">${escapeHtml(cashAmountStr)}</span></div>`;
+  }
+
+
+  html += `
     <div style="margin-top:10px;">${t("newCall_question")}</div>
     <div class="btn-row">
       <button id="acceptCallBtn">${t("newCall_btn_accept")}</button>
@@ -4871,23 +5615,43 @@ function showCallModalForDriver(call) {
       const driverCallRef = driverRef.collection("calls").doc(call.id);
 
       const driverPricing = currentDriverData || {};
-      const pricing = {
-        baseFee: BASE_DELIVERY_FEE,
-        pricePerKmDelivery:
-          typeof driverPricing.pricePerKmDelivery === "number"
-            ? driverPricing.pricePerKmDelivery
-            : null,
-        includeToMerchantSegment: !!driverPricing.includeToMerchantSegment,
-        useSamePriceForBoth: driverPricing.useSamePriceForBoth !== false,
-        pricePerKmToMerchant:
-          typeof driverPricing.pricePerKmToMerchant === "number"
-            ? driverPricing.pricePerKmToMerchant
-            : null,
-        freeKm:
-          typeof driverPricing.freeKm === "number"
-            ? driverPricing.freeKm
-            : 0
-      };
+// الشرط الوحيد: ما تم حفظه في إعدادات السائق
+const pricingMode = driverPricing.pricingMode || "per_km";
+
+const pricing = {
+  pricingMode: pricingMode,
+
+  // عند معادلة الشركة (independent_tiered) لا نستخدم baseFee نهائياً
+  baseFee: pricingMode === "per_km" ? BASE_DELIVERY_FEE : 0,
+
+  pricePerKmDelivery:
+    typeof driverPricing.pricePerKmDelivery === "number"
+      ? driverPricing.pricePerKmDelivery
+      : null,
+  includeToMerchantSegment: !!driverPricing.includeToMerchantSegment,
+  useSamePriceForBoth: driverPricing.useSamePriceForBoth !== false,
+  pricePerKmToMerchant:
+    typeof driverPricing.pricePerKmToMerchant === "number"
+      ? driverPricing.pricePerKmToMerchant
+      : null,
+  freeKm:
+    typeof driverPricing.freeKm === "number"
+      ? driverPricing.freeKm
+      : 0
+};
+
+      // ✅ تجهيز بيانات الكاش
+      const orderPrice =
+        typeof call.orderPrice === "number" ? call.orderPrice : null;
+
+      const paymentType =
+        call.paymentType ||
+        (call.collectCash ? "cash" : "online");
+
+      const cashAmount =
+        typeof call.cashAmount === "number"
+          ? call.cashAmount
+          : (call.collectCash && orderPrice != null ? orderPrice : null);
 
       const driverCallData = {
         merchantId: call.merchantId,
@@ -4904,12 +5668,22 @@ function showCallModalForDriver(call) {
           call.createdAt || firebase.firestore.FieldValue.serverTimestamp(),
         respondedAt: firebase.firestore.FieldValue.serverTimestamp(),
         merchantCallPath: call.ref.path,
+
+        // ✅ هنا نضيف حقول الكاش في وثيقة السائق
+        orderPrice: orderPrice,
+        collectCash: !!call.collectCash,
+        paymentType: paymentType,
+        cashAmount: cashAmount,
+
         deliveryFee: call.deliveryFee || 0,
         customerName: call.customerName || "",
         deliveryAddress: call.deliveryAddress || "",
         notes: call.notes || "",
+        orderValue:
+          typeof call.orderValue === "number" ? call.orderValue : null,
         pricing: pricing
       };
+
 
       // إنشاء/تحديث نداء السائق
       await driverCallRef.set(driverCallData, { merge: true });
@@ -5070,14 +5844,12 @@ window.driverCompleteCall = function (callId) {
     return c.id === callId;
   });
   if (!call) {
-alert(t("alert_orderNotFound"));
-
+    alert(t("alert_orderNotFound"));
     return;
   }
 
   if (!navigator.geolocation) {
     alert(t("alert_geo_not_supported"));
-
     return;
   }
 
@@ -5094,20 +5866,17 @@ alert(t("alert_orderNotFound"));
 
       try {
         const driverPricing = call.pricing || currentDriverData || {};
-        const baseFee =
-          typeof driverPricing.baseFee === "number"
-            ? driverPricing.baseFee
-            : BASE_DELIVERY_FEE;
-
-        const pricePerKmDelivery =
-          typeof driverPricing.pricePerKmDelivery === "number"
-            ? driverPricing.pricePerKmDelivery
-            : 0;
+        const pricingMode = driverPricing.pricingMode || "per_km";
 
         const includeToMerchantSegment =
           !!driverPricing.includeToMerchantSegment;
         const useSamePriceForBoth =
           driverPricing.useSamePriceForBoth !== false;
+
+        const pricePerKmDelivery =
+          typeof driverPricing.pricePerKmDelivery === "number"
+            ? driverPricing.pricePerKmDelivery
+            : 0;
 
         let pricePerKmToMerchant =
           typeof driverPricing.pricePerKmToMerchant === "number"
@@ -5126,51 +5895,113 @@ alert(t("alert_orderNotFound"));
             ? driverPricing.freeKm
             : 0;
 
-        let d1 = 0; // السائق -> التاجر
-        let d2 = 0; // التاجر -> نقطة التسليم
+        // ============================
+        // 1) حساب المسافات للتخزين
+        // ============================
+        let d1Storage = 0; // driver -> merchant (يُخزَّن دائماً)
+        let d2 = 0;        // merchant -> dropoff (يُستخدم في المعادلة)
 
-        if (
-          includeToMerchantSegment &&
-          call.driverStartLat != null &&
-          call.driverStartLng != null &&
-          call.merchantLat != null &&
-          call.merchantLng != null &&
-          pricePerKmToMerchant > 0
-        ) {
-          d1 = await getRouteDistanceKm(
-            { lat: call.driverStartLat, lng: call.driverStartLng },
-            { lat: call.merchantLat, lng: call.merchantLng }
-          );
-        }
+        if (call.merchantLat != null && call.merchantLng != null) {
+          // مسافة السائق من نقطة البداية إلى التاجر
+          if (call.driverStartLat != null && call.driverStartLng != null) {
+            d1Storage = await getRouteDistanceKm(
+              { lat: call.driverStartLat, lng: call.driverStartLng },
+              { lat: call.merchantLat, lng: call.merchantLng }
+            );
+          }
 
-        if (
-          call.merchantLat != null &&
-          call.merchantLng != null &&
-          pricePerKmDelivery > 0
-        ) {
+          // مسافة التاجر → العميل
           d2 = await getRouteDistanceKm(
             { lat: call.merchantLat, lng: call.merchantLng },
             { lat: dropLat, lng: dropLng }
           );
         }
 
-        const totalKm = d1 + d2;
-        const rawDistanceFee =
-          d1 * (pricePerKmToMerchant || 0) +
-          d2 * pricePerKmDelivery;
+        const totalKmStorage = d1Storage + d2;
 
-        let distanceFee = rawDistanceFee;
+        // ============================
+        // 2) حساب التكلفة حسب نموذج التسعير
+        // ============================
+        let totalFee = 0;
+        let baseFeeUsed = 0;
+        let distanceFee = 0;
         let freeKmUsed = 0;
+        let perKmEffective = 0;
 
-        if (freeKm > 0 && totalKm > 0 && rawDistanceFee > 0) {
-          freeKmUsed = Math.min(freeKm, totalKm);
-          const avgPerKm = rawDistanceFee / totalKm;
-          const discount = freeKmUsed * avgPerKm;
-          distanceFee = Math.max(rawDistanceFee - discount, 0);
+        if (pricingMode === "independent_tiered") {
+  // ✅ نموذج تسعيرة Taussil:
+  // - يستخدم كمعيار لموظفي Taussil، ويمكن للمستقلين اختياره أيضاً.
+  // - Grundgebühr:
+  //    * Bestellwert ≤ 25 € → 3,50 €
+  //    * Bestellwert > 25 € → 14 % vom Bestellwert
+  // - مسافة التسعير: المتجر → العميل فقط (d2)
+  //   * أول 7 كم: 0,50 €/كم
+  //   * من 7 إلى 12 كم: 0,80 €/كم
+  //   * ما بعد 12 كم: 1,00 €/كم
+  //
+  // ملاحظة: كل مقطع يُسعَّر بسعره، وليس كل المسافة بسعر الشريحة الأخيرة.
+
+  const orderValue =
+    typeof call.orderValue === "number" ? call.orderValue : 0;
+
+  if (orderValue <= 25) {
+    baseFeeUsed = 3.5;
+  } else {
+    baseFeeUsed = orderValue * 0.14;
+  }
+
+  const kmForPricing = d2; // فقط مسافة المتجر → العميل
+
+  // تقسيم المسافة على الثلاث شرائح
+  const tier1Km = Math.min(kmForPricing, 7);                         // 0–7 كم
+  const tier2Km = Math.max(Math.min(kmForPricing, 12) - 7, 0);       // 7–12 كم
+  const tier3Km = Math.max(kmForPricing - 12, 0);                    // > 12 كم
+
+  const tier1Cost = tier1Km * 0.5;
+  const tier2Cost = tier2Km * 0.8;
+  const tier3Cost = tier3Km * 1.0;
+
+  distanceFee = tier1Cost + tier2Cost + tier3Cost;
+
+  // متوسط تقريبي للعرض فقط (لو حاب يظهر في تفاصيل التكلفة)
+  perKmEffective = kmForPricing > 0 ? distanceFee / kmForPricing : 0;
+
+  totalFee = baseFeeUsed + distanceFee;
+  freeKmUsed = 0; // لا يوجد كيلومترات مجانية في هذا النموذج
+
+
+        } else {
+          // 🔁 نموذج per_km القديم كما كان
+          const baseFee =
+            typeof driverPricing.baseFee === "number"
+              ? driverPricing.baseFee
+              : BASE_DELIVERY_FEE;
+
+          const d1Cost = includeToMerchantSegment ? d1Storage : 0;
+          const d2Cost = d2;
+
+          let rawDistanceFee =
+            d1Cost * (pricePerKmToMerchant || 0) +
+            d2Cost * pricePerKmDelivery;
+
+          distanceFee = rawDistanceFee;
+          freeKmUsed = 0;
+
+          if (freeKm > 0 && (d1Cost + d2Cost) > 0 && rawDistanceFee > 0) {
+            freeKmUsed = Math.min(freeKm, (d1Cost + d2Cost));
+            const avgPerKm = rawDistanceFee / (d1Cost + d2Cost);
+            const discount = freeKmUsed * avgPerKm;
+            distanceFee = Math.max(rawDistanceFee - discount, 0);
+          }
+
+          baseFeeUsed = baseFee;
+          totalFee = baseFeeUsed + distanceFee;
+          perKmEffective = 0; // غير مهم في هذا النموذج
         }
 
-        const totalFee = baseFee + distanceFee;
-
+        // ============================
+        // 3) تحديث البيانات في Firestore
+        // ============================
         const patch = {
           status: "delivered",
           dropoffLat: dropLat,
@@ -5178,49 +6009,51 @@ alert(t("alert_orderNotFound"));
           deliveredAt: firebase.firestore.FieldValue.serverTimestamp(),
           deliveryFee: totalFee,
           distance: {
-            driverToMerchantKm: d1,
+            driverToMerchantKm: d1Storage,
             merchantToDropoffKm: d2,
-            totalKm: totalKm,
+            totalKm: totalKmStorage,
             freeKmUsed: freeKmUsed
           },
           cost: {
-            baseFee: baseFee,
+            pricingMode: pricingMode,
+            baseFee: baseFeeUsed,
             distanceFee: distanceFee,
             totalFee: totalFee,
-            perKmDriverToMerchant: pricePerKmToMerchant || 0,
-            perKmMerchantToDropoff: pricePerKmDelivery,
-            freeKm: freeKm
+            perKmDriverToMerchant:
+              pricingMode === "per_km"
+                ? (pricePerKmToMerchant || 0)
+                : 0,
+            perKmMerchantToDropoff:
+              pricingMode === "per_km"
+                ? pricePerKmDelivery
+                : perKmEffective,
+            freeKm: pricingMode === "per_km" ? freeKm : 0
           }
         };
 
-                await updateDriverCallAndMerchant(callId, patch);
+        await updateDriverCallAndMerchant(callId, patch);
 
         if (driverUid) {
           await db.collection("drivers").doc(driverUid).update({
             busy: false
           });
         }
-    // 🧹 تنظيف خط الطريق أيضاً في حالة الإلغاء
-    clearOrderRoute();
 
-        // تنظيف كامل لمسار التوجيه وماركر المتجر/العميل بعد التسليم
+        // تنظيف الخريطة والتوجيه
         clearRouteAndNavigation();
-        // طيّ بطاقة الطلب النشط (يبقى زر السهم فقط للحظات حتى يتحدث الـ snapshot)
+
+        // طيّ كرت الطلب النشط
         if (window.toggleCurrentOrderPanel) {
           toggleCurrentOrderPanel(true);
         }
 
         alert(t("alert_completeDeliverySuccess"));
-
-
       } catch (err) {
         alert(t("alert_completeDeliveryError") + err.message);
-
       }
     },
     function (err) {
       alert(t("alert_geo_failed_prefix") + err.message);
-
     },
     geoOptions
   );
