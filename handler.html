@@ -76,6 +76,22 @@ html[dir="ltr"] .lang-switcher {
     .orders-list { max-height: 240px; overflow:auto; padding:10px; background:#fff; border-radius:10px; }
     .order-card { border:1px solid #eef; padding:10px; margin-bottom:8px; border-radius:8px; cursor:pointer; }
     .order-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+	    .order-card.cash-order {
+      border-color: #fecaca;
+      box-shadow: 0 0 0 1px rgba(239,68,68,0.35);
+    }
+
+    .cash-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: #fee2e2;
+      color: #b91c1c;
+      margin-inline-start: 6px; /* يعمل RTL/LTR */
+    }
+
     .controls { display:flex; gap:8px; align-items:center; }
     .small { font-size:13px; color:var(--muted); }
     /* modal */
@@ -491,6 +507,29 @@ html[dir="ltr"] .online-drivers-card {
   border-color: #22c55e;
   animation: merchant-active-order-pulse 1.2s ease-out infinite;
 }
+@keyframes merchant-cash-order-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239,68,68,0.8);
+    border-color: #ef4444;
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(239,68,68,0);
+    border-color: #ef4444;
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239,68,68,0);
+    border-color: #ef4444;
+  }
+}
+
+.merchant-side-panel .order-card.cash-order {
+  border-color: #fecaca;
+}
+
+.merchant-side-panel .order-card.cash-order.active-call {
+  border-color: #ef4444;
+  animation: merchant-cash-order-pulse 1.2s ease-out infinite;
+}
 
 /* أزرار ثانوية داخل القائمة */
 .merchant-side-panel button.secondary {
@@ -578,6 +617,37 @@ html[dir="ltr"] .toast {
   margin-top:4px;
   margin-bottom:4px;
   font-size:11px;
+}
+/* حقل سعر الطلب + زر كاش في بالون السائق */
+.cash-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.cash-row input {
+  width: 130px;
+  padding: 4px 6px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  box-sizing: border-box;
+}
+
+.cash-toggle-btn {
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 999px;
+  border: 1px solid #22211d;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.cash-toggle-btn.active {
+  background: #b91c1c;
+  border-color: #b91c1c;
+  color: #fff;
 }
 
 </style>
@@ -977,6 +1047,26 @@ printFooterTotalOrders: "مجموع الطلبات",
 printFooterTotalFees: "مجموع تكاليف التوصيل (€)",
 printNoOrders: "لا توجد طلبات سابقة للطباعة.",
 printNoOrdersForDriver: "لا توجد طلبات سابقة لهذا السائق للطباعة.",
+    driverOrderPriceLabel: "سعر الطلب",
+    driverCashButtonLabel: "نقداً",
+    paymentTypeLabel: "طريقة الدفع",
+    paymentTypeCash: "كاش عند التسليم",
+    paymentTypeOnline: "دفع أونلاين",
+    paymentTypeUnknown: "غير محددة",
+    cashAmountLabel: "مبلغ الكاش مع السائق",
+    badgeCash: "كاش",
+
+    csvHeaderPaymentType: "طريقة الدفع",
+    csvHeaderCashAmount: "مبلغ الكاش",
+
+    orderDetailsPaymentTypeLabel: "طريقة الدفع",
+    orderDetailsCashAmountLabel: "مبلغ الكاش",
+
+    printColPaymentType: "طريقة الدفع",
+    printColCashAmount: "مبلغ الكاش (€)",
+
+    printSingleOrderPaymentTypeLabel: "طريقة الدفع",
+    printSingleOrderCashAmountLabel: "مبلغ الكاش مع السائق",
 
   },
   en: {
@@ -1125,6 +1215,26 @@ printFooterTotalOrders: "Total orders",
 printFooterTotalFees: "Total delivery fees (€)",
 printNoOrders: "No past orders to print.",
 printNoOrdersForDriver: "No past orders for this driver to print.",
+    driverOrderPriceLabel: "Order amount",
+    driverCashButtonLabel: "Cash",
+    paymentTypeLabel: "Payment type",
+    paymentTypeCash: "Cash on delivery",
+    paymentTypeOnline: "Online payment",
+    paymentTypeUnknown: "Not specified",
+    cashAmountLabel: "Cash amount with driver",
+    badgeCash: "CASH",
+
+    csvHeaderPaymentType: "Payment type",
+    csvHeaderCashAmount: "Cash amount",
+
+    orderDetailsPaymentTypeLabel: "Payment type",
+    orderDetailsCashAmountLabel: "Cash amount",
+
+    printColPaymentType: "Payment type",
+    printColCashAmount: "Cash amount (€)",
+
+    printSingleOrderPaymentTypeLabel: "Payment type",
+    printSingleOrderCashAmountLabel: "Cash amount with driver",
 
   },
   de: {
@@ -1273,6 +1383,26 @@ printFooterTotalOrders: "Anzahl Bestellungen",
 printFooterTotalFees: "Summe Lieferkosten (€)",
 printNoOrders: "Es gibt keine vergangenen Bestellungen zum Drucken.",
 printNoOrdersForDriver: "Es gibt keine vergangenen Bestellungen für diesen Fahrer zum Drucken.",
+    driverOrderPriceLabel: "Bestellbetrag",
+    driverCashButtonLabel: "Bar",
+    paymentTypeLabel: "Zahlungsart",
+    paymentTypeCash: "Barzahlung bei Lieferung",
+    paymentTypeOnline: "Online-Zahlung",
+    paymentTypeUnknown: "Nicht angegeben",
+    cashAmountLabel: "Bargeldbetrag beim Fahrer",
+    badgeCash: "BAR",
+
+    csvHeaderPaymentType: "Zahlungsart",
+    csvHeaderCashAmount: "Bargeldbetrag",
+
+    orderDetailsPaymentTypeLabel: "Zahlungsart",
+    orderDetailsCashAmountLabel: "Bargeldbetrag",
+
+    printColPaymentType: "Zahlungsart",
+    printColCashAmount: "Bargeldbetrag (€)",
+
+    printSingleOrderPaymentTypeLabel: "Zahlungsart",
+    printSingleOrderCashAmountLabel: "Bargeldbetrag beim Fahrer",
 
   },
   tr: {
@@ -1421,6 +1551,26 @@ printFooterTotalOrders: "Toplam sipariş",
 printFooterTotalFees: "Toplam teslimat ücreti (€)",
 printNoOrders: "Yazdırılacak geçmiş sipariş yok.",
 printNoOrdersForDriver: "Bu sürücü için yazdırılacak geçmiş sipariş yok.",
+    driverOrderPriceLabel: "Sipariş tutarı",
+    driverCashButtonLabel: "Nakit",
+    paymentTypeLabel: "Ödeme türü",
+    paymentTypeCash: "Teslimatta nakit",
+    paymentTypeOnline: "Online ödeme",
+    paymentTypeUnknown: "Belirtilmemiş",
+    cashAmountLabel: "Sürücüdeki nakit tutarı",
+    badgeCash: "NAKİT",
+
+    csvHeaderPaymentType: "Ödeme türü",
+    csvHeaderCashAmount: "Nakit tutarı",
+
+    orderDetailsPaymentTypeLabel: "Ödeme türü",
+    orderDetailsCashAmountLabel: "Nakit tutarı",
+
+    printColPaymentType: "Ödeme türü",
+    printColCashAmount: "Nakit tutarı (€)",
+
+    printSingleOrderPaymentTypeLabel: "Ödeme türü",
+    printSingleOrderCashAmountLabel: "Sürücüdeki nakit tutarı",
 
   }
 };
@@ -3120,8 +3270,9 @@ function buildDriverInfoContent(id, data) {
       : "سائق");
 
   const isBusy = !!data.busy;
+  const usesTaussilPricing = data.pricingMode !== "per_km";
 
-  // تنسيق الأرقام حسب اللغة (فاصلة للعربي/أوروبي أو نقطة للإنجليزي)
+  // تنسيق الأرقام حسب اللغة (كما كان)
   const formatAmount = (num) => {
     const s = Number(num).toFixed(2);
     if (lang === "de" || lang === "tr") return s.replace(".", ",");
@@ -3146,7 +3297,11 @@ function buildDriverInfoContent(id, data) {
           `Base fee ${base}€ + ${toMer}€/km (driver → merchant) + ${perKm}€/km (merchant → drop-off point)`,
         baseFeeMerchantOnly: (base, perKm) =>
           `Base fee ${base}€ + ${perKm}€/km (merchant → drop-off point)`,
-        freeKm: (km) => `First ${km} km free`
+                freeKm: (km) => `First ${km} km free`,
+        usesTaussilPricing: "Uses Taussil pricing",
+        orderPriceLabel: I18N.en.driverOrderPriceLabel,
+
+        cashBtn: I18N.en.driverCashButtonLabel
       };
       break;
 
@@ -3165,7 +3320,11 @@ function buildDriverInfoContent(id, data) {
           `Grundgebühr ${base}€ + ${toMer}€/km (Fahrer → Händler) + ${perKm}€/km (Händler → Lieferort)`,
         baseFeeMerchantOnly: (base, perKm) =>
           `Grundgebühr ${base}€ + ${perKm}€/km (Händler → Lieferort)`,
-        freeKm: (km) => `Die ersten ${km} km kostenlos`
+                freeKm: (km) => `Die ersten ${km} km kostenlos`,
+        usesTaussilPricing: "Verwendet Taussil-Tarif",
+        orderPriceLabel: I18N.de.driverOrderPriceLabel,
+
+        cashBtn: I18N.de.driverCashButtonLabel
       };
       break;
 
@@ -3184,7 +3343,11 @@ function buildDriverInfoContent(id, data) {
           `Temel ücret ${base}€ + ${toMer}€/km (sürücü → işletme) + ${perKm}€/km (işletme → teslimat noktası)`,
         baseFeeMerchantOnly: (base, perKm) =>
           `Temel ücret ${base}€ + ${perKm}€/km (işletme → teslimat noktası)`,
-        freeKm: (km) => `İlk ${km} km ücretsiz`
+                freeKm: (km) => `İlk ${km} km ücretsiz`,
+        usesTaussilPricing: "Taussil tarifini kullanıyor",
+        orderPriceLabel: I18N.tr.driverOrderPriceLabel,
+
+        cashBtn: I18N.tr.driverCashButtonLabel
       };
       break;
 
@@ -3203,7 +3366,11 @@ function buildDriverInfoContent(id, data) {
           `رسوم أساسية ${base}€ + ${toMer}€/كم (من السائق إلى التاجر) + ${perKm}€/كم (من التاجر إلى نقطة التسليم)`,
         baseFeeMerchantOnly: (base, perKm) =>
           `رسوم أساسية ${base}€ + ${perKm}€/كم (من التاجر إلى نقطة التسليم)`,
-        freeKm: (km) => `أول ${km} كم مجاناً`
+                freeKm: (km) => `أول ${km} كم مجاناً`,
+        usesTaussilPricing: "يستخدم تسعيرة Taussil",
+        orderPriceLabel: I18N.ar.driverOrderPriceLabel,
+
+        cashBtn: I18N.ar.driverCashButtonLabel
       };
       break;
   }
@@ -3214,10 +3381,11 @@ function buildDriverInfoContent(id, data) {
   } else if (!merchantCurrentOnline) {
     actionHtml = `<span class="small" style="color:#9ca3af;">${texts.offline}</span>`;
   } else {
-    actionHtml = `<button id="callBtn_${id}" class="small call-btn">${texts.callBtn}</button>`;
+    actionHtml = `<button id="callBtn_${id}" type="button" class="small call-btn">${texts.callBtn}</button>`;
   }
 
-  let pricingHtml = texts.noPricing;
+  // نص التسعيرة كما كان
+    let pricingHtml = texts.noPricing;
 
   const hasDeliveryPrice =
     typeof data.pricePerKmDelivery === "number" &&
@@ -3257,28 +3425,79 @@ function buildDriverInfoContent(id, data) {
     }
 
     pricingHtml = line;
+  } else if (data.pricingMode === "independent_tiered") {
+    // سائق مستقل يستخدم تسعيرة Taussil
+    pricingHtml = texts.usesTaussilPricing;
   }
 
-  const isRtl = lang === "ar";
-
-    const isLtrLang = ["en", "de", "tr"].includes(currentLang);
+  const isLtrLang = ["en", "de", "tr"].includes(currentLang);
   const container = document.createElement("div");
   container.style.direction = isLtrLang ? "ltr" : "rtl";
   container.style.textAlign = isLtrLang ? "left" : "right";
 
+  const priceInputId = `orderPrice_${id}`;
+  const cashBtnId = `cashBtn_${id}`;
+  const cashRowHtml = usesTaussilPricing
+  ? `
+      <div class="cash-row">
+        <span class="small">${texts.orderPriceLabel}:</span>
+        <input id="${priceInputId}" type="number" min="0" step="0.01" value="0.00" />
+        <button
+          id="${cashBtnId}"
+          type="button"
+          class="cash-toggle-btn"
+          style="color:#000;"
+        >
+          ${texts.cashBtn}
+        </button>
+      </div>
+    `
+  : "";
+
   container.innerHTML = `
-    <div style="min-width:220px">
+    <div style="min-width:230px">
       <strong>${escapeHtml(firstName)}</strong><br/>
       <div class="small">${texts.phoneLabel} ${escapeHtml(data.phone || "")}</div>
       <div class="small">${texts.cityLabel} ${escapeHtml(data.city || "")}</div>
       <div class="small" style="margin-top:4px;">
         ${texts.pricingLabel}<br/>${pricingHtml}
       </div>
-      <div style="margin-top:8px; display:flex; gap:6px; justify-content:${isRtl ? "flex-end" : "flex-start"};">
+            ${cashRowHtml}
+
+      <div style="margin-top:8px; display:flex; gap:6px; justify-content:${isLtrLang ? "flex-start" : "flex-end"};">
         ${actionHtml}
       </div>
     </div>
   `;
+
+  // تفعيل زر كاش (تبديل اللون وتخزين الحالة في data-attribute)
+  const cashBtnEl = container.querySelector(`#${cashBtnId}`);
+  if (cashBtnEl) {
+    cashBtnEl.dataset.active = "0";
+    cashBtnEl.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const active = cashBtnEl.dataset.active === "1";
+      const newActive = !active;
+      cashBtnEl.dataset.active = newActive ? "1" : "0";
+      cashBtnEl.classList.toggle("active", newActive);
+    });
+  }
+  // إخفاء حقل السعر وزر الكاش إذا كان السائق مشغول أو يستخدم تسعيرته الخاصة
+  if (isBusy || data.pricingMode === "per_km") {
+    const cashRowEl = container.querySelector(".cash-row");
+    if (cashRowEl) {
+      cashRowEl.style.display = "none";
+    }
+  }
+
+  // زر نداء السائق – يبقى كما هو لكن createCallForDriver سيقرأ حقل السعر/كاش من الـ DOM
+  const btn = container.querySelector(`#callBtn_${id}`);
+  if (btn) {
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      createCallForDriver(id);
+    });
+  }
 
   return container;
 }
@@ -3330,14 +3549,8 @@ function addDriverMarker(id, data) {
   info.setContent(content);
 
   marker.addListener("click", () => {
-    info.open(map, marker);
-    setTimeout(() => {
-      const btn = document.getElementById(`callBtn_${id}`);
-      if (btn) {
-        btn.onclick = () => createCallForDriver(id);
-      }
-    }, 80);
-  });
+  info.open(map, marker);
+});
 
   const state = {
     marker,
@@ -4208,46 +4421,65 @@ function renderMerchantCalls(allCalls) {
   }
 
   activeOrdersEl.innerHTML = "";
-activeFiltered.forEach((c) => {
-  const driverName =
-    (cachedDrivers[c.driverId] &&
-      ((cachedDrivers[c.driverId].firstName || "") +
-        " " +
-        (cachedDrivers[c.driverId].lastName || ""))) ||
-    c.driverFirstName ||
-    "سائق";
+  activeFiltered.forEach((c) => {
+    const driverName =
+      (cachedDrivers[c.driverId] &&
+        ((cachedDrivers[c.driverId].firstName || "") +
+          " " +
+          (cachedDrivers[c.driverId].lastName || ""))) ||
+      c.driverFirstName ||
+      "سائق";
 
-  // الطلب النشط: السائق في الطريق للتاجر أو للعميل
-  const isLiveTrip =
-    isStatusHeadingToMerchant(c.status) ||
-    isStatusHeadingToCustomer(c.status);
+    const isLiveTrip =
+      isStatusHeadingToMerchant(c.status) ||
+      isStatusHeadingToCustomer(c.status);
 
-  const card = document.createElement("div");
-  card.className = "order-card";
-  if (isLiveTrip) {
-    card.classList.add("active-call"); // إطار أخضر نابض
-  }
+    const isCash = isCashOrder(c);
+    const cashAmountStr = formatCashAmount(c);
 
-  card.innerHTML = `
-    <div style="display:flex; justify-content:space-between; gap:8px; align-items:center;">
-      <div>
-        <div><strong>#${getShortId(c.id)}</strong> — ${escapeHtml(driverName)}</div>
-        <div class="small">${t("callStatusLabel")}: ${escapeHtml(
-          c.status || "pending"
-        )} — ${formatDate(c._date)}</div>
+    const card = document.createElement("div");
+    card.className = "order-card";
+    if (isLiveTrip) {
+      card.classList.add("active-call");
+    }
+    if (isCash) {
+      card.classList.add("cash-order");
+    }
+
+    const cashBadgeHtml = isCash
+      ? `<span class="cash-badge">${escapeHtml(t("badgeCash"))}</span>`
+      : "";
+
+    const amountLine =
+      cashAmountStr
+        ? `<div class="small">${escapeHtml(t("cashAmountLabel"))}: ${escapeHtml(cashAmountStr)}</div>`
+        : "";
+
+    card.innerHTML = `
+      <div style="display:flex; justify-content:space-between; gap:8px; align-items:center;">
+        <div>
+          <div>
+            <strong>#${getShortId(c.id)}</strong>
+            ${cashBadgeHtml}
+            — ${escapeHtml(driverName)}
+          </div>
+          ${amountLine}
+          <div class="small">${t("callStatusLabel")}: ${escapeHtml(
+            c.status || "pending"
+          )} — ${formatDate(c._date)}</div>
+        </div>
       </div>
-    </div>
-  `;
+    `;
 
-  activeOrdersEl.appendChild(card);
+    activeOrdersEl.appendChild(card);
 
-  card.addEventListener("click", (e) => {
-    if (e.target.tagName.toLowerCase() === "button") return;
-    viewOrderDetails(c.id);
+    card.addEventListener("click", (e) => {
+      if (e.target.tagName.toLowerCase() === "button") return;
+      viewOrderDetails(c.id);
+    });
   });
-});
 
-  completedOrdersEl.innerHTML = "";
+    completedOrdersEl.innerHTML = "";
   completedFiltered.forEach((c) => {
     const driverName =
       (cachedDrivers[c.driverId] &&
@@ -4262,12 +4494,33 @@ activeFiltered.forEach((c) => {
         ? c.respondedAt.toDate()
         : c._date;
 
+    const isCash = isCashOrder(c);
+    const cashAmountStr = formatCashAmount(c);
+
     const card = document.createElement("div");
     card.className = "order-card";
+    if (isCash) {
+      card.classList.add("cash-order");
+    }
+
+    const cashBadgeHtml = isCash
+      ? `<span class="cash-badge">${escapeHtml(t("badgeCash"))}</span>`
+      : "";
+
+    const amountLine =
+      cashAmountStr
+        ? `<div class="small">${escapeHtml(t("cashAmountLabel"))}: ${escapeHtml(cashAmountStr)}</div>`
+        : "";
+
     card.innerHTML = `
       <div style="display:flex; justify-content:space-between; gap:8px; align-items:center;">
         <div>
-          <div><strong>#${getShortId(c.id)}</strong> — ${escapeHtml(driverName)}</div>
+          <div>
+            <strong>#${getShortId(c.id)}</strong>
+            ${cashBadgeHtml}
+            — ${escapeHtml(driverName)}
+          </div>
+          ${amountLine}
           <div class="small">${escapeHtml(
             c.status || ""
           )} — ${formatDate(dateBase)}</div>
@@ -4281,8 +4534,8 @@ activeFiltered.forEach((c) => {
       if (e.target.tagName.toLowerCase() === "button") return;
       viewOrderDetails(c.id);
     });
-	refreshDriverFilterOptions();
   });
+
 }
 
 function compareCalls(a, b, mode) {
@@ -4327,6 +4580,97 @@ function getShortId(id) {
   if (!id) return "";
   return String(id).slice(-6);
 }
+function isCashOrder(o) {
+  if (!o) return false;
+
+  const pt = (o.paymentType || "").toLowerCase();
+
+  // صريح من الحقل
+  if (pt === "cash") return true;
+  if (pt === "online" || pt === "card" || pt === "pos") return false;
+
+  // لو حفظنا collectCash فقط
+  if (o.collectCash === true) return true;
+
+  // استنتاج من وجود مبلغ كاش
+  if (typeof o.cashAmount === "number" && o.cashAmount > 0) return true;
+
+  // استخدام orderPrice لو كان موجوداً و collectCash ليست false
+  if (
+    typeof o.orderPrice === "number" &&
+    o.orderPrice > 0 &&
+    o.collectCash !== false
+  ) {
+    return true;
+  }
+
+  // حقل بديل قديم
+  if (o.isCash === true) return true;
+
+  return false;
+}
+
+function getPaymentTypeLabel(o) {
+  if (!o) return t("paymentTypeUnknown");
+
+  const pt = (o.paymentType || "").toLowerCase();
+  if (pt === "cash") return t("paymentTypeCash");
+  if (pt === "online" || pt === "card" || pt === "pos") {
+    return t("paymentTypeOnline");
+  }
+
+  // لو اعتمدنا فقط على collectCash أو cashAmount / orderPrice
+  if (o.collectCash === true) return t("paymentTypeCash");
+  if (typeof o.cashAmount === "number" && o.cashAmount > 0) {
+    return t("paymentTypeCash");
+  }
+  if (
+    typeof o.orderPrice === "number" &&
+    o.orderPrice > 0 &&
+    o.collectCash !== false
+  ) {
+    return t("paymentTypeCash");
+  }
+
+  return t("paymentTypeUnknown");
+}
+
+function formatCashAmount(o) {
+  if (!o) return "";
+
+  let raw = null;
+
+  // أولاً: الحقل الأساسي
+  if (typeof o.cashAmount === "number" && o.cashAmount > 0) {
+    raw = o.cashAmount;
+  }
+  // ثانياً: orderPrice من واجهة التاجر
+  else if (typeof o.orderPrice === "number" && o.orderPrice > 0) {
+    raw = o.orderPrice;
+  }
+  // ثالثاً: totalPrice إن كان لديك تطبيق آخر يكتب هذا الحقل
+  else if (typeof o.totalPrice === "number" && o.totalPrice > 0) {
+    raw = o.totalPrice;
+  }
+  // رابعاً (خيار اختياري): لو الدفع كاش لكن لا يوجد مبلغ واضح، ن fallback على deliveryFee
+  else if (
+    (o.paymentType || "").toLowerCase() === "cash" &&
+    typeof o.deliveryFee === "number"
+  ) {
+    raw = o.deliveryFee;
+  }
+
+  if (raw == null) return "";
+
+  const num = Number(raw);
+  if (!Number.isFinite(num)) return "";
+
+  let s = num.toFixed(2);
+  if (currentLang === "de" || currentLang === "tr") {
+    s = s.replace(".", ",");
+  }
+  return s + " €";
+}
 
 /* ========== تفاصيل الطلب (من calls) للتاجر ========== */
 window.viewOrderDetails = async function (callId) {
@@ -4363,6 +4707,9 @@ window.viewOrderDetails = async function (callId) {
   } else if (o.deliveryFee != null) {
     feeLabel = String(o.deliveryFee);
   }
+  const isCash = isCashOrder(o);
+  const paymentTypeLabel = getPaymentTypeLabel(o);
+  const cashAmountStr = formatCashAmount(o);
 
   const shortId = getShortId(o.id);
   const driverName = (
@@ -4390,6 +4737,11 @@ window.viewOrderDetails = async function (callId) {
   html += `<div>${t("orderDetailsCityLabel")}: ${escapeHtml(
     o.merchantCity || "-"
   )}</div>`;
+    html += `<div>${t("orderDetailsPaymentTypeLabel")}: ${escapeHtml(paymentTypeLabel)}</div>`;
+  if (cashAmountStr) {
+    html += `<div>${t("orderDetailsCashAmountLabel")}: ${escapeHtml(cashAmountStr)}</div>`;
+  }
+
   html += `<div>${t("orderDetailsCustomerNameLabel")}: ${escapeHtml(
     o.customerName || "-"
   )}</div>`;
@@ -4454,6 +4806,24 @@ modalBackdrop.addEventListener("click", (e) => {
 async function createCallForDriver(driverId) {
   const driver = cachedDrivers[driverId] || {};
 
+  // قراءة سعر الطلب وحالة الدفع نقداً من بالون السائق (إن وُجدت)
+  let orderPrice = 0;
+  let collectCash = false;
+
+  const priceInputEl = document.getElementById(`orderPrice_${driverId}`);
+  if (priceInputEl) {
+    const raw = String(priceInputEl.value || "").replace(",", ".");
+    const parsed = parseFloat(raw);
+    if (!isNaN(parsed) && parsed >= 0) {
+      orderPrice = parsed;
+    }
+  }
+
+  const cashBtnEl = document.getElementById(`cashBtn_${driverId}`);
+  if (cashBtnEl && cashBtnEl.dataset.active === "1") {
+    collectCash = true;
+  }
+
   if (!currentMerchantId) {
     showToast(t("toastNoMerchant"), "error");
     return;
@@ -4482,8 +4852,21 @@ async function createCallForDriver(driverId) {
       driverLastName: driver.lastName || "",
       driverPhone: driver.phone || "",
       status: "pending",
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+
+      // الحقول الجديدة لمنطق التسعير حسب سعر الطلب
+      orderPrice: orderPrice,      // رقم السعر الذي أدخله التاجر
+      collectCash: collectCash     // true إذا السائق يجب أن يجمع سعر الطلب كاش من العميل
     };
+
+    // 👈 جديد: نضبط نوع الدفع + مبلغ الكاش حسب اختيار التاجر
+    if (collectCash) {
+      callData.paymentType = "cash";
+      callData.cashAmount = orderPrice || 0;
+    } else {
+      callData.paymentType = "online";
+      callData.cashAmount = 0;
+    }
 
     if (merchantLocationLat != null && merchantLocationLng != null) {
       callData.merchantLat = merchantLocationLat;
@@ -4505,6 +4888,7 @@ async function createCallForDriver(driverId) {
       }
     }
 
+    // إغلاق بالون السائق بعد الإرسال
     closeDriverInfoWindow(driverId);
 
     const label = driver.firstName
@@ -4546,7 +4930,7 @@ exportCsvBtn.addEventListener("click", () => {
 
   const rows = [];
   // رؤوس الأعمدة مترجمة
-  rows.push([
+    rows.push([
     t("csvHeaderId"),
     t("csvHeaderDriverId"),
     t("csvHeaderDriverName"),
@@ -4554,7 +4938,9 @@ exportCsvBtn.addEventListener("click", () => {
     t("csvHeaderRequestTime"),
     t("csvHeaderResponseTime"),
     t("csvHeaderMerchantName"),
-    t("csvHeaderMerchantCity")
+    t("csvHeaderMerchantCity"),
+    t("csvHeaderPaymentType"),
+    t("csvHeaderCashAmount")
   ]);
 
   completed.forEach((c) => {
@@ -4575,6 +4961,9 @@ exportCsvBtn.addEventListener("click", () => {
         ? c.respondedAt.toDate().toISOString()
         : "";
 
+        const payTypeLabel = getPaymentTypeLabel(c);
+    const cashAmountStr = formatCashAmount(c);
+
     rows.push([
       c.id,
       c.driverId || "",
@@ -4583,8 +4972,11 @@ exportCsvBtn.addEventListener("click", () => {
       createdIso,
       respondedIso,
       c.merchantName || "",
-      c.merchantCity || ""
+      c.merchantCity || "",
+      payTypeLabel,
+      cashAmountStr
     ]);
+
   });
 
   const csvContent = rows
@@ -4655,7 +5047,10 @@ printBtn.addEventListener("click", () => {
     footerTotalOrders: t("printFooterTotalOrders"),
     footerTotalFees: t("printFooterTotalFees"),
     noOrdersAll: t("printNoOrders"),
-    noOrdersDriver: t("printNoOrdersForDriver")
+    noOrdersDriver: t("printNoOrdersForDriver"),
+	    colPaymentType: t("printColPaymentType"),
+    colCashAmount: t("printColCashAmount"),
+
   };
 
   if (!completed.length) {
@@ -4785,13 +5180,15 @@ printBtn.addEventListener("click", () => {
   }
 
   // جدول الطلبات
-  html += `<table><thead><tr>
+    html += `<table><thead><tr>
     <th>${escapeHtml(labels.colMerchant)}</th>
     <th>${escapeHtml(labels.colDriver)}</th>
     <th>${escapeHtml(labels.colOrderId)}</th>
     <th>${escapeHtml(labels.colStatus)}</th>
     <th>${escapeHtml(labels.colCreatedAt)}</th>
     <th>${escapeHtml(labels.colCustomerAddress)}</th>
+    <th>${escapeHtml(labels.colPaymentType)}</th>
+    <th>${escapeHtml(labels.colCashAmount)}</th>
     <th>${escapeHtml(labels.colDistDriverToMerchant)}</th>
     <th>${escapeHtml(labels.colDistMerchantToCustomer)}</th>
     <th>${escapeHtml(labels.colDeliveryFee)}</th>
@@ -4807,6 +5204,8 @@ printBtn.addEventListener("click", () => {
           " " +
           (cachedDrivers[c.driverId].lastName || ""))) ||
       ((c.driverFirstName || "") + " " + (c.driverLastName || "")).trim();
+    const payTypeLabel = getPaymentTypeLabel(c);
+    const cashAmountStr = formatCashAmount(c);
 
     const merchantNameRow = c.merchantName || merchantHeaderName || "";
 
@@ -4841,17 +5240,20 @@ printBtn.addEventListener("click", () => {
     // ID مختصر (6 خانات)
     const shortId = getShortId(c.id);
 
-    html += `<tr>
+        html += `<tr>
       <td>${escapeHtml(merchantNameRow || "")}</td>
       <td>${escapeHtml(driverName || "")}</td>
       <td>${escapeHtml(shortId || "")}</td>
       <td>${escapeHtml(c.status || "")}</td>
       <td>${escapeHtml(createdUtcLabel)}</td>
       <td>${escapeHtml(c.deliveryAddress || "")}</td>
+      <td>${escapeHtml(payTypeLabel)}</td>
+      <td>${escapeHtml(cashAmountStr)}</td>
       <td>${escapeHtml(d1)}</td>
       <td>${escapeHtml(d2)}</td>
       <td>${escapeHtml(feeStr)}</td>
     </tr>`;
+
   });
 
   html += `</tbody></table>`;
@@ -5087,6 +5489,8 @@ window.printOrder = async function (callId) {
 
   const shortId = getShortId(o.id);
   const docDir = currentLang === "ar" ? "rtl" : "ltr";
+  const paymentTypeLabel = getPaymentTypeLabel(o);
+  const cashAmountStr = formatCashAmount(o);
 
   const titlePrefix = t("printSingleOrderTitlePrefix");
   const headingPrefix = t("printSingleOrderHeadingPrefix");
@@ -5109,15 +5513,20 @@ window.printOrder = async function (callId) {
   html += `<div>${t("printSingleOrderDriverPhoneLabel")}: ${escapeHtml(
     o.driverPhone || "-"
   )}</div>`;
-  html += `<div>${t("printSingleOrderCustomerLabel")}: ${escapeHtml(
+    html += `<div>${t("printSingleOrderCustomerLabel")}: ${escapeHtml(
     o.customerName || "-"
   )}</div>`;
   html += `<div>${t("printSingleOrderAddressLabel")}: ${escapeHtml(
     o.deliveryAddress || "-"
   )}</div>`;
+  html += `<div>${t("printSingleOrderPaymentTypeLabel")}: ${escapeHtml(paymentTypeLabel)}</div>`;
+  if (cashAmountStr) {
+    html += `<div>${t("printSingleOrderCashAmountLabel")}: ${escapeHtml(cashAmountStr)}</div>`;
+  }
   html += `<div>${t("printSingleOrderCostLabel")}: ${escapeHtml(
     o.deliveryFee != null ? o.deliveryFee : "-"
   )}</div>`;
+
 
   html += `</body></html>`;
   const w = window.open("", "_blank");
