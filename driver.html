@@ -4718,6 +4718,17 @@ function populatePricingFormFromData() {
 }
 
 async function savePricingSettings() {
+// 🔒 منع السائق المستقل من تعديل التسعيرة إذا كان مشغولاً أو لديه طلب نشط
+  const isIndependentDriver =
+    currentDriverData && currentDriverData.driverType !== "employee";
+  const isBusy = !!(currentDriverData && currentDriverData.busy);
+  const hasActiveJob =
+    typeof driverHasActiveJob === "function" && driverHasActiveJob();
+
+  if (isIndependentDriver && (isBusy || hasActiveJob)) {
+    alert(t("driver_pricing_locked_while_busy"));
+    return;
+  }
   const pricingModeSelect = document.getElementById("pricingModeSelect");
   const deliveryInput = document.getElementById("pricePerKmDelivery");
   const includeCheckbox = document.getElementById("includeToMerchantSegment");
