@@ -1543,6 +1543,13 @@ pricing_taussil_info_note:
     driverApprovalModal_message:
       "Your driver account has been approved. You can now start offering trips and delivery services.",
     driverApprovalModal_button: "Start",
+// 🇬🇧 English (en)
+currentOrder_orderPrice: "Order amount",
+currentOrder_btn_editPrice: "Edit price",
+orderDetails_orderPrice: "Order amount",
+prompt_editOrderPrice: "Enter the new order amount (€):",
+alert_invalid_orderPrice: "Invalid amount.",
+alert_orderPriceUpdated: "Order amount updated successfully.",
 
   },
 
@@ -1779,6 +1786,13 @@ pricing_taussil_info_note:
     driverApprovalModal_message:
       "Dein Fahrer-Konto wurde freigeschaltet. Du kannst jetzt Fahrten und Lieferungen übernehmen.",
     driverApprovalModal_button: "Starten",
+// 🇩🇪 German (de)
+currentOrder_orderPrice: "Bestellwert",
+currentOrder_btn_editPrice: "Preis bearbeiten",
+orderDetails_orderPrice: "Bestellwert",
+prompt_editOrderPrice: "Neuen Bestellwert eingeben (€):",
+alert_invalid_orderPrice: "Ungültiger Betrag.",
+alert_orderPriceUpdated: "Bestellwert wurde erfolgreich aktualisiert.",
 
   },
 
@@ -2014,6 +2028,13 @@ pricing_taussil_info_note:
     driverApprovalModal_message:
       "لقد تم تفعيل حسابك بنجاح ويمكنك بدء تقديم الرحلات وخدمة التوصيل مباشرة.",
     driverApprovalModal_button: "إبدأ",
+// 🇸🇦 Arabic (ar)
+currentOrder_orderPrice: "قيمة الطلب",
+currentOrder_btn_editPrice: "تعديل السعر",
+orderDetails_orderPrice: "قيمة الطلب",
+prompt_editOrderPrice: "أدخل قيمة الطلب الجديدة (€):",
+alert_invalid_orderPrice: "قيمة غير صالحة.",
+alert_orderPriceUpdated: "تم تحديث قيمة الطلب بنجاح.",
 
   },
     tr: {
@@ -2253,6 +2274,13 @@ pricing_taussil_info_note:
     driverApprovalModal_message:
       "Sürücü hesabınız onaylandı. Artık yolculuk ve teslimat hizmeti vermeye başlayabilirsiniz.",
     driverApprovalModal_button: "Başlat",
+// 🇹🇷 Turkish (tr)
+currentOrder_orderPrice: "Sipariş tutarı",
+currentOrder_btn_editPrice: "Fiyatı düzenle",
+orderDetails_orderPrice: "Sipariş tutarı",
+prompt_editOrderPrice: "Yeni sipariş tutarını girin (€):",
+alert_invalid_orderPrice: "Geçersiz tutar.",
+alert_orderPriceUpdated: "Sipariş tutarı başarıyla güncellendi.",
 
   }
 
@@ -5113,6 +5141,11 @@ function renderDriverCurrentOrder(call) {
   const feeHtml = isCash
     ? `<span class="cash-amount-highlight">${escapeHtml(feeValue)}</span>`
     : escapeHtml(feeValue);
+// ✅ جديد: قراءة orderPrice وتجهيزه للعرض
+  const orderPrice =
+    typeof call.orderPrice === "number" ? call.orderPrice : null; // ✅ جديد
+  const orderPriceStr =
+    orderPrice != null ? orderPrice.toFixed(2) + " €" : "";        // ✅ جديد
 
   let buttonsHtml = "";
   const statusCode = (call.status || "accepted").toLowerCase();
@@ -5122,12 +5155,23 @@ function renderDriverCurrentOrder(call) {
     statusCode === "in_progress" ||
     statusCode === "heading_to_customer"
   ) {
+    // ✅ جديد: زر تعديل السعر + زر تم التسليم
     buttonsHtml = `
+      <button onclick="driverEditOrderPrice('${call.id}')">
+        ${t("currentOrder_btn_editPrice")}
+      </button>
       <button onclick="driverCompleteCall('${call.id}')">
         ${t("currentOrder_btn_delivered")}
       </button>
     `;
   }
+
+  // ✅ جديد: سطر قيمة orderPrice
+  const orderPriceLineHtml = orderPriceStr
+    ? `<div class="small">
+         ${t("currentOrder_orderPrice")}: ${escapeHtml(orderPriceStr)}
+       </div>`
+    : "";
 
   // سطر التكلفة يظهر فقط لغير الموظف
   const costLineHtml = !isEmployee
@@ -5152,6 +5196,7 @@ function renderDriverCurrentOrder(call) {
       <div class="small">
         ${escapeHtml(call.deliveryAddress || "-")}
       </div>
+	  ${orderPriceLineHtml} <!-- ✅ جديد: سطر قيمة الطلب -->
       ${costLineHtml}
       <div class="btn-row">
         ${buttonsHtml}
@@ -5534,6 +5579,11 @@ const distanceLabel =
     } else if (o.deliveryFee != null) {
       feeLabel = escapeHtml(o.deliveryFee) + "";
     }
+// ✅ جديد: تجهيز orderPrice للعرض في التفاصيل
+    const orderPriceStr =
+      typeof o.orderPrice === "number"
+        ? o.orderPrice.toFixed(2) + " €"
+        : ""; // ✅ جديد
 
     // ✅ بيانات الكاش لعرضها
     const paymentTypeLabel = getPaymentTypeLabel(o);
@@ -5550,7 +5600,10 @@ const distanceLabel =
   if (cashAmountStr) {
     html += `<div class="small">${t("orderDetails_cashAmount")}: <span class="cash-amount-highlight">${escapeHtml(cashAmountStr)}</span></div>`;
   }
-
+// ✅ جديد: عرض قيمة orderPrice في تفاصيل الطلب
+    if (orderPriceStr) {
+      html += `<div>${t("orderDetails_orderPrice")}: ${escapeHtml(orderPriceStr)}</div>`;
+    }
     html += `<div>${t("orderDetails_totalDistance")}: ${distanceLabel}</div>`;
     // سطر تكلفة التوصيل يظهر فقط لغير الموظفين
     if (!isEmployee) {
@@ -5941,32 +5994,35 @@ window.driverCompleteCall = function (callId) {
 
         if (pricingMode === "independent_tiered") {
   // ✅ نموذج تسعيرة Taussil:
-  // - يستخدم كمعيار لموظفي Taussil، ويمكن للمستقلين اختياره أيضاً.
   // - Grundgebühr:
   //    * Bestellwert ≤ 25 € → 3,50 €
   //    * Bestellwert > 25 € → 14 % vom Bestellwert
   // - مسافة التسعير: المتجر → العميل فقط (d2)
-  //   * أول 7 كم: 0,50 €/كم
-  //   * من 7 إلى 12 كم: 0,80 €/كم
-  //   * ما بعد 12 كم: 1,00 €/كم
-  //
-  // ملاحظة: كل مقطع يُسعَّر بسعره، وليس كل المسافة بسعر الشريحة الأخيرة.
+  //   * 0–7 km → 0,50 €/km
+  //   * 7–12 km → 0,80 €/km
+  //   * >12 km → 1,00 €/km
 
-  const orderValue =
-    typeof call.orderValue === "number" ? call.orderValue : 0;
+  // نستخدم orderPrice (سعر الطلب) أولاً، ونرجع لـ orderValue عند اللزوم فقط
+  const orderAmount =
+    typeof call.orderPrice === "number"
+      ? call.orderPrice
+      : typeof call.orderValue === "number"
+        ? call.orderValue
+        : 0;
 
-  if (orderValue <= 25) {
+  if (orderAmount <= 25) {
     baseFeeUsed = 3.5;
   } else {
-    baseFeeUsed = orderValue * 0.14;
+    baseFeeUsed = orderAmount * 0.14;
   }
 
-  const kmForPricing = d2; // فقط مسافة المتجر → العميل
+  // مسافة التسعير هي المتجر → العميل فقط
+  const kmForPricing = d2;
 
   // تقسيم المسافة على الثلاث شرائح
-  const tier1Km = Math.min(kmForPricing, 7);                         // 0–7 كم
-  const tier2Km = Math.max(Math.min(kmForPricing, 12) - 7, 0);       // 7–12 كم
-  const tier3Km = Math.max(kmForPricing - 12, 0);                    // > 12 كم
+  const tier1Km = Math.min(kmForPricing, 7);                    // 0–7 km
+  const tier2Km = Math.max(Math.min(kmForPricing, 12) - 7, 0);  // 7–12 km
+  const tier3Km = Math.max(kmForPricing - 12, 0);               // > 12 km
 
   const tier1Cost = tier1Km * 0.5;
   const tier2Cost = tier2Km * 0.8;
@@ -5974,11 +6030,11 @@ window.driverCompleteCall = function (callId) {
 
   distanceFee = tier1Cost + tier2Cost + tier3Cost;
 
-  // متوسط تقريبي للعرض فقط (لو حاب يظهر في تفاصيل التكلفة)
+  // متوسط لكل كم لو حاب تعرضه في التفاصيل فقط
   perKmEffective = kmForPricing > 0 ? distanceFee / kmForPricing : 0;
 
   totalFee = baseFeeUsed + distanceFee;
-  freeKmUsed = 0; // لا يوجد كيلومترات مجانية في هذا النموذج
+  freeKmUsed = 0; // لا يوجد freeKm في تسعيرة Taussil
 
 
         } else {
@@ -6068,6 +6124,54 @@ window.driverCompleteCall = function (callId) {
     },
     geoOptions
   );
+};
+// ✅ جديد: تمكين السائق من تعديل قيمة orderPrice من بطاقة الطلب النشط
+window.driverEditOrderPrice = async function (callId) {
+  const call = driverCallsCache.find(function (c) {
+    return c.id === callId;
+  });
+
+  if (!call) {
+    alert(t("alert_orderNotFound"));
+    return;
+  }
+
+  // ✅ جديد: القيمة الحالية كنص افتراضي
+  const currentValue =
+    typeof call.orderPrice === "number"
+      ? call.orderPrice.toFixed(2)
+      : "";
+
+  // ✅ جديد: طلب قيمة جديدة من السائق
+  const input = prompt(
+    t("prompt_editOrderPrice") || "Neue Bestellsumme (in €):", // ✅ جديد
+    currentValue
+  );
+  if (input === null) return; // إلغاء من قبل المستخدم
+
+  const normalized = input.replace(",", ".").trim(); // ✅ جديد
+  const newVal = parseFloat(normalized);             // ✅ جديد
+
+  if (isNaN(newVal) || newVal < 0) {
+    alert(t("alert_invalid_orderPrice") || "Ungültiger Betrag."); // ✅ جديد
+    return;
+  }
+
+  const patch = {
+    orderPrice: newVal // ✅ جديد
+  };
+
+  // ✅ جديد: لو الطلب كاش، نخلي cashAmount يساوي قيمة الطلب المعدَّلة
+  if (isCashOrder(call)) {
+    patch.cashAmount = newVal;
+  }
+
+  try {
+    await updateDriverCallAndMerchant(callId, patch); // ✅ جديد
+    alert(t("alert_orderPriceUpdated") || "Order price updated."); // ✅ جديد
+  } catch (err) {
+    alert(t("alert_call_update_failed") + err.message);
+  }
 };
 
 window.driverCancelCall = async function (callId) {
