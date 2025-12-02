@@ -649,6 +649,45 @@ html[dir="ltr"] .toast {
   border-color: #b91c1c;
   color: #fff;
 }
+.smart-assistant-btn {                            /* NEW */
+  position: fixed;                                /* NEW */
+  left: 16px;                                     /* NEW */
+  bottom: 16px;                                   /* NEW */
+  z-index: 2000;                                  /* NEW */
+  width: 52px;                                    /* NEW */
+  height: 52px;                                   /* NEW */
+  border-radius: 50%;                             /* NEW */
+  border: none;                                   /* NEW */
+  padding: 0;                                     /* NEW */
+  background: #0f172a;                            /* NEW */
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.45);  /* NEW */
+  display: none;                                  /* NEW */ /* مخفي افتراضياً */
+  align-items: center;                            /* NEW */
+  justify-content: center;                        /* NEW */
+  cursor: pointer;                                /* NEW */
+}                                                 /* NEW */
+
+/* إظهار الزر فقط عندما يكون الـ body في وضع لوحة التاجر */ /* NEW */
+.merchant-mode .smart-assistant-btn {             /* NEW */
+  display: flex;                                  /* NEW */
+}                                                 /* NEW */
+
+.smart-assistant-icon {                           /* NEW */
+  width: 36px;                                    /* NEW */
+  height: 36px;                                   /* NEW */
+  animation: smart-assistant-float 1.6s           /* NEW */
+             ease-in-out                          /* NEW */
+             infinite;                            /* NEW */
+}                                                 /* NEW */
+
+@keyframes smart-assistant-float {                /* NEW */
+  0%, 100% {                                      /* NEW */
+    transform: translateY(0);                     /* NEW */
+  }                                               /* NEW */
+  50% {                                           /* NEW */
+    transform: translateY(-3px);                  /* NEW */
+  }                                               /* NEW */
+}                                                 /* NEW */
 
 </style>
 </head>
@@ -812,6 +851,14 @@ html[dir="ltr"] .toast {
     <div id="merchantSidePanelBackdrop" class="merchant-side-panel-backdrop"></div>
   </div>
 </div>
+<!-- زر المساعد الذكي العائم في أسفل الشاشة -->
+<button id="smartAssistantBtn" class="smart-assistant-btn" type="button">
+  <img
+    src="ooooo.webp"
+    alt=""
+    class="smart-assistant-icon"
+  />
+</button>
 
 <!-- تفاصيل الطلب (مودال) -->
 <div id="orderModal" class="hidden">
@@ -891,6 +938,7 @@ html[dir="ltr"] .toast {
 <audio id="merchantOnlineSound" src="online1.mp3" preload="auto"></audio>
 <!-- صوت عند تفعيل حساب التاجر (الاعتماد) -->
 <audio id="merchantApprovedSound" src="unterwegs.mp3" preload="auto"></audio>
+<audio id="smartAssistantSound" src="send.mp3" preload="auto"></audio> <!-- NEW -->
 
 <!-- Toast notifications -->
 <div id="toastContainer" class="toast-container"></div>
@@ -1067,7 +1115,7 @@ printNoOrdersForDriver: "لا توجد طلبات سابقة لهذا السائ
 
     printSingleOrderPaymentTypeLabel: "طريقة الدفع",
     printSingleOrderCashAmountLabel: "مبلغ الكاش مع السائق",
-
+smartAssistantComingSoon: "قريباً سيتوفر مساعدك الذكي من Taussil.",           // NEW
   },
   en: {
     pageTitle: "Delivery System — Merchant Interface",
@@ -1235,7 +1283,7 @@ printNoOrdersForDriver: "No past orders for this driver to print.",
 
     printSingleOrderPaymentTypeLabel: "Payment type",
     printSingleOrderCashAmountLabel: "Cash amount with driver",
-
+ smartAssistantComingSoon: "Your smart assistant from Taussil is coming soon.", // NEW
   },
   de: {
     pageTitle: "Liefersystem — Händleroberfläche",
@@ -1403,7 +1451,7 @@ printNoOrdersForDriver: "Es gibt keine vergangenen Bestellungen für diesen Fahr
 
     printSingleOrderPaymentTypeLabel: "Zahlungsart",
     printSingleOrderCashAmountLabel: "Bargeldbetrag beim Fahrer",
-
+smartAssistantComingSoon: "Dein smarter Assistent von Taussil ist bald verfügbar.", // NEW
   },
   tr: {
     pageTitle: "Teslimat Sistemi — İşletme Arayüzü",
@@ -1571,7 +1619,7 @@ printNoOrdersForDriver: "Bu sürücü için yazdırılacak geçmiş sipariş yok
 
     printSingleOrderPaymentTypeLabel: "Ödeme türü",
     printSingleOrderCashAmountLabel: "Sürücüdeki nakit tutarı",
-
+smartAssistantComingSoon: "Taussil'in akıllı asistanı yakında hizmetinizde.",  // NEW
   }
 };
 
@@ -1745,7 +1793,7 @@ const merchantApprovedStartBtn  = document.getElementById("merchantApprovedStart
 /* ========== Toast helper ========== */
 const toastContainer = document.getElementById("toastContainer");
 
-function showToast(message, type = "success") {
+function showToast(message, type = "success", durationMs = 2500) { // CHANGED: مدة مخصّصة
   if (!toastContainer) return;
 
   const toast = document.createElement("div");
@@ -1768,8 +1816,8 @@ function showToast(message, type = "success") {
     }
   };
 
-  // بعد 2.5 ثانية نبدأ الإخفاء التدريجي
-  setTimeout(() => {
+  // بعد مدة مخصّصة نبدأ الإخفاء التدريجي
+  setTimeout(() => {                          // CHANGED
     toast.classList.add("fade-out");
 
     // إزالة بعد انتهاء الـ transition
@@ -1777,8 +1825,9 @@ function showToast(message, type = "success") {
 
     // فالباك إضافي لو لأي سبب transitionend ما اشتغل
     setTimeout(removeToast, 800);
-  }, 2500);
+  }, durationMs);                             // CHANGED
 }
+
 /* ========== مودال النص القانوني للنسخة التجريبية ========== */
 function openBetaLegalModal() {
   if (!betaLegalModal || !betaLegalBackdrop) return;
@@ -1909,6 +1958,7 @@ const openDriversPickerBtn = document.getElementById("openDriversPicker");
 const driversPickerPanel = document.getElementById("driversPickerPanel");
 const driversPickerList = document.getElementById("driversPickerList");
 const driversPickerCloseBtn = document.getElementById("driversPickerClose");
+const smartAssistantBtn = document.getElementById("smartAssistantBtn"); // NEW
 
 const merchantSidePanel = document.getElementById("merchantSidePanel");
 const merchantSidePanelBackdrop = document.getElementById("merchantSidePanelBackdrop");
@@ -1922,12 +1972,32 @@ const driverOnWaySoundEl      = document.getElementById("driverOnWaySound");
 const driverNearSoundEl       = document.getElementById("driverNearSound");
 // صوت تسليم الطلب (لرحلة العميل)
 const customerDeliveredSoundEl = document.getElementById("customerDeliveredSound");
+const smartAssistantSoundEl   = document.getElementById("smartAssistantSound"); // NEW
+// زر المساعد الذكي (Teaser)                                     // NEW
+if (smartAssistantBtn) {                                          // NEW
+  smartAssistantBtn.addEventListener("click", () => {             // NEW
+    // تشغيل صوت المساعد الذكي                                   // NEW
+    if (smartAssistantSoundEl) {                                  // NEW
+      try {                                                       // NEW
+        smartAssistantSoundEl.currentTime = 0;                    // NEW
+        smartAssistantSoundEl.play();                             // NEW
+      } catch (e) {                                               // NEW
+        console.warn("تعذر تشغيل صوت المساعد الذكي:", e);        // NEW
+      }                                                           // NEW
+    }                                                             // NEW
+
+    // توست لمدة ٥ ثواني                                         // NEW
+    showToast(t("smartAssistantComingSoon"), "success", 5000);    // NEW
+  });                                                             // NEW
+}                                                                 // NEW
+
 let merchantApprovalStatus = "pending";
 let merchantCurrentOnline = false;
 let playMerchantOnlineSoundNext = false;
 /* ========== متغيّرات الخريطة والسائقين ========== */
 let map;
 let driverMarkers = {};
+const driverInfoLocked = {};
 let merchantMarker = null;
 let ordersListenerUnsub = null;
 let driversListenerUnsub = null;
@@ -3441,7 +3511,7 @@ function buildDriverInfoContent(id, data) {
   ? `
       <div class="cash-row">
         <span class="small">${texts.orderPriceLabel}:</span>
-        <input id="${priceInputId}" type="number" min="0" step="0.01" value="0.00" />
+        <input id="${priceInputId}" type="number" min="0" step="0.01" placeholder="€ 0.00" />
         <button
           id="${cashBtnId}"
           type="button"
@@ -3458,9 +3528,8 @@ function buildDriverInfoContent(id, data) {
     <div style="min-width:230px">
       <strong>${escapeHtml(firstName)}</strong><br/>
       <div class="small">${texts.phoneLabel} ${escapeHtml(data.phone || "")}</div>
-      <div class="small">${texts.cityLabel} ${escapeHtml(data.city || "")}</div>
       <div class="small" style="margin-top:4px;">
-        ${texts.pricingLabel}<br/>${pricingHtml}
+        ${pricingHtml}
       </div>
             ${cashRowHtml}
 
@@ -3469,6 +3538,17 @@ function buildDriverInfoContent(id, data) {
       </div>
     </div>
   `;
+    // قفل البالون عند بداية إدخال السعر، وفكّه عند الخروج من الحقل // ⬅ جديد
+  const priceInputEl = container.querySelector(`#${priceInputId}`);         // ⬅ جديد
+  if (priceInputEl) {                                                       // ⬅ جديد
+    priceInputEl.addEventListener("focus", () => {                          // ⬅ جديد
+      driverInfoLocked[id] = true;                                          // ⬅ جديد
+    });                                                                     // ⬅ جديد
+
+    priceInputEl.addEventListener("blur", () => {                           // ⬅ جديد
+      driverInfoLocked[id] = false;                                         // ⬅ جديد
+    });                                                                     // ⬅ جديد
+  }                                                                         // ⬅ جديد
 
   // تفعيل زر كاش (تبديل اللون وتخزين الحالة في data-attribute)
   const cashBtnEl = container.querySelector(`#${cashBtnId}`);
@@ -3476,6 +3556,7 @@ function buildDriverInfoContent(id, data) {
     cashBtnEl.dataset.active = "0";
     cashBtnEl.addEventListener("click", (e) => {
       e.stopPropagation();
+	  driverInfoLocked[id] = true;
       const active = cashBtnEl.dataset.active === "1";
       const newActive = !active;
       cashBtnEl.dataset.active = newActive ? "1" : "0";
@@ -3495,6 +3576,7 @@ function buildDriverInfoContent(id, data) {
   if (btn) {
     btn.addEventListener("click", (event) => {
       event.stopPropagation();
+	  driverInfoLocked[id] = false;
       createCallForDriver(id);
     });
   }
@@ -3532,8 +3614,12 @@ function addDriverMarker(id, data) {
       }
     }
 
-    const newContent = buildDriverInfoContent(id, data);
-    state.info.setContent(newContent);
+        // فقط نعيد بناء محتوى البالون إذا لم يكن مقفولاً من التاجر // ⬅ جديد
+    if (!driverInfoLocked[id]) {                                     // ⬅ جديد
+      const newContent = buildDriverInfoContent(id, data);           // ⬅ جديد
+      state.info.setContent(newContent);                             // ⬅ جديد
+    }                                                                // ⬅ جديد
+
     return;
   }
 
@@ -3547,8 +3633,17 @@ function addDriverMarker(id, data) {
   const info = new google.maps.InfoWindow();
   const content = buildDriverInfoContent(id, data);
   info.setContent(content);
-
+ info.addListener("closeclick", () => {      // ⬅ جديد
+    driverInfoLocked[id] = false;             // ⬅ جديد
+  });   
   marker.addListener("click", () => {
+  // عند كل فتح جديد، لو البالون غير مقفول نعيد بناء المحتوى من آخر نسخة من بيانات السائق // ⬅ جديد
+    if (!driverInfoLocked[id]) {                                              // ⬅ جديد
+      const latestData = cachedDrivers[id] || data;                           // ⬅ جديد
+      const refreshedContent = buildDriverInfoContent(id, latestData);        // ⬅ جديد
+      info.setContent(refreshedContent);                                      // ⬅ جديد
+    }                                                                         // ⬅ جديد
+
   info.open(map, marker);
 });
 
@@ -3599,6 +3694,7 @@ function closeDriverInfoWindow(driverId) {
     state.info.close();
   }
 }
+
 function isStatusHeadingToMerchant(status) {
   if (!status) return false;
   const s = String(status).toLowerCase();
@@ -4873,12 +4969,37 @@ async function createCallForDriver(driverId) {
       callData.merchantLng = merchantLocationLng;
     }
 
-    await db
-      .collection("merchants")
-      .doc(currentMerchantId)
-      .collection("calls")
-      .add(callData);
+    // ✅ جديد: مراجع ثابتة للـ calls & driver
+    const callsColRef = db                // ✅ جديد
+      .collection("merchants")            // ✅ جديد
+      .doc(currentMerchantId)            // ✅ جديد
+      .collection("calls");              // ✅ جديد
 
+    const callRef = callsColRef.doc();   // ✅ جديد: نولد id يدويًا لاستخدامه في الترانزاكشن
+
+    const driverRef = db                 // ✅ جديد
+      .collection("drivers")             // ✅ جديد
+      .doc(driverId);                    // ✅ جديد
+
+    // ✅ جديد: ترانزاكشن لحماية التزامن مع حالة السائق
+    await db.runTransaction(async (tx) => {                     // ✅ جديد
+      const driverSnap = await tx.get(driverRef);               // ✅ جديد
+      if (!driverSnap.exists) {                                 // ✅ جديد
+        throw new Error("DRIVER_NOT_FOUND");                    // ✅ جديد
+      }                                                         // ✅ جديد
+
+      const driverData = driverSnap.data() || {};               // ✅ جديد
+
+      // (اختياري) لو عندك حقل approvalStatus / online تقدر تفحصه هنا
+      // if (!driverData.online) throw new Error("DRIVER_OFFLINE"); // ✅ جديد (اختياري)
+
+      if (driverData.busy) {                                    // ✅ جديد
+        throw new Error("DRIVER_BUSY");                         // ✅ جديد
+      }                                                         // ✅ جديد
+
+      // إذا وصلنا هنا → السائق غير مشغول فعلياً في Firestore
+      tx.set(callRef, callData);                                // ✅ جديد
+    });                                                         // ✅ جديد
     if (merchantCallSoundEl) {
       try {
         merchantCallSoundEl.currentTime = 0;
@@ -4896,6 +5017,18 @@ async function createCallForDriver(driverId) {
       : t("toastCallSentPrefix");
     showToast(label, "success");
   } catch (err) {
+  // ✅ جديد: تعامل خاص مع الأخطاء المنطقية
+    if (err && err.message === "DRIVER_BUSY") {                 // ✅ جديد
+      showToast(t("toastDriverBusy"), "error");                 // ✅ جديد
+      return;                                                   // ✅ جديد
+    }                                                           // ✅ جديد
+    if (err && err.message === "DRIVER_NOT_FOUND") {            // ✅ جديد
+      console.warn("Driver not found when creating call");      // ✅ جديد
+      showToast(t("toastDriverNotFound") || "Driver not found", "error"); // ✅ جديد
+      return;                                                   // ✅ جديد
+    }                                                           // ✅ جديد
+
+
     showToast(t("toastErrorSendCallPrefix") + " " + err.message, "error");
   }
 }
