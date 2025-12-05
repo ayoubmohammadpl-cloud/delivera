@@ -4970,36 +4970,43 @@ async function createCallForDriver(driverId) {
     }
 
     // ✅ جديد: مراجع ثابتة للـ calls & driver
-    const callsColRef = db                // ✅ جديد
-      .collection("merchants")            // ✅ جديد
-      .doc(currentMerchantId)            // ✅ جديد
-      .collection("calls");              // ✅ جديد
+        const callsColRef = db
+      .collection("merchants")
+      .doc(currentMerchantId)
+      .collection("calls");
 
-    const callRef = callsColRef.doc();   // ✅ جديد: نولد id يدويًا لاستخدامه في الترانزاكشن
+    // سنمنع وجود أكثر من نداء "نشط" لنفس السائق من نفس التاجر
+    const existingSnap = await callsColRef
+      .where("driverId", "==", driverId)
+      .limit(10)
+      .get();
 
-    const driverRef = db                 // ✅ جديد
-      .collection("drivers")             // ✅ جديد
-      .doc(driverId);                    // ✅ جديد
+    const completedStatuses = [
+      "rejected",
+      "cancelled",
+      "completed",
+      "finished",
+      "delivered"
+    ];
 
-    // ✅ جديد: ترانزاكشن لحماية التزامن مع حالة السائق
-    await db.runTransaction(async (tx) => {                     // ✅ جديد
-      const driverSnap = await tx.get(driverRef);               // ✅ جديد
-      if (!driverSnap.exists) {                                 // ✅ جديد
-        throw new Error("DRIVER_NOT_FOUND");                    // ✅ جديد
-      }                                                         // ✅ جديد
+    let hasActive = false;
+    existingSnap.forEach((doc) => {
+      const d = doc.data() || {};
+      const st = (d.status || "pending").toLowerCase();
+      if (!completedStatuses.includes(st)) {
+        hasActive = true;
+      }
+    });
 
-      const driverData = driverSnap.data() || {};               // ✅ جديد
+    if (hasActive) {
+      // يوجد نداء سابق لنفس السائق لم يُغلق بعد
+      showToast(t("toastDriverBusy"), "error");
+      return;
+    }
 
-      // (اختياري) لو عندك حقل approvalStatus / online تقدر تفحصه هنا
-      // if (!driverData.online) throw new Error("DRIVER_OFFLINE"); // ✅ جديد (اختياري)
-
-      if (driverData.busy) {                                    // ✅ جديد
-        throw new Error("DRIVER_BUSY");                         // ✅ جديد
-      }                                                         // ✅ جديد
-
-      // إذا وصلنا هنا → السائق غير مشغول فعلياً في Firestore
-      tx.set(callRef, callData);                                // ✅ جديد
-    });                                                         // ✅ جديد
+    // لا يوجد نداء نشط لنفس السائق → أنشئ نداء جديد
+    await callsColRef.doc().set(callData);
+                                                       // ✅ جديد
     if (merchantCallSoundEl) {
       try {
         merchantCallSoundEl.currentTime = 0;
@@ -5017,18 +5024,7 @@ async function createCallForDriver(driverId) {
       : t("toastCallSentPrefix");
     showToast(label, "success");
   } catch (err) {
-  // ✅ جديد: تعامل خاص مع الأخطاء المنطقية
-    if (err && err.message === "DRIVER_BUSY") {                 // ✅ جديد
-      showToast(t("toastDriverBusy"), "error");                 // ✅ جديد
-      return;                                                   // ✅ جديد
-    }                                                           // ✅ جديد
-    if (err && err.message === "DRIVER_NOT_FOUND") {            // ✅ جديد
-      console.warn("Driver not found when creating call");      // ✅ جديد
-      showToast(t("toastDriverNotFound") || "Driver not found", "error"); // ✅ جديد
-      return;                                                   // ✅ جديد
-    }                                                           // ✅ جديد
-
-
+  
     showToast(t("toastErrorSendCallPrefix") + " " + err.message, "error");
   }
 }
