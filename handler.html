@@ -687,7 +687,459 @@ html[dir="ltr"] .toast {
   50% {                                           /* NEW */
     transform: translateY(-3px);                  /* NEW */
   }                                               /* NEW */
-}                                                 /* NEW */
+}               
+/* ذيل مضيء يدور حول زر المساعد الذكي عندما توجد auto_pending calls */
+.smart-assistant-btn.smart-assistant-orbit::before {
+  content: "";
+  position: absolute;
+  inset: -8px;                 /* مدى الذيل حول الزر */
+  border-radius: 999px;
+  border: 2px solid transparent;
+  border-top-color: rgba(56, 189, 248, 0.9);   /* أزرق سماوي */
+  border-right-color: rgba(34, 197, 94, 0.9);  /* أخضر نيوني */
+  box-shadow:
+    0 0 10px rgba(56, 189, 248, 0.9),
+    0 0 14px rgba(34, 197, 94, 0.85);
+  filter: blur(0.3px);
+  transform-origin: center;
+  animation: sa-orbit-spin 1.6s linear infinite;
+  pointer-events: none;
+}
+
+/* طرف الذيل المدبّب (مثل الأفعى) */
+.smart-assistant-btn.smart-assistant-orbit::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 0%, #e0f2fe, #38bdf8);
+  box-shadow:
+    0 0 8px rgba(56, 189, 248, 0.8),
+    0 0 14px rgba(34, 197, 94, 0.6);
+  top: -10px;  /* فوق الزر بقليل */
+  left: 50%;
+  transform: translateX(-50%);
+  animation: sa-orbit-spin 1.6s linear infinite;
+  animation-delay: -0.25s; /* slight phase shift */
+  pointer-events: none;
+}
+
+@keyframes sa-orbit-spin {
+  0% {
+    transform: rotate(0deg) translateX(0);
+  }
+  100% {
+    transform: rotate(360deg) translateX(0);
+  }
+}
+                                  /* NEW */
+/* النظام الذكي: طبقة المودال العامة */
+.sa-modal { /* النظام الذكي */
+  position: fixed; /* النظام الذكي */
+  inset: 0; /* النظام الذكي */
+  z-index: 2200; /* النظام الذكي */
+  display: flex; /* النظام الذكي */
+  align-items: flex-end; /* النظام الذكي */
+  justify-content: flex-start; /* النظام الذكي */
+  pointer-events: none; /* النظام الذكي */
+  opacity: 0; /* النظام الذكي */
+  transition: opacity 0.18s ease-out; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-modal-open { /* النظام الذكي */
+  opacity: 1; /* النظام الذكي */
+  pointer-events: auto; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-modal-hidden { /* النظام الذكي */
+  opacity: 0; /* النظام الذكي */
+  pointer-events: none; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-modal-backdrop { /* النظام الذكي */
+  position: absolute; /* النظام الذكي */
+  inset: 0; /* النظام الذكي */
+  background: rgba(15, 23, 42, 0.35); /* النظام الذكي */
+  backdrop-filter: blur(3px); /* النظام الذكي */
+} /* النظام الذكي */
+
+/* النظام الذكي: الفقاعة نفسها */
+.sa-bubble { /* النظام الذكي */
+  position: absolute; /* النظام الذكي */
+  left: 16px; /* النظام الذكي */
+  bottom: 88px; /* النظام الذكي */
+  width: 360px; /* النظام الذكي: تثبيت عرض الفقاعة على الشاشات العادية */
+  max-width: calc(100% - 32px); /* النظام الذكي: لكي لا تتجاوز الشاشة في الموبايل */
+  transform-origin: left bottom; /* النظام الذكي */
+  transform: scale(0.92) translateY(8px); /* النظام الذكي */
+  opacity: 0; /* النظام الذكي */
+  transition: transform 0.18s ease-out, opacity 0.18s ease-out; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-modal-open .sa-bubble { /* النظام الذكي */
+  opacity: 1; /* النظام الذكي */
+  transform: scale(1) translateY(0); /* النظام الذكي */
+}
+
+/* النظام الذكي: التوهّج الخلفي (إيحاء AI) */
+.sa-bubble-glow { /* النظام الذكي */
+  position: absolute; /* النظام الذكي */
+  inset: -8px -10px 20px -4px; /* النظام الذكي */
+  border-radius: 26px; /* النظام الذكي */
+  background: conic-gradient( /* النظام الذكي */
+    from 160deg, /* النظام الذكي */
+    rgba(56, 189, 248, 0.4), /* النظام الذكي */
+    rgba(34, 197, 94, 0.5), /* النظام الذكي */
+    rgba(129, 140, 248, 0.45), /* النظام الذكي */
+    rgba(56, 189, 248, 0.4) /* النظام الذكي */
+  ); /* النظام الذكي */
+  opacity: 0.9; /* النظام الذكي */
+  filter: blur(14px); /* النظام الذكي */
+  animation: sa-bubble-glow-pulse 5s ease-in-out infinite; /* النظام الذكي */
+} /* النظام الذكي */
+
+@keyframes sa-bubble-glow-pulse { /* النظام الذكي */
+  0%, 100% { opacity: 0.78; transform: scale(0.98); } /* النظام الذكي */
+  50% { opacity: 1; transform: scale(1.02); } /* النظام الذكي */
+} /* النظام الذكي */
+
+/* النظام الذكي: محتوى الفقاعة */
+.sa-bubble-inner { /* النظام الذكي */
+  position: relative; /* النظام الذكي */
+  z-index: 1; /* النظام الذكي */
+  border-radius: 22px; /* النظام الذكي */
+  padding: 14px 14px 12px; /* النظام الذكي */
+  background: radial-gradient(circle at top left, #1f2937, #020617); /* النظام الذكي */
+  border: 1px solid rgba(148, 163, 184, 0.45); /* النظام الذكي */
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.8); /* النظام الذكي */
+  color: #e5e7eb; /* النظام الذكي */
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; /* النظام الذكي */
+} /* النظام الذكي */
+
+/* النظام الذكي: الهيدر */
+.sa-bubble-header { /* النظام الذكي */
+  display: flex; /* النظام الذكي */
+  align-items: center; /* النظام الذكي */
+  justify-content: space-between; /* النظام الذكي */
+  gap: 8px; /* النظام الذكي */
+  margin-bottom: 8px; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-header-left { /* النظام الذكي */
+  display: flex; /* النظام الذكي */
+  align-items: center; /* النظام الذكي */
+  gap: 8px; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-bot-avatar { /* النظام الذكي */
+  width: 38px; /* النظام الذكي */
+  height: 38px; /* النظام الذكي */
+  border-radius: 999px; /* النظام الذكي */
+  background: radial-gradient(circle at 30% 0%, #22c55e, #0f172a); /* النظام الذكي */
+  display: flex; /* النظام الذكي */
+  align-items: center; /* النظام الذكي */
+  justify-content: center; /* النظام الذكي */
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.9), 0 10px 30px rgba(16, 185, 129, 0.7); /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-bot-face { /* النظام الذكي */
+  width: 22px; /* النظام الذكي */
+  height: 18px; /* النظام الذكي */
+  border-radius: 10px; /* النظام الذكي */
+  background: radial-gradient(circle at 30% 0%, #bbf7d0, #22c55e); /* النظام الذكي */
+  position: relative; /* النظام الذكي */
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.9); /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-bot-face::before, .sa-bot-face::after { /* النظام الذكي */
+  content: ""; /* النظام الذكي */
+  position: absolute; /* النظام الذكي */
+  top: 6px; /* النظام الذكي */
+  width: 4px; /* النظام الذكي */
+  height: 4px; /* النظام الذكي */
+  border-radius: 999px; /* النظام الذكي */
+  background: #022c22; /* النظام الذكي */
+  box-shadow: 0 0 4px rgba(6, 95, 70, 0.9); /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-bot-face::before { left: 5px; } /* النظام الذكي */
+.sa-bot-face::after  { right: 5px; } /* النظام الذكي */
+
+.sa-header-texts { /* النظام الذكي */
+  display: flex; /* النظام الذكي */
+  flex-direction: column; /* النظام الذكي */
+  gap: 2px; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-title { /* النظام الذكي */
+  font-size: 13px; /* النظام الذكي */
+  font-weight: 700; /* النظام الذكي */
+  letter-spacing: 0.02em; /* النظام الذكي */
+  color: #e5e7eb; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-question { /* النظام الذكي */
+  font-size: 11px; /* النظام الذكي */
+  color: #9ca3af; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-close-btn { /* النظام الذكي */
+  width: 26px; /* النظام الذكي */
+  height: 26px; /* النظام الذكي */
+  border-radius: 999px; /* النظام الذكي */
+  border: 1px solid rgba(148, 163, 184, 0.5); /* النظام الذكي */
+  background: radial-gradient(circle at 30% 0%, #0f172a, #020617); /* النظام الذكي */
+  color: #9ca3af; /* النظام الذكي */
+  font-size: 14px; /* النظام الذكي */
+  line-height: 1; /* النظام الذكي */
+  display: flex; /* النظام الذكي */
+  align-items: center; /* النظام الذكي */
+  justify-content: center; /* النظام الذكي */
+  cursor: pointer; /* النظام الذكي */
+  transition: background 0.15s ease-out, border-color 0.15s ease-out, color 0.15s ease-out, transform 0.12s ease-out; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-close-btn:hover { /* النظام الذكي */
+  background: radial-gradient(circle at 30% 0%, #111827, #020617); /* النظام الذكي */
+  border-color: rgba(156, 163, 175, 0.9); /* النظام الذكي */
+  color: #e5e7eb; /* النظام الذكي */
+  transform: scale(1.03); /* النظام الذكي */
+} /* النظام الذكي */
+
+/* النظام الذكي: جسم الفقاعة */
+.sa-bubble-body { /* النظام الذكي */
+  display: flex; /* النظام الذكي */
+  flex-direction: column; /* النظام الذكي */
+  gap: 8px; /* النظام الذكي */
+  margin-bottom: 8px; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-assistant-text { /* النظام الذكي */
+  min-height: 32px; /* النظام الذكي */
+  font-size: 12px; /* النظام الذكي */
+  line-height: 1.6; /* النظام الذكي */
+  color: #d1d5db; /* النظام الذكي */
+  position: relative; /* النظام الذكي */
+  padding-inline-end: 10px; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-assistant-text[data-dir="ltr"] { /* النظام الذكي */
+  direction: ltr; /* النظام الذكي */
+  text-align: left; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-assistant-text[data-dir="rtl"] { /* النظام الذكي */
+  direction: rtl; /* النظام الذكي */
+  text-align: right; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-assistant-text::after { /* النظام الذكي */
+  content: ""; /* النظام الذكي */
+  display: inline-block; /* النظام الذكي */
+  width: 6px; /* النظام الذكي */
+  height: 12px; /* النظام الذكي */
+  margin-inline-start: 3px; /* النظام الذكي */
+  border-radius: 999px; /* النظام الذكي */
+  background: linear-gradient(to bottom, #22c55e, #38bdf8); /* النظام الذكي */
+  opacity: 0; /* النظام الذكي */
+  transform: translateY(2px); /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-assistant-text.sa-typewriter-active::after { /* النظام الذكي */
+  opacity: 1; /* النظام الذكي */
+  animation: sa-caret-blink 0.8s steps(1, end) infinite; /* النظام الذكي */
+} /* النظام الذكي */
+
+@keyframes sa-caret-blink { /* النظام الذكي */
+  0%, 50% { opacity: 1; } /* النظام الذكي */
+  50.01%, 100% { opacity: 0; } /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-summary-text { /* النظام الذكي */
+  font-size: 11px; /* النظام الذكي */
+  color: #9ca3af; /* النظام الذكي */
+} /* النظام الذكي */
+/* النظام الذكي: حالة الخطأ في نص الملخص */
+.sa-summary-text.sa-summary-error { /* النظام الذكي */
+  color: #fecaca; /* النظام الذكي */
+} /* النظام الذكي */
+
+/* النظام الذكي: العداد */
+.sa-counter-row { /* النظام الذكي */
+  display: flex; /* النظام الذكي */
+  align-items: stretch; /* النظام الذكي */
+  gap: 6px; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-counter-btn { /* النظام الذكي */
+  width: 32px; /* النظام الذكي */
+  border-radius: 999px; /* النظام الذكي */
+  border: 1px solid rgba(148, 163, 184, 0.6); /* النظام الذكي */
+  background: radial-gradient(circle at 20% 0%, #020617, #020617); /* النظام الذكي */
+  color: #e5e7eb; /* النظام الذكي */
+  font-size: 16px; /* النظام الذكي */
+  cursor: pointer; /* النظام الذكي */
+  display: flex; /* النظام الذكي */
+  align-items: center; /* النظام الذكي */
+  justify-content: center; /* النظام الذكي */
+  transition: background 0.15s ease-out, border-color 0.15s ease-out, transform 0.12s ease-out; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-counter-btn:hover { /* النظام الذكي */
+  border-color: rgba(209, 213, 219, 0.9); /* النظام الذكي */
+  transform: translateY(-1px); /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-counter-input { /* النظام الذكي */
+  flex: 1; /* النظام الذكي */
+  min-width: 0; /* النظام الذكي */
+  border-radius: 999px; /* النظام الذكي */
+  border: 1px solid rgba(148, 163, 184, 0.7); /* النظام الذكي */
+  background: radial-gradient(circle at 0% 0%, #020617, #020617); /* النظام الذكي */
+  color: #e5e7eb; /* النظام الذكي */
+  font-size: 13px; /* النظام الذكي */
+  padding: 6px 10px; /* النظام الذكي */
+  text-align: center; /* النظام الذكي */
+  outline: none; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-counter-input:focus { /* النظام الذكي */
+  border-color: #22c55e; /* النظام الذكي */
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.7); /* النظام الذكي */
+} /* النظام الذكي */
+
+/* النظام الذكي: الأزرار السريعة */
+.sa-presets-row { /* النظام الذكي */
+  display: flex; /* النظام الذكي */
+  flex-wrap: wrap; /* النظام الذكي */
+  gap: 6px; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-preset-btn { /* النظام الذكي */
+  border-radius: 999px; /* النظام الذكي */
+  border: 1px solid rgba(55, 65, 81, 0.9); /* النظام الذكي */
+  background: radial-gradient(circle at 0% 0%, #020617, #020617); /* النظام الذكي */
+  color: #9ca3af; /* النظام الذكي */
+  font-size: 11px; /* النظام الذكي */
+  padding: 4px 10px; /* النظام الذكي */
+  cursor: pointer; /* النظام الذكي */
+  white-space: nowrap; /* النظام الذكي */
+  transition: background 0.15s ease-out, color 0.15s ease-out, border-color 0.15s ease-out, transform 0.12s ease-out; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-preset-btn:hover { /* النظام الذكي */
+  color: #e5e7eb; /* النظام الذكي */
+  border-color: rgba(148, 163, 184, 0.9); /* النظام الذكي */
+  transform: translateY(-1px); /* النظام الذكي */
+} /* النظام الذكي */
+
+/* النظام الذكي: وضع التوزيع */
+.sa-mode-row { /* النظام الذكي */
+  display: flex; /* النظام الذكي */
+  align-items: center; /* النظام الذكي */
+  justify-content: space-between; /* النظام الذكي */
+  gap: 8px; /* النظام الذكي */
+  margin-top: 4px; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-mode-label { /* النظام الذكي */
+  font-size: 11px; /* النظام الذكي */
+  color: #9ca3af; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-mode-pill { /* النظام الذكي */
+  display: inline-flex; /* النظام الذكي */
+  align-items: center; /* النظام الذكي */
+  gap: 6px; /* النظام الذكي */
+  padding: 4px 10px; /* النظام الذكي */
+  border-radius: 999px; /* النظام الذكي */
+  background: radial-gradient(circle at 0% 0%, #022c22, #020617); /* النظام الذكي */
+  border: 1px solid rgba(34, 197, 94, 0.6); /* النظام الذكي */
+  font-size: 11px; /* النظام الذكي */
+  color: #bbf7d0; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-mode-dot { /* النظام الذكي */
+  width: 8px; /* النظام الذكي */
+  height: 8px; /* النظام الذكي */
+  border-radius: 999px; /* النظام الذكي */
+  background: radial-gradient(circle at 30% 0%, #bbf7d0, #22c55e); /* النظام الذكي */
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.9); /* النظام الذكي */
+} /* النظام الذكي */
+
+/* النظام الذكي: الفوتر (أزرار) */
+.sa-bubble-footer { /* النظام الذكي */
+  display: flex; /* النظام الذكي */
+  justify-content: flex-end; /* النظام الذكي */
+  gap: 6px; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-btn { /* النظام الذكي */
+  border-radius: 999px; /* النظام الذكي */
+  font-size: 12px; /* النظام الذكي */
+  padding: 6px 16px; /* النظام الذكي */
+  border: 1px solid transparent; /* النظام الذكي */
+  cursor: pointer; /* النظام الذكي */
+  transition: background 0.16s ease-out, border-color 0.16s ease-out, transform 0.12s ease-out, box-shadow 0.16s ease-out; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-btn-secondary { /* النظام الذكي */
+  background: radial-gradient(circle at 0% 0%, #020617, #020617); /* النظام الذكي */
+  border-color: rgba(55, 65, 81, 0.9); /* النظام الذكي */
+  color: #e5e7eb; /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-btn-secondary:hover { /* النظام الذكي */
+  border-color: rgba(148, 163, 184, 0.9); /* النظام الذكي */
+  transform: translateY(-1px); /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-btn-primary { /* النظام الذكي */
+  background: linear-gradient(135deg, #22c55e, #38bdf8); /* النظام الذكي */
+  color: #022c22; /* النظام الذكي */
+  font-weight: 600; /* النظام الذكي */
+  box-shadow: 0 12px 30px rgba(16, 185, 129, 0.65); /* النظام الذكي */
+} /* النظام الذكي */
+
+.sa-btn-primary:hover { /* النظام الذكي */
+  transform: translateY(-1px); /* النظام الذكي */
+  box-shadow: 0 14px 38px rgba(16, 185, 129, 0.9); /* النظام الذكي */
+} /* النظام الذكي */
+/* النظام الذكي: حالة تحميل زر الإرسال */
+.sa-btn.sa-btn-loading { /* النظام الذكي */
+  opacity: 0.7; /* النظام الذكي */
+  cursor: wait; /* النظام الذكي */
+  pointer-events: none; /* النظام الذكي */
+} /* النظام الذكي */
+
+/* النظام الذكي: ذيل الفقاعة */
+.sa-bubble-tail { /* النظام الذكي */
+  position: absolute; /* النظام الذكي */
+  left: 20px; /* النظام الذكي */
+  bottom: -14px; /* النظام الذكي */
+  width: 34px; /* النظام الذكي */
+  height: 18px; /* النظام الذكي */
+  background: radial-gradient(circle at 0% 0%, #020617, #020617); /* النظام الذكي */
+  border-radius: 0 0 18px 18px; /* النظام الذكي */
+  border-bottom: 1px solid rgba(148, 163, 184, 0.6); /* النظام الذكي */
+  border-right: 1px solid rgba(148, 163, 184, 0.5); /* النظام الذكي */
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.9); /* النظام الذكي */
+} /* النظام الذكي */
+
+/* النظام الذكي: استجابة للشاشات الصغيرة */
+@media (max-width: 600px) { /* النظام الذكي */
+  .sa-bubble { /* النظام الذكي */
+    max-width: calc(100% - 32px); /* النظام الذكي */
+  } /* النظام الذكي */
+} /* النظام الذكي */
+/* النظام الذكي: ضبط أيقونة الروبوت داخل الفقاعة لتستخدم نفس أيقونة الزر */
+.sa-bot-avatar .smart-assistant-icon, /* النظام الذكي */
+.sa-bot-avatar img { /* النظام الذكي */
+  width: 40px; /* النظام الذكي */
+  height: 40px; /* النظام الذكي */
+  display: block; /* النظام الذكي */
+} /* النظام الذكي */
 
 </style>
 </head>
@@ -859,6 +1311,81 @@ html[dir="ltr"] .toast {
     class="smart-assistant-icon"
   />
 </button>
+<!-- النظام الذكي: فقاعة المساعد الذكي -->
+<div id="smartAssistantModal" class="sa-modal sa-modal-hidden"><!-- النظام الذكي -->
+  <div class="sa-modal-backdrop"></div><!-- النظام الذكي -->
+
+  <div class="sa-bubble" id="saBubble"><!-- النظام الذكي -->
+    <div class="sa-bubble-glow"></div><!-- النظام الذكي -->
+
+    <div class="sa-bubble-inner"><!-- النظام الذكي -->
+      <!-- الهيدر: صورة الروبوت + العنوان + زر إغلاق --> <!-- النظام الذكي -->
+      <div class="sa-bubble-header"><!-- النظام الذكي -->
+        <div class="sa-header-left"><!-- النظام الذكي -->
+          <div class="sa-bot-avatar" id="saBotAvatar"><!-- النظام الذكي -->
+  <!-- سيتم حقن نفس أيقونة زر المساعد الذكي (smart-assistant-icon) هنا عبر JS --> <!-- النظام الذكي -->
+</div><!-- النظام الذكي -->
+          <div class="sa-header-texts"><!-- النظام الذكي -->
+            <div class="sa-title" id="saTitle"></div><!-- النظام الذكي -->
+            <div class="sa-question" id="saQuestion"></div><!-- النظام الذكي -->
+          </div><!-- النظام الذكي -->
+        </div><!-- النظام الذكي -->
+
+        <button type="button" class="sa-close-btn" id="saCloseBtn" aria-label="Close"><!-- النظام الذكي -->
+          ×<!-- النظام الذكي -->
+        </button><!-- النظام الذكي -->
+      </div><!-- النظام الذكي -->
+
+      <!-- نص المساعد بتأثير الكتابة --> <!-- النظام الذكي -->
+      <div class="sa-bubble-body"><!-- النظام الذكي -->
+        <div class="sa-assistant-text" id="saAssistantText" data-dir="rtl"></div><!-- النظام الذكي -->
+        <div class="sa-summary-text" id="saSummaryText"></div><!-- النظام الذكي -->
+
+        <!-- عدّاد الطلبات --> <!-- النظام الذكي -->
+        <div class="sa-counter-row"><!-- النظام الذكي -->
+          <button type="button" class="sa-counter-btn" id="saMinusBtn">−</button><!-- النظام الذكي -->
+          <input
+            type="number"
+            id="saCountInput"
+            class="sa-counter-input"
+            min="0"
+            step="1"
+          /><!-- النظام الذكي -->
+          <button type="button" class="sa-counter-btn" id="saPlusBtn">+</button><!-- النظام الذكي -->
+        </div><!-- النظام الذكي -->
+
+        <!-- أزرار الإضافة السريعة --> <!-- النظام الذكي -->
+        <div class="sa-presets-row"><!-- النظام الذكي -->
+          <button type="button" class="sa-preset-btn" data-add="5">+5</button><!-- النظام الذكي -->
+          <button type="button" class="sa-preset-btn" data-add="10">+10</button><!-- النظام الذكي -->
+          <button type="button" class="sa-preset-btn" data-add="20">+20</button><!-- النظام الذكي -->
+        </div><!-- النظام الذكي -->
+
+        <!-- وضع التوزيع (حالياً نص فقط، بدون منطق) --> <!-- النظام الذكي -->
+        <div class="sa-mode-row"><!-- النظام الذكي -->
+          <div class="sa-mode-label" id="saModeLabel"></div><!-- النظام الذكي -->
+          <div class="sa-mode-pill"><!-- النظام الذكي -->
+            <span class="sa-mode-dot"></span><!-- النظام الذكي -->
+            <span id="saModeValue"></span><!-- النظام الذكي -->
+          </div><!-- النظام الذكي -->
+        </div><!-- النظام الذكي -->
+      </div><!-- النظام الذكي -->
+
+      <!-- الأزرار السفلية --> <!-- النظام الذكي -->
+      <div class="sa-bubble-footer"><!-- النظام الذكي -->
+        <button type="button" class="sa-btn sa-btn-secondary" id="saCancelBtn"><!-- النظام الذكي -->
+          إلغاء<!-- النظام الذكي -->
+        </button><!-- النظام الذكي -->
+        <button type="button" class="sa-btn sa-btn-primary" id="saSendBtn"><!-- النظام الذكي -->
+          إرسال الآن<!-- النظام الذكي -->
+        </button><!-- النظام الذكي -->
+      </div><!-- النظام الذكي -->
+    </div><!-- النظام الذكي -->
+
+    <!-- ذيل الفقاعة متجه نحو زر الروبوت في الأسفل --> <!-- النظام الذكي -->
+    <div class="sa-bubble-tail"></div><!-- النظام الذكي -->
+  </div><!-- النظام الذكي -->
+</div><!-- النظام الذكي -->
 
 <!-- تفاصيل الطلب (مودال) -->
 <div id="orderModal" class="hidden">
@@ -939,6 +1466,7 @@ html[dir="ltr"] .toast {
 <!-- صوت عند تفعيل حساب التاجر (الاعتماد) -->
 <audio id="merchantApprovedSound" src="unterwegs.mp3" preload="auto"></audio>
 <audio id="smartAssistantSound" src="send.mp3" preload="auto"></audio> <!-- NEW -->
+<audio id="smartAssistantSendSound" src="send.mp3" preload="auto"></audio> <!-- النظام الذكي -->
 
 <!-- Toast notifications -->
 <div id="toastContainer" class="toast-container"></div>
@@ -1973,23 +2501,571 @@ const driverNearSoundEl       = document.getElementById("driverNearSound");
 // صوت تسليم الطلب (لرحلة العميل)
 const customerDeliveredSoundEl = document.getElementById("customerDeliveredSound");
 const smartAssistantSoundEl   = document.getElementById("smartAssistantSound"); // NEW
-// زر المساعد الذكي (Teaser)                                     // NEW
-if (smartAssistantBtn) {                                          // NEW
-  smartAssistantBtn.addEventListener("click", () => {             // NEW
-    // تشغيل صوت المساعد الذكي                                   // NEW
-    if (smartAssistantSoundEl) {                                  // NEW
-      try {                                                       // NEW
-        smartAssistantSoundEl.currentTime = 0;                    // NEW
-        smartAssistantSoundEl.play();                             // NEW
-      } catch (e) {                                               // NEW
-        console.warn("تعذر تشغيل صوت المساعد الذكي:", e);        // NEW
-      }                                                           // NEW
-    }                                                             // NEW
+const smartAssistantSendSoundEl =
+  document.getElementById("smartAssistantSendSound"); // النظام الذكي
 
-    // توست لمدة ٥ ثواني                                         // NEW
-    showToast(t("smartAssistantComingSoon"), "success", 5000);    // NEW
-  });                                                             // NEW
-}                                                                 // NEW
+// ============================== // النظام الذكي
+//  النظام الذكي: فقاعة المساعد الذكي (UI فقط) // النظام الذكي
+// ============================== // النظام الذكي
+
+// النظام الذكي: ثوابت إعدادات العداد
+const SMART_ASSISTANT_MIN = 0; // النظام الذكي
+const SMART_ASSISTANT_MAX = 20; // النظام الذكي
+const SMART_ASSISTANT_DEFAULT = 0; // النظام الذكي
+
+// النظام الذكي: نصوص الفقاعة بعدة لغات (محلية، بدون t())
+const SA_LANGS = ["ar", "en", "de", "tr"]; // النظام الذكي
+
+const SA_TEXTS = { // النظام الذكي
+  ar: { // النظام الذكي
+    title: "المساعد الذكي للطلبات", // النظام الذكي
+    intro:
+      "أدخل عدد الطلبات وسأتولى توزيعها تلقائياً على السائقين المتاحين.", // النظام الذكي
+    offlineIntro:
+      "يبدو أنك حالياً في حالة أوفلاين. فعّل أونلاين من الأعلى ثم أدخل عدد الطلبات لأساعدك في توزيعها.", // النظام الذكي
+    question: "كم طلب تريد إنشاءه الآن لهذا المطعم؟", // النظام الذكي
+    summary:
+      "سيتم إنشاء %COUNT% طلب توصيل وإرسالها تلقائياً للسائقين المتاحين.", // النظام الذكي
+    modeLabel: "طريقة التوزيع", // النظام الذكي
+    modeAuto: "توزيع تلقائي – أفضل سائق متاح", // النظام الذكي
+    cancel: "إلغاء", // النظام الذكي
+    sendNow: "إرسال الآن", // النظام الذكي
+    sentToast: "تم إرسال %COUNT% أمر إلى المساعد الذكي.", // النظام الذكي
+    errorNoCount: "لم تحدد عدداً للطلبات التي تريني أن أديرها لك!", // النظام الذكي
+    errorNoMerchant:
+      "لا يوجد تاجر حالي مسجّل، لا يمكن إنشاء طلب للمساعد الذكي.", // النظام الذكي
+    errorMerchantOffline:
+      "لو سمحت فعّل حالتك إلى أونلاين كي أتمكن من مساعدتك.", // النظام الذكي
+    errorGeneric:
+      "حدث خطأ أثناء إرسال الطلب إلى المساعد الذكي. الرجاء المحاولة لاحقاً.", // النظام الذكي
+  }, // النظام الذكي
+
+  en: { // النظام الذكي
+    title: "Smart Orders Assistant", // النظام الذكي
+    intro:
+      "Enter the number of orders and I will automatically assign them to available drivers.", // النظام الذكي
+    offlineIntro:
+      "It looks like you’re currently offline. Switch yourself online from the top bar, then enter the number of orders and I’ll help you distribute them.", // النظام الذكي
+    question:
+      "How many orders do you want to create now for this restaurant?", // النظام الذكي
+    summary:
+      "%COUNT% delivery orders will be created and automatically assigned to available drivers.", // النظام الذكي
+    modeLabel: "Distribution mode", // النظام الذكي
+    modeAuto: "Automatic – best available driver", // النظام الذكي
+    cancel: "Cancel", // النظام الذكي
+    sendNow: "Send now", // النظام الذكي
+    sentToast:
+      "%COUNT% orders were sent to the smart assistant.", // النظام الذكي
+    errorNoCount:
+      "You didn’t specify how many orders you want me to manage for you!", // النظام الذكي
+    errorNoMerchant:
+      "No current merchant is set, I cannot create a smart assistant job.", // النظام الذكي
+    errorMerchantOffline:
+      "Please switch your status to online so I can help you.", // النظام الذكي
+    errorGeneric:
+      "An error occurred while sending the request to the smart assistant. Please try again later.", // النظام الذكي
+  }, // النظام الذكي
+
+  de: { // النظام الذكي
+    title: "Intelligenter Bestellassistent", // النظام الذكي
+    intro:
+      "Gib die Anzahl der Bestellungen ein, und ich verteile sie automatisch auf verfügbare Fahrer.", // النظام الذكي
+    offlineIntro:
+      "Du bist derzeit auf Offline gestellt. Schalte dich oben auf Online und gib dann die Anzahl der Bestellungen ein, damit ich sie für dich verteilen kann.", // النظام الذكي
+    question:
+      "Wie viele Bestellungen möchtest du jetzt für dieses Restaurant erstellen?", // النظام الذكي
+    summary:
+      "%COUNT% Lieferaufträge werden erstellt und automatisch an verfügbare Fahrer verteilt.", // النظام الذكي
+    modeLabel: "Verteilungsmodus", // النظام الذكي
+    modeAuto: "Automatisch – bester verfügbarer Fahrer", // النظام الذكي
+    cancel: "Abbrechen", // النظام الذكي
+    sendNow: "Jetzt senden", // النظام الذكي
+    sentToast:
+      "%COUNT% Aufträge wurden an den smarten Assistenten gesendet.", // النظام الذكي
+    errorNoCount:
+      "Du hast keine Anzahl an Bestellungen angegeben, die ich für dich verwalten soll!", // النظام الذكي
+    errorNoMerchant:
+      "Es ist kein aktueller Händler gesetzt, ich kann keinen Smart-Assistenten-Job erstellen.", // النظام الذكي
+    errorMerchantOffline:
+      "Bitte stelle deinen Status auf Online, damit ich dir helfen kann.", // النظام الذكي
+    errorGeneric:
+      "Beim Senden der Anfrage an den smarten Assistenten ist ein Fehler aufgetreten. Bitte versuche es später erneut.", // النظام الذكي
+  }, // النظام الذكي
+
+  tr: { // النظام الذكي
+    title: "Akıllı Sipariş Asistanı", // النظام الذكي
+    intro:
+      "Sipariş sayısını gir, ben de onları uygun sürücülere otomatik olarak dağıtayım.", // النظام الذكي
+    offlineIntro:
+      "Şu anda durumun çevrimdışı görünüyor. Üst bardan çevrimiçi ol, sonra sipariş sayısını gir, ben de dağıtıma yardım edeyim.", // النظام الذكي
+    question:
+      "Bu restoran için şimdi kaç sipariş oluşturmak istiyorsun?", // النظام الذكي
+    summary:
+      "%COUNT% teslimat siparişi oluşturulacak ve uygun sürücülere otomatik olarak atanacak.", // النظام الذكي
+    modeLabel: "Dağıtım modu", // النظام الذكي
+    modeAuto: "Otomatik – en uygun sürücü", // النظام الذكي
+    cancel: "İptal", // النظام الذكي
+    sendNow: "Şimdi gönder", // النظام الذكي
+    sentToast:
+      "%COUNT% sipariş akıllı asistana gönderildi.", // النظام الذكي
+    errorNoCount:
+      "Benim senin için yönetmemi istediğin sipariş sayısını belirtmedin!", // النظام الذكي
+    errorNoMerchant:
+      "Aktif bir işletme tanımlı değil, akıllı asistan işi oluşturamıyorum.", // النظام الذكي
+    errorMerchantOffline:
+      "Lütfen sana yardımcı olabilmem için durumunu çevrimiçi yap.", // النظام الذكي
+    errorGeneric:
+      "Akıllı asistana istek gönderilirken bir hata oluştu. Lütfen daha sonra tekrar dene.", // النظام الذكي
+  }, // النظام الذكي
+}; // النظام الذكي
+
+function saGetLang() { // النظام الذكي
+  const raw = (window.currentLang || "ar").toLowerCase(); // النظام الذكي
+  return SA_LANGS.includes(raw) ? raw : "ar"; // النظام الذكي
+} // النظام الذكي
+
+function saGetTexts() { // النظام الذكي
+  const lang = saGetLang(); // النظام الذكي
+  return SA_TEXTS[lang] || SA_TEXTS.ar; // النظام الذكي
+} // النظام الذكي
+
+// النظام الذكي: عناصر الواجهة
+const smartAssistantBtnEl =
+  document.getElementById("smartAssistantBtn") ||
+  document.querySelector(".smart-assistant-btn"); // النظام الذكي
+  // النظام الذكي: تشغيل/إيقاف الذيل المضيء حول زر المساعد حسب وجود auto_pending
+function saUpdateSmartAssistantOrbit(hasAutoPending) { // النظام الذكي
+  if (!smartAssistantBtnEl) return; // النظام الذكي
+  if (hasAutoPending) { // النظام الذكي
+    smartAssistantBtnEl.classList.add("smart-assistant-orbit"); // النظام الذكي
+  } else { // النظام الذكي
+    smartAssistantBtnEl.classList.remove("smart-assistant-orbit"); // النظام الذكي
+  } // النظام الذكي
+} // النظام الذكي
+
+const smartAssistantModalEl = document.getElementById("smartAssistantModal"); // النظام الذكي
+
+const saTitleEl = document.getElementById("saTitle"); // النظام الذكي
+const saQuestionEl = document.getElementById("saQuestion"); // النظام الذكي
+const saAssistantTextEl = document.getElementById("saAssistantText"); // النظام الذكي
+const saSummaryTextEl = document.getElementById("saSummaryText"); // النظام الذكي
+const saModeLabelEl = document.getElementById("saModeLabel"); // النظام الذكي
+const saModeValueEl = document.getElementById("saModeValue"); // النظام الذكي
+const saBotAvatarEl = document.getElementById("saBotAvatar"); // النظام الذكي
+// النظام الذكي: حقن نفس أيقونة زر المساعد داخل الفقاعة
+function saInitAvatarIcon() { // النظام الذكي
+  if (!saBotAvatarEl) return; // النظام الذكي
+  const btnIcon = document.querySelector(".smart-assistant-icon"); // النظام الذكي
+  if (!btnIcon) return; // النظام الذكي
+
+  const clone = btnIcon.cloneNode(true); // النظام الذكي
+  clone.removeAttribute("id"); // النظام الذكي
+  clone.classList.add("sa-bot-icon"); // النظام الذكي
+
+  saBotAvatarEl.innerHTML = ""; // النظام الذكي
+  saBotAvatarEl.appendChild(clone); // النظام الذكي
+} // النظام الذكي
+
+const saMinusBtnEl = document.getElementById("saMinusBtn"); // النظام الذكي
+const saPlusBtnEl = document.getElementById("saPlusBtn"); // النظام الذكي
+const saCountInputEl = document.getElementById("saCountInput"); // النظام الذكي
+const saPresetBtns = document.querySelectorAll(".sa-preset-btn"); // النظام الذكي
+
+const saCancelBtnEl = document.getElementById("saCancelBtn"); // النظام الذكي
+const saSendBtnEl = document.getElementById("saSendBtn"); // النظام الذكي
+const saCloseBtnEl = document.getElementById("saCloseBtn"); // النظام الذكي
+
+let saTypingTimer = null; // النظام الذكي
+
+// النظام الذكي: إعداد اتجاه النص حسب اللغة
+function saSetDirectionForAssistantText() { // النظام الذكي
+  if (!saAssistantTextEl) return; // النظام الذكي
+  const lang = saGetLang(); // النظام الذكي
+  const dir = lang === "en" || lang === "de" || lang === "tr" ? "ltr" : "rtl"; // النظام الذكي
+  saAssistantTextEl.dataset.dir = dir; // النظام الذكي
+} // النظام الذكي
+
+// النظام الذكي: تطبيق النصوص على عناصر الواجهة
+function saApplyStaticTexts() { // النظام الذكي
+  const t = saGetTexts(); // النظام الذكي
+  if (saTitleEl) saTitleEl.textContent = t.title; // النظام الذكي
+  if (saQuestionEl) saQuestionEl.textContent = t.question; // النظام الذكي
+  if (saModeLabelEl) saModeLabelEl.textContent = t.modeLabel; // النظام الذكي
+  if (saModeValueEl) saModeValueEl.textContent = t.modeAuto; // النظام الذكي
+  if (saCancelBtnEl) saCancelBtnEl.textContent = t.cancel; // النظام الذكي
+  if (saSendBtnEl) saSendBtnEl.textContent = t.sendNow; // النظام الذكي
+} // النظام الذكي
+
+// النظام الذكي: دوال العداد
+function saNormalizeCount(value) { // النظام الذكي
+  let v = parseInt(value, 10); // النظام الذكي
+  if (!Number.isFinite(v)) v = SMART_ASSISTANT_DEFAULT; // النظام الذكي
+  if (v < SMART_ASSISTANT_MIN) v = SMART_ASSISTANT_MIN; // النظام الذكي
+  if (v > SMART_ASSISTANT_MAX) v = SMART_ASSISTANT_MAX; // النظام الذكي
+  return v; // النظام الذكي
+} // النظام الذكي
+
+function saSetCount(value) { // النظام الذكي
+  if (!saCountInputEl) return; // النظام الذكي
+  const normalized = saNormalizeCount(value); // النظام الذكي
+  saCountInputEl.value = normalized; // النظام الذكي
+  saUpdateSummaryText(); // النظام الذكي
+} // النظام الذكي
+
+function saGetCount() { // النظام الذكي
+  if (!saCountInputEl) return SMART_ASSISTANT_DEFAULT; // النظام الذكي
+  return saNormalizeCount(saCountInputEl.value); // النظام الذكي
+} // النظام الذكي
+
+function saGetSummaryMessage(count) { // النظام الذكي
+  const t = saGetTexts(); // النظام الذكي
+  const template = t.summary || ""; // النظام الذكي
+  return template.replace("%COUNT%", String(count)); // النظام الذكي
+} // النظام الذكي
+// النظام الذكي: إنشاء autoJob في Firestore
+async function saCreateAutoJob(count) { // النظام الذكي
+  const t = saGetTexts(); // النظام الذكي
+
+  // تحقق من وجود تاجر حالي (استخدام المتغيّر العالمي الحالي في المشروع) // النظام الذكي
+  if (!currentMerchantId) { // النظام الذكي
+    const errMsg =
+      t.errorNoMerchant ||
+      "لا يوجد تاجر حالي مسجّل، لا يمكن إنشاء طلب للمساعد الذكي."; // النظام الذكي
+
+    if (typeof showToast === "function") { // النظام الذكي
+      showToast(errMsg, "error"); // النظام الذكي
+    } else { // النظام الذكي
+      console.error("[SmartAssistant] " + errMsg); // النظام الذكي
+    } // النظام الذكي
+
+    throw new Error("NO_MERCHANT_ID"); // النظام الذكي
+  } // النظام الذكي
+
+  const merchantId = currentMerchantId; // النظام الذكي
+
+  // ✅ جديد: نقرأ اسم التاجر والعنوان الظاهر في الواجهة
+  const merchantName =
+    merchantNameEl && merchantNameEl.textContent
+      ? merchantNameEl.textContent.trim()
+      : null;
+
+  const merchantCityText =
+    merchantCityEl && merchantCityEl.textContent
+      ? merchantCityEl.textContent.trim()
+      : null;
+
+  const payload = { // النظام الذكي
+    type: "bulk_orders", // النظام الذكي
+    countRequested: count, // النظام الذكي
+    countCreated: 0, // النظام الذكي
+    status: "pending", // النظام الذكي
+    source: "assistant", // النظام الذكي
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(), // النظام الذكي
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(), // النظام الذكي
+
+    // ✅ جديد: نفس الحقول التي يعتمد عليها النداء اليدوي
+    merchantName: merchantName,      // النظام الذكي
+    merchantCity: merchantCityText,  // النظام الذكي
+  }; // النظام الذكي
+
+  // ✅ أهم شيء: تمرير إحداثيات المطعم مع الـ job
+  if (
+    typeof merchantLocationLat === "number" &&
+    typeof merchantLocationLng === "number"
+  ) {
+    payload.merchantLat = merchantLocationLat;   // النظام الذكي
+    payload.merchantLng = merchantLocationLng;   // النظام الذكي
+  }
+
+  await db // النظام الذكي
+    .collection("merchants") // النظام الذكي
+    .doc(merchantId) // النظام الذكي
+    .collection("autoJobs") // النظام الذكي
+    .add(payload); // النظام الذكي
+} // النظام الذكي
+
+function saUpdateSummaryText() { // النظام الذكي
+  if (!saSummaryTextEl) return; // النظام الذكي
+  saSummaryTextEl.classList.remove("sa-summary-error"); // النظام الذكي
+  const count = saGetCount(); // النظام الذكي
+  const summary = saGetSummaryMessage(count); // النظام الذكي
+  saSummaryTextEl.textContent = summary; // النظام الذكي
+} // النظام الذكي
+
+// النظام الذكي: تأثير الكتابة
+function saTypeAssistantText(message) { // النظام الذكي
+  if (!saAssistantTextEl) return; // النظام الذكي
+  if (saTypingTimer) { // النظام الذكي
+    clearTimeout(saTypingTimer); // النظام الذكي
+    saTypingTimer = null; // النظام الذكي
+  } // النظام الذكي
+
+  saAssistantTextEl.classList.add("sa-typewriter-active"); // النظام الذكي
+  saAssistantTextEl.textContent = ""; // النظام الذكي
+  let index = 0; // النظام الذكي
+
+  function step() { // النظام الذكي
+    if (!saAssistantTextEl) return; // النظام الذكي
+    if (index <= message.length) { // النظام الذكي
+      saAssistantTextEl.textContent = message.slice(0, index); // النظام الذكي
+      index += 1; // النظام الذكي
+      saTypingTimer = setTimeout(step, 20); // النظام الذكي
+    } else { // النظام الذكي
+      saAssistantTextEl.classList.remove("sa-typewriter-active"); // النظام الذكي
+      saTypingTimer = null; // النظام الذكي
+    } // النظام الذكي
+  } // النظام الذكي
+
+  step(); // النظام الذكي
+} // النظام الذكي
+
+// النظام الذكي: فتح / إغلاق الفقاعة
+function openSmartAssistantModal() { // النظام الذكي
+  if (!smartAssistantModalEl) return; // النظام الذكي
+
+  saApplyStaticTexts(); // النظام الذكي
+  saSetDirectionForAssistantText(); // النظام الذكي
+  saSetCount(SMART_ASSISTANT_DEFAULT); // النظام الذكي
+
+  const t = saGetTexts(); // النظام الذكي
+  saTypeAssistantText(t.intro || ""); // النظام الذكي
+
+  smartAssistantModalEl.classList.remove("sa-modal-hidden"); // النظام الذكي
+  smartAssistantModalEl.classList.add("sa-modal-open"); // النظام الذكي
+
+  // تشغيل صوت المساعد الذكي (إن وجد) // النظام الذكي
+  if (typeof smartAssistantSoundEl !== "undefined" && smartAssistantSoundEl) { // النظام الذكي
+    try { // النظام الذكي
+      smartAssistantSoundEl.currentTime = 0; // النظام الذكي
+      smartAssistantSoundEl.play(); // النظام الذكي
+    } catch (e) { // النظام الذكي
+      console.warn("تعذر تشغيل صوت المساعد الذكي:", e); // النظام الذكي
+    } // النظام الذكي
+  } // النظام الذكي
+} // النظام الذكي
+function openSmartAssistantModal() { // النظام الذكي
+  if (!smartAssistantModalEl) return; // النظام الذكي
+
+  saInitAvatarIcon(); // النظام الذكي  ← هنا
+  saApplyStaticTexts(); // النظام الذكي
+  saSetDirectionForAssistantText(); // النظام الذكي
+  saSetCount(SMART_ASSISTANT_DEFAULT); // النظام الذكي
+
+  const t = saGetTexts(); // النظام الذكي
+
+  // نقرأ حالة التاجر من المتغيّر العالمي الموجود في المشروع // النظام الذكي
+  const isOnline =
+    typeof merchantCurrentOnline === "boolean"
+      ? merchantCurrentOnline
+      : true; // النظام الذكي (نعتبره أونلاين لو لم يكن مهيّأ بشكل غريب)
+
+  const introMessage = isOnline
+    ? (t.intro || "")
+    : (t.offlineIntro || t.intro || ""); // النظام الذكي
+
+  saTypeAssistantText(introMessage); // النظام الذكي
+
+  smartAssistantModalEl.classList.remove("sa-modal-hidden"); // النظام الذكي
+  smartAssistantModalEl.classList.add("sa-modal-open"); // النظام الذكي
+
+  // تشغيل صوت المساعد الذكي (إن وجد) // النظام الذكي
+  if (typeof smartAssistantSoundEl !== "undefined" && smartAssistantSoundEl) { // النظام الذكي
+    try { // النظام الذكي
+      smartAssistantSoundEl.currentTime = 0; // النظام الذكي
+      smartAssistantSoundEl.play(); // النظام الذكي
+    } catch (e) { // النظام الذكي
+      console.warn("تعذر تشغيل صوت المساعد الذكي:", e); // النظام الذكي
+    } // النظام الذكي
+  } // النظام الذكي
+} // النظام الذكي
+function closeSmartAssistantModal() { // النظام الذكي
+  if (!smartAssistantModalEl) return; // النظام الذكي
+  smartAssistantModalEl.classList.remove("sa-modal-open"); // النظام الذكي
+  smartAssistantModalEl.classList.add("sa-modal-hidden"); // النظام الذكي
+
+  if (saTypingTimer) { // النظام الذكي
+    clearTimeout(saTypingTimer); // النظام الذكي
+    saTypingTimer = null; // النظام الذكي
+  } // النظام الذكي
+} // النظام الذكي
+
+// النظام الذكي: ربط زر الروبوت بفتح الفقاعة
+if (smartAssistantBtnEl) { // النظام الذكي
+  smartAssistantBtnEl.addEventListener("click", function (e) { // النظام الذكي
+    e.preventDefault(); // النظام الذكي
+    openSmartAssistantModal(); // النظام الذكي
+  }); // النظام الذكي
+} // النظام الذكي
+
+// النظام الذكي: ربط + و −
+if (saPlusBtnEl) { // النظام الذكي
+  saPlusBtnEl.addEventListener("click", function () { // النظام الذكي
+    const current = saGetCount(); // النظام الذكي
+    saSetCount(current + 1); // النظام الذكي
+    const msg = saGetSummaryMessage(saGetCount()); // النظام الذكي
+    saTypeAssistantText(msg); // النظام الذكي
+  }); // النظام الذكي
+} // النظام الذكي
+
+if (saMinusBtnEl) { // النظام الذكي
+  saMinusBtnEl.addEventListener("click", function () { // النظام الذكي
+    const current = saGetCount(); // النظام الذكي
+    saSetCount(current - 1); // النظام الذكي
+    const msg = saGetSummaryMessage(saGetCount()); // النظام الذكي
+    saTypeAssistantText(msg); // النظام الذكي
+  }); // النظام الذكي
+} // النظام الذكي
+
+// النظام الذكي: تغيير القيمة من الـ input
+if (saCountInputEl) { // النظام الذكي
+  saCountInputEl.addEventListener("change", function () { // النظام الذكي
+    saSetCount(saCountInputEl.value); // النظام الذكي
+    const msg = saGetSummaryMessage(saGetCount()); // النظام الذكي
+    saTypeAssistantText(msg); // النظام الذكي
+  }); // النظام الذكي
+} // النظام الذكي
+
+// النظام الذكي: أزرار الإضافة السريعة
+if (saPresetBtns && saPresetBtns.length) { // النظام الذكي
+  saPresetBtns.forEach(function (btn) { // النظام الذكي
+    btn.addEventListener("click", function () { // النظام الذكي
+      const add = parseInt(btn.getAttribute("data-add"), 10) || 0; // النظام الذكي
+      const current = saGetCount(); // النظام الذكي
+      saSetCount(current + add); // النظام الذكي
+      const msg = saGetSummaryMessage(saGetCount()); // النظام الذكي
+      saTypeAssistantText(msg); // النظام الذكي
+    }); // النظام الذكي
+  }); // النظام الذكي
+} // النظام الذكي
+
+// النظام الذكي: أزرار الإغلاق (إلغاء + × + الخلفية)
+if (saCancelBtnEl) { // النظام الذكي
+  saCancelBtnEl.addEventListener("click", function () { // النظام الذكي
+    closeSmartAssistantModal(); // النظام الذكي
+  }); // النظام الذكي
+} // النظام الذكي
+
+if (saCloseBtnEl) { // النظام الذكي
+  saCloseBtnEl.addEventListener("click", function () { // النظام الذكي
+    closeSmartAssistantModal(); // النظام الذكي
+  }); // النظام الذكي
+} // النظام الذكي
+
+if (smartAssistantModalEl) { // النظام الذكي
+  smartAssistantModalEl.addEventListener("click", function (e) { // النظام الذكي
+    if (e.target === smartAssistantModalEl || e.target.classList.contains("sa-modal-backdrop")) { // النظام الذكي
+      closeSmartAssistantModal(); // النظام الذكي
+    } // النظام الذكي
+  }); // النظام الذكي
+} // النظام الذكي
+
+// النظام الذكي: زر الإرسال – الآن يكتب autoJob في Firestore
+if (saSendBtnEl) { // النظام الذكي
+  saSendBtnEl.addEventListener("click", async function () { // النظام الذكي
+    const count = saGetCount(); // النظام الذكي
+    const t = saGetTexts(); // النظام الذكي
+
+    // تحقق: لا نسمح بالإرسال عندما يكون العدد 0 // النظام الذكي
+    if (!count || count < 1) { // النظام الذكي
+      const err = t.errorNoCount || "الرجاء تحديد عدد الطلبات أولاً."; // النظام الذكي
+
+      if (saSummaryTextEl) { // النظام الذكي
+        saSummaryTextEl.textContent = err; // النظام الذكي
+        saSummaryTextEl.classList.add("sa-summary-error"); // النظام الذكي
+      } // النظام الذكي
+
+      if (typeof showToast === "function") { // النظام الذكي
+        showToast(err, "error"); // النظام الذكي
+      } else { // النظام الذكي
+        console.warn("[SmartAssistant] " + err); // النظام الذكي
+      } // النظام الذكي
+
+      return; // النظام الذكي
+    } // النظام الذكي
+
+    // تحقق: لا نسمح بالإرسال عندما التاجر أوفلاين // النظام الذكي
+    const isOnline =
+      typeof merchantCurrentOnline === "boolean"
+        ? merchantCurrentOnline
+        : true; // النظام الذكي
+
+    if (!isOnline) { // النظام الذكي
+      const offlineErr =
+        t.errorMerchantOffline ||
+        "لو سمحت فعّل حالتك إلى أونلاين كي أتمكن من مساعدتك."; // النظام الذكي
+
+      if (saSummaryTextEl) { // النظام الذكي
+        saSummaryTextEl.textContent = offlineErr; // النظام الذكي
+        saSummaryTextEl.classList.add("sa-summary-error"); // النظام الذكي
+      } // النظام الذكي
+
+      if (typeof showToast === "function") { // النظام الذكي
+        showToast(offlineErr, "error"); // النظام الذكي
+      } else { // النظام الذكي
+        console.warn("[SmartAssistant] " + offlineErr); // النظام الذكي
+      } // النظام الذكي
+
+      return; // النظام الذكي ← لا نرسل أي شيء ولا نغلق الفقاعة // النظام الذكي
+    } // النظام الذكي
+
+    // حماية بسيطة من الضغط المزدوج // النظام الذكي
+    saSendBtnEl.disabled = true; // النظام الذكي
+    saSendBtnEl.classList.add("sa-btn-loading"); // النظام الذكي
+
+    try { // النظام الذكي
+      await saCreateAutoJob(count); // النظام الذكي
+
+      const msg =
+        (t.sentToast || "").replace("%COUNT%", String(count)) ||
+        "تم إرسال الطلب إلى المساعد الذكي."; // النظام الذكي
+
+      if (typeof showToast === "function") { // النظام الذكي
+        showToast(msg, "success"); // النظام الذكي
+      } else { // النظام الذكي
+        console.log("[SmartAssistant]", msg); // النظام الذكي
+      } // النظام الذكي
+
+      closeSmartAssistantModal(); // النظام الذكي
+    } catch (err) { // النظام الذكي
+      console.error("[SmartAssistant] Failed to create autoJob:", err); // النظام الذكي
+      const errMsg =
+        t.errorGeneric ||
+        "حدث خطأ أثناء إرسال الطلب إلى المساعد الذكي. الرجاء المحاولة لاحقاً."; // النظام الذكي
+
+      if (typeof showToast === "function") { // النظام الذكي
+        showToast(errMsg, "error"); // النظام الذكي
+      } else { // النظام الذكي
+        console.error("[SmartAssistant] " + errMsg); // النظام الذكي
+      } // النظام الذكي
+    } finally { // النظام الذكي
+	    // ... بعد تحقق count و isOnline مباشرة // النظام الذكي
+
+    // تشغيل صوت إرسال المساعد الذكي (إن وجد) // النظام الذكي
+    if (smartAssistantSendSoundEl) { // النظام الذكي
+      try { // النظام الذكي
+        smartAssistantSendSoundEl.currentTime = 0; // النظام الذكي
+        smartAssistantSendSoundEl.play(); // النظام الذكي
+      } catch (e) { // النظام الذكي
+        console.warn("تعذر تشغيل صوت إرسال المساعد الذكي:", e); // النظام الذكي
+      } // النظام الذكي
+    } // النظام الذكي
+
+    // حماية بسيطة من الضغط المزدوج // النظام الذكي
+    saSendBtnEl.disabled = true; // النظام الذكي
+    saSendBtnEl.classList.add("sa-btn-loading"); // النظام الذكي
+
+      saSendBtnEl.disabled = false; // النظام الذكي
+      saSendBtnEl.classList.remove("sa-btn-loading"); // النظام الذكي
+    } // النظام الذكي
+  }); // النظام الذكي
+} // النظام الذكي
+
+// النظام الذكي: إغلاق بالـ Esc
+document.addEventListener("keydown", function (e) { // النظام الذكي
+  if (e.key === "Escape" || e.key === "Esc") { // النظام الذكي
+    closeSmartAssistantModal(); // النظام الذكي
+  } // النظام الذكي
+}); // النظام الذكي
 
 let merchantApprovalStatus = "pending";
 let merchantCurrentOnline = false;
@@ -3315,14 +4391,23 @@ function initMapAndData(merchantId) {
         lastCallsById[id] = newData;
       });
 
-      const calls = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        calls.push({ id: doc.id, ...data });
-        lastCallsById[doc.id] = data;
-      });
-      renderMerchantCalls(calls);
+          const calls = [];
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      calls.push({ id: doc.id, ...data });
+      lastCallsById[doc.id] = data;
     });
+
+    // ✅ جديد: هل يوجد أي auto_pending لهذا التاجر؟
+    const hasAutoPending = calls.some((c) => {
+      const st = (c.status || "").toLowerCase();
+      return st === "auto_pending";
+    });
+    saUpdateSmartAssistantOrbit(hasAutoPending); // النظام الذكي
+
+    renderMerchantCalls(calls);
+  });
+
 }
 
 function buildDriverInfoContent(id, data) {
