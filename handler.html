@@ -2767,10 +2767,9 @@ async function saCreateAutoJob(count) {
 
 function saUpdateSummaryText() { // النظام الذكي
   if (!saSummaryTextEl) return; // النظام الذكي
+  // نستخدمها فقط لمسح أخطاء سابقة، بدون إظهار ملخص ثابت
   saSummaryTextEl.classList.remove("sa-summary-error"); // النظام الذكي
-  const count = saGetCount(); // النظام الذكي
-  const summary = saGetSummaryMessage(count); // النظام الذكي
-  saSummaryTextEl.textContent = summary; // النظام الذكي
+  saSummaryTextEl.textContent = ""; // النظام الذكي
 } // النظام الذكي
 
 // النظام الذكي: تأثير الكتابة
