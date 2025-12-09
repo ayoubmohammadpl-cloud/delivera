@@ -4888,7 +4888,7 @@ function centerMapCinematic(currentLatLng, heading) {
   }
 
   // مسافة أمام السائق (متر) – عدّلها حسب ما تحب
-  const metersAhead = 5;
+  const metersAhead = 80;
 
   const effectiveHeading =
     typeof heading === "number" && !isNaN(heading)
@@ -4906,7 +4906,7 @@ function centerMapCinematic(currentLatLng, heading) {
   driverMap.setCenter(centerAhead);
 
   // تقريب بسيط أثناء القيادة
-  const targetZoom = 18.2;
+  const targetZoom = 17;
   if ((driverMap.getZoom() || 0) < targetZoom) {
     driverMap.setZoom(targetZoom);
   }
