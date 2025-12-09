@@ -1463,8 +1463,10 @@ body.driver-extra-open #driverExtraScanBtn {
 <audio id="driverApprovalSound" src="unterwegs.mp3" preload="auto"></audio>
 
 <!-- Google Maps API -->
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCUMgXQwwe7afBlRpp6zrXunbTVSCXfSqQ&v=beta&map_ids=a07979cd0230b599b0df811d&libraries=geometry,places">
-  defer</script>
+<script
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCUMgXQwwe7afBlRpp6zrXunbTVSCXfSqQ&v=beta&map_ids=a07979cd0230b599b0df811d&libraries=geometry,places"
+  defer
+></script>
 
 
 <script>
@@ -4179,20 +4181,37 @@ function initDriverMap() {
 
   try {
     if (!driverMap && typeof google !== "undefined" && google.maps && google.maps.Map) {
-      driverMap = new google.maps.Map(driverMapContainer, {
+     driverMap = new google.maps.Map(driverMapContainer, {
   center,
   zoom: 16,
-  mapId: "a07979cd0230b599b0df811d",        // نفس الـ Map ID في السكربت
+
+  // ⬅ مهم جداً: نفس الـ Map ID المستخدم في السكربت
+  mapId: "a07979cd0230b599b0df811d",
+
+  // نضمن استخدام الـ Vector Map
+  renderingType: google.maps.RenderingType.VECTOR,
+
   disableDefaultUI: true,
   zoomControl: false,
   gestureHandling: "greedy",
 
-  // مهم جداً لتدوير/إمالة الخريطة
+  // وضع مبدئي للملاحة
   tilt: 45,
   heading: 0,
+
+  // تفعيل التدوير والإمالة بالـ Gestures / الكيبورد
   tiltInteractionEnabled: true,
-  headingInteractionEnabled: true
+  headingInteractionEnabled: true,
 });
+// 🔍 تشخيص نوع الخريطة ودعم التدوير
+try {
+  console.log("supports setHeading?:", typeof driverMap.setHeading);
+  if (typeof driverMap.getRenderingType === "function") {
+    console.log("map renderingType:", driverMap.getRenderingType());
+  }
+} catch (e) {
+  console.warn("debug map renderingType failed:", e);
+}
 
     } else if (driverMap) {
       driverMap.setCenter(center);
