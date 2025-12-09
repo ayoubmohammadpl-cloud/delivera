@@ -1463,7 +1463,7 @@ body.driver-extra-open #driverExtraScanBtn {
 <audio id="driverApprovalSound" src="unterwegs.mp3" preload="auto"></audio>
 
 <!-- Google Maps API -->
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCUMgXQwwe7afBlRpp6zrXunbTVSCXfSqQ&libraries=geometry,places&language=ar"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCUMgXQwwe7afBlRpp6zrXunbTVSCXfSqQ&libraries=places&map_ids=a07979cd0230b599b0df811d"></script>
 
 
 <script>
@@ -4182,32 +4182,13 @@ function initDriverMap() {
   center,
   zoom: 13,
   disableDefaultUI: true,
-  zoomControl: false,       // إيقاف +/-
-  gestureHandling: "greedy",// يسمح للماب تلتقط حركات الأصابع (سحب/تكبير/تدوير)
+  zoomControl: false,
+  gestureHandling: "greedy",
   tilt: 0,
   heading: 0,
-  styles: [
-    // أساس ألوان الخريطة الداكنة
-    { elementType: "geometry", stylers: [{ color: "#1f2933" }] },
-    { elementType: "labels.text.fill", stylers: [{ color: "#9fb3c8" }] },
-    { elementType: "labels.text.stroke", stylers: [{ color: "#1f2933" }] },
 
-    // إخفاء كل رموز الأماكن (مطاعم، محطات، الخ...)
-    { featureType: "poi", stylers: [{ visibility: "off" }] },
-    { featureType: "transit", stylers: [{ visibility: "off" }] },
-    { featureType: "road", elementType: "labels.icon", stylers: [{ visibility: "off" }] },
-
-    // الطرق
-    { featureType: "road", elementType: "geometry", stylers: [{ color: "#323f4b" }] },
-    { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#1f2933" }] },
-
-    // الحدائق (لو حاب تبقيها أغمق فقط)
-    { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#173d3c" }] },
-
-    // الماء
-    { featureType: "water", elementType: "geometry", stylers: [{ color: "#102a43" }] },
-    { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#d9e2ec" }] }
-  ]
+  // 👈 هنا نربط الخريطة بالتصميم من الـ Console
+  mapId: "a07979cd0230b599b0df811d"
 });
 
     } else if (driverMap) {
