@@ -632,6 +632,27 @@ body.driver-mode .auth-lang-switcher {
     display: block;
     object-fit: contain;
 }
+.map-theme-toggle-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background-color: #ffffff; /* زر أبيض */
+  color: #333;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+  margin: 0 8px;
+}
+
+.map-theme-toggle-btn[data-theme="dark"] {
+  background-color: #222;
+  color: #fff;
+}
+
 /* الأزرار الفرعية manual / scan — نفس نقطة زر الإضافة كبداية */
 .driver-extra-child-btn {
     position: fixed;
@@ -1253,6 +1274,10 @@ body.driver-extra-open #driverExtraScanBtn {
     </div>
 
     <div class="driver-top-center">
+	<!-- زر تبديل وضع الخريطة (نهاري / ليلي) -->
+<button id="mapThemeToggleBtn" class="map-theme-toggle-btn" type="button">
+  ☀
+</button>
         <!-- زر الحالة في منتصف الشريط -->
         <button id="toggleOnlineBtn" class="driver-toggle-btn">الحالة: أوفلاين</button>
     </div>
@@ -1463,11 +1488,11 @@ body.driver-extra-open #driverExtraScanBtn {
 <audio id="driverApprovalSound" src="unterwegs.mp3" preload="auto"></audio>
 
 <!-- Google Maps API -->
+<!-- Google Maps API -->
 <script
-  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCUMgXQwwe7afBlRpp6zrXunbTVSCXfSqQ&v=beta&map_ids=a07979cd0230b599b0df811d&libraries=geometry,places"
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCUMgXQwwe7afBlRpp6zrXunbTVSCXfSqQ&map_ids=f3d7cadc45e5c75f5f210e69,f3d7cadc45e5c75f51f4d9ab&libraries=geometry,places"
   defer
 ></script>
-
 
 <script>
 /* ========== إعداد Firebase ========== */
@@ -3944,6 +3969,12 @@ async function showDriverDashboard(uid) {
   }
   // تهيئة خريطة السائق
   initDriverMap();
+if (typeof setupMapThemeToggle === "function") {
+  setupMapThemeToggle();
+}
+
+  // زر تغيير وضع الخريطة (نهاري / ليلي)
+  setupMapThemeToggle();
 
   // تعبئة نموذج التسعير من بيانات السائق الحالية
   populatePricingFormFromData();
@@ -4163,6 +4194,116 @@ function getStatusLabel(status) {
   const key = map[s] || "status_unknown";
   return t(key);
 }
+// ========== Map Theme (Light / Dark) ==========
+// خريطة الوضع النهاري = الـ Map ID الحالي
+const DRIVER_MAP_LIGHT_ID = "f3d7cadc45e5c75f5f210e69";
+// خريطة الوضع الليلي = الـ Map ID الداكن من Google Maps Designer
+const DRIVER_MAP_DARK_ID  = "f3d7cadc45e5c75f51f4d9ab";
+
+let driverMapTheme = "light";
+
+// قيم نحفظ فيها آخر مركز وزوم عند إعادة بناء الخريطة
+let driverMapRebuildCenter = null;
+let driverMapRebuildZoom   = null;
+
+function updateMapThemeToggleButton() {
+  const btn = document.getElementById("mapThemeToggleBtn");
+  if (!btn) return;
+
+  if (driverMapTheme === "dark") {
+    btn.dataset.theme = "dark";
+    btn.textContent   = "🌙";
+    btn.title         = t("mapTheme_dark");
+  } else {
+    btn.dataset.theme = "light";
+    btn.textContent   = "☀";
+    btn.title         = t("mapTheme_light");
+  }
+}
+
+function rebuildDriverMap() {
+  if (!driverMapContainer) return;
+  if (typeof google === "undefined" || !google.maps || !google.maps.Map) return;
+
+  // حفظ المركز والزوم الحاليين
+  if (driverMap) {
+    try {
+      driverMapRebuildCenter = driverMap.getCenter();
+      driverMapRebuildZoom   = driverMap.getZoom();
+    } catch (e) {
+      driverMapRebuildCenter = null;
+      driverMapRebuildZoom   = null;
+    }
+  }
+
+  // تنظيف عناصر مرتبطة بالخريطة القديمة
+  if (remainingRoutePolyline) {
+    remainingRoutePolyline.setMap(null);
+    remainingRoutePolyline = null;
+  }
+  if (driverMarker) {
+    driverMarker.setMap(null);
+    driverMarker = null;
+  }
+  if (merchantMarker) {
+    merchantMarker.setMap(null);
+    merchantMarker = null;
+  }
+  if (customerMarker) {
+    customerMarker.setMap(null);
+    customerMarker = null;
+  }
+  if (driverGlowInner) {
+    driverGlowInner.setMap(null);
+    driverGlowInner = null;
+  }
+  if (driverGlowOuter) {
+    driverGlowOuter.setMap(null);
+    driverGlowOuter = null;
+  }
+
+  // إجبار initDriverMap على إنشاء Map جديدة
+  driverMap = null;
+  initDriverMap();
+}
+
+function applyDriverMapTheme(theme) {
+  driverMapTheme = theme === "dark" ? "dark" : "light";
+  console.log("Map theme now:", driverMapTheme);
+
+  try {
+    localStorage.setItem("driverMapTheme", driverMapTheme);
+  } catch (e) {}
+
+  updateMapThemeToggleButton();
+  rebuildDriverMap();
+}
+
+function setupMapThemeToggle() {
+  const btn = document.getElementById("mapThemeToggleBtn");
+  if (!btn) return;
+
+  // منع تكرار ربط الـ click لو استُدعيت أكثر من مرة
+  if (btn.dataset.themeBound === "1") {
+    return;
+  }
+  btn.dataset.themeBound = "1";
+
+  // قراءة آخر وضع من localStorage
+  try {
+    const saved = localStorage.getItem("driverMapTheme");
+    if (saved === "dark" || saved === "light") {
+      driverMapTheme = saved;
+    }
+  } catch (e) {}
+
+  updateMapThemeToggleButton();
+
+  btn.addEventListener("click", () => {
+    const next = driverMapTheme === "light" ? "dark" : "light";
+    applyDriverMapTheme(next);
+  });
+}
 
 /* خريطة السائق */
 function initDriverMap() {
@@ -4171,7 +4312,11 @@ function initDriverMap() {
   const defaultCenter = { lat: 25.276987, lng: 55.296249 };
   let center = defaultCenter;
 
-  if (
+  // لو إعادة بناء الخريطة: استخدم المركز القديم
+  if (driverMapRebuildCenter) {
+    center = driverMapRebuildCenter;
+    driverMapRebuildCenter = null;
+  } else if (
     currentDriverData &&
     typeof currentDriverData.lat === "number" &&
     typeof currentDriverData.lng === "number"
@@ -4179,43 +4324,51 @@ function initDriverMap() {
     center = { lat: currentDriverData.lat, lng: currentDriverData.lng };
   }
 
-  try {
-    if (!driverMap && typeof google !== "undefined" && google.maps && google.maps.Map) {
-     driverMap = new google.maps.Map(driverMapContainer, {
-  center,
-  zoom: 16,
-
-  // ⬅ مهم جداً: نفس الـ Map ID المستخدم في السكربت
-  mapId: "a07979cd0230b599b0df811d",
-
-  // نضمن استخدام الـ Vector Map
-  renderingType: google.maps.RenderingType.VECTOR,
-
-  disableDefaultUI: true,
-  zoomControl: false,
-  gestureHandling: "greedy",
-
-  // وضع مبدئي للملاحة
-  tilt: 45,
-  heading: 0,
-
-  // تفعيل التدوير والإمالة بالـ Gestures / الكيبورد
-  tiltInteractionEnabled: true,
-  headingInteractionEnabled: true,
-});
-// 🔍 تشخيص نوع الخريطة ودعم التدوير
-try {
-  console.log("supports setHeading?:", typeof driverMap.setHeading);
-  if (typeof driverMap.getRenderingType === "function") {
-    console.log("map renderingType:", driverMap.getRenderingType());
+  let zoom = 16;
+  if (typeof driverMapRebuildZoom === "number") {
+    zoom = driverMapRebuildZoom;
+    driverMapRebuildZoom = null;
   }
-} catch (e) {
-  console.warn("debug map renderingType failed:", e);
-}
+console.log(
+  "initDriverMap with theme:",
+  driverMapTheme,
+  "mapId:",
+  driverMapTheme === "dark" ? DRIVER_MAP_DARK_ID : DRIVER_MAP_LIGHT_ID
+);
 
-    } else if (driverMap) {
-      driverMap.setCenter(center);
-    }
+  try {
+   if (!driverMap && typeof google !== "undefined" && google.maps && google.maps.Map) {
+  // لو متوفّر ColorScheme في النسخة الحالية من الـ API
+  let colorSchemeOption = undefined;
+  if (google.maps.ColorScheme) {
+    colorSchemeOption =
+      driverMapTheme === "dark"
+        ? google.maps.ColorScheme.DARK
+        : google.maps.ColorScheme.LIGHT;
+  }
+
+  const mapOptions = {
+    center,
+    zoom,
+    mapId: DRIVER_MAP_LIGHT_ID, // استخدم Map ID واحد فقط لو حاب
+    renderingType: google.maps.RenderingType.VECTOR,
+    disableDefaultUI: true,
+    zoomControl: false,
+    gestureHandling: "greedy",
+    tilt: 45,
+    heading: 0,
+    tiltInteractionEnabled: true,
+    headingInteractionEnabled: true
+  };
+
+  if (colorSchemeOption) {
+    mapOptions.colorScheme = colorSchemeOption;
+  }
+
+  driverMap = new google.maps.Map(driverMapContainer, mapOptions);
+} else if (driverMap) {
+  driverMap.setCenter(center);
+}
 
     // تهيئة خدمات المسار وعرضه على الخريطة
     if (typeof google !== "undefined" && google.maps) {
@@ -4224,20 +4377,20 @@ try {
       }
       if (!directionsRenderer) {
         directionsRenderer = new google.maps.DirectionsRenderer({
-  suppressMarkers: true,
-  preserveViewport: false,
-  polylineOptions: {
-    strokeOpacity: 0 // نخفي خط Google الأزرق الافتراضي
-  }
-});
-directionsRenderer.setMap(driverMap);
-
+          suppressMarkers: true,
+          preserveViewport: false,
+          polylineOptions: {
+            strokeOpacity: 0 // نخفي خط Google الأزرق الافتراضي
+          }
+        });
       }
-
-      // تهيئة حقل عنوان العميل مع Google Places Autocomplete
-      initCustomerAutocomplete();
+      // عند إعادة بناء الخريطة نربط الـ renderer بالخريطة الجديدة
+      directionsRenderer.setMap(driverMap);
     }
-  } catch(e) {
+
+    // تهيئة حقل عنوان العميل مع Google Places Autocomplete
+    initCustomerAutocomplete();
+  } catch (e) {
     console.error("تعذر تهيئة الخريطة:", e);
   }
 }
