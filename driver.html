@@ -226,8 +226,8 @@ body.driver-mode .auth-lang-switcher {
 
         /* أيقونة المتجر */
 .driver-nav-btn .driver-nav-icon {
-    width: 70px;                 /* تقدر تزبطها 28 / 30 حسب ذوقك */
-    height: 70px;
+    width: 60px;                 /* تقدر تزبطها 28 / 30 حسب ذوقك */
+    height: 60px;
     border-radius: 0;            /* لا دائرة داخلية */
     background-color: transparent; /* 🔴 لا خلفية بيضا */
     background-image: url("navigation.png");  /* اسم ملف المتجر */
@@ -610,18 +610,92 @@ body.driver-mode .auth-lang-switcher {
 .driver-search-btn {
     bottom: 185px;
 }
+/* زر إضافة طلب جديد فوق زر المستخدم مباشرة */
+.driver-extra-order-btn {
+    position: fixed;
+    right: 15px;    /* نفس right حق الأزرار الأخرى */
+    bottom: 235px;  /* 185 + 95 => نفس المسافة بين nav و search */
+    z-index: 3;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+    width: auto;
+    height: auto;
+    cursor: pointer;
+}
 
-    /* أيقونة المستخدم */
+/* نفس حجم أيقونة المستخدم تماماً */
+.driver-extra-order-btn img {
+    width: 60px;
+    height: 60px;
+    display: block;
+    object-fit: contain;
+}
+/* الأزرار الفرعية manual / scan — نفس نقطة زر الإضافة كبداية */
+.driver-extra-child-btn {
+    position: fixed;
+    right: 15px;     /* نفس right */
+    bottom: 280px;   /* نفس bottom (فوق المستخدم) */
+    z-index: 3;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+    width: auto;
+    height: auto;
+    cursor: pointer;
+
+    /* مخفية افتراضياً فوق زر الإضافة */
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(0, 0);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+/* حجم أيقونات manual / scan = 50x50 */
+.driver-extra-child-btn img {
+    width: 50px;
+    height: 50px;
+    display: block;
+    object-fit: contain;
+}
+
+/* عند الفتح: شكل ٧ عربي باتجاه اليسار */
+
+/* خط أفقي لليسار (مثلاً manual) */
+body.driver-extra-open #driverExtraManualBtn {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-100px, 0);      /* يسار فقط */
+}
+
+/* نزول تحت هذا الخط (scan) لعمل شكل ٧ */
+body.driver-extra-open #driverExtraScanBtn {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-100px, 100px);   /* تحت manual مع نفس الإزاحة لليسار */
+}
+
+/* أيقونة المستخدم */
 .driver-search-icon {
-    width: 70px;
-    height: 70px;
+    position: fixed;          /* أو absolute لو باقي الأزرار absolute */
+    right: 15px;              /* نفس right للأزرار الأخرى */
+    bottom: 170px;            /* هنا تتحكم بارتفاع الأيقونة فوق الأسفل */
+
+    width: 60px;
+    height: 60px;
     border-radius: 0;
-    background-color: transparent; /* 🔴 لا خلفية بيضا */
-    background-image: url("kunde.png"); /* اسم ملف العميل */
+
+    background-color: transparent;      /* لا خلفية بيضاء */
+    background-image: url("kunde.png"); /* أيقونة العميل */
     background-size: contain;
     background-position: center;
     background-repeat: no-repeat;
+
+    z-index: 1000;            /* لتظهر فوق الخريطة والعناصر الأخرى */
 }
+
     /* لوحة إدخال عنوان العميل */
     .driver-address-panel {
         position: fixed;
@@ -635,6 +709,173 @@ body.driver-mode .auth-lang-switcher {
         border-radius: 12px;
         color:#fff;
     }
+/* نافذة الإدخال اليدوي للطلب الإضافي */
+.driver-extra-manual-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 8; /* فوق الخريطة والأزرار */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.driver-extra-manual-panel.hidden {
+  display: none;
+}
+
+.driver-extra-manual-inner {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 14px 16px;
+  width: 90%;
+  max-width: 360px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
+}
+
+/* صف السعر + زر الكاش */
+.driver-extra-price-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* حقل السعر: يأخذ الباقي (حوالي 75%) */
+#driverExtraPriceInput {
+  flex: 1 1 0;
+  min-width: 0;                 /* مهم حتى يُسمح له بالانكماش */
+  margin: 0;
+  border-radius: 999px;
+  border: 1px solid #ddd;
+  padding-inline: 12px;
+  box-sizing: border-box;
+}
+/* حالة الخطأ لحقل السعر */
+#driverExtraPriceInput.driver-extra-price-error {
+  border-color: #dc2626;
+  color: #dc2626;
+}
+
+/* لون الـ placeholder في حالة الخطأ */
+#driverExtraPriceInput.driver-extra-price-error::placeholder {
+  color: #dc2626;
+}
+
+/* زر الكاش: أساساً 25% من الصف، مع حد أقصى حتى لا يكسر المنبثق */
+.driver-extra-cash-btn {
+  flex: 0 1 25%;                /* أساس 25%، ويمكن أن ينكمش قليلاً */
+  max-width: 35%;               /* لن يتجاوز تقريباً ثلث الصف */
+  min-width: 70px;              /* لا يصبح صغيراً جداً */
+  padding: 9px 10px;
+  border-radius: 999px;
+  border: 1px solid #ddd;
+  background: #ffffff;
+  color: #333;
+  font-size: 13px;
+  cursor: pointer;
+  box-sizing: border-box;
+
+  /* احتواء النص بدون خروج */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.driver-extra-cash-btn.cash-on {
+  background: #dc2626;
+  border-color: #b91c1c;
+  color: #ffffff;
+}
+
+/* زر تأكيد الإضافة */
+.driver-extra-confirm-btn {
+  width: 100%;
+  margin-top: 10px;
+  border-radius: 999px;
+  padding: 10px 0;
+  font-size: 14px;
+}
+/* زر مبدّل الطلبات النشطة (فوق زر الإضافة) */
+.driver-active-switcher-btn {
+  position: fixed;          /* أو absolute لو أنت تستخدم حاوية نسبية */
+  right: 10px;              /* عدّل حسب مكان زر الإضافة */
+  bottom: 300px;            /* يكون فوق زر الإضافة مثلاً */
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.driver-active-switcher-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* شارة عدد الطلبات */
+.driver-active-switcher-badge {
+  position: absolute;
+  top: -4px;
+  right: 22px;
+  min-width: 18px;
+  height: 26px;
+  padding: 0 4px;
+  border-radius: 999px;
+   background: rgba(220, 53, 69, 0.75); /* 🔴  الأحمر مع شفافية 85% */
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  box-shadow: 0 0 0 1px #fff;
+}
+
+/* بطاقات منبثق اختيار الطلب الحالي */
+.active-switcher-list {
+  margin-top: 10px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.active-switcher-card {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  margin-bottom: 6px;
+  cursor: pointer;
+  background: #fff;
+ 
+}
+
+.active-switcher-card-current {
+  border-color: #28a745;
+  box-shadow: 0 0 8px rgba(40, 167, 69, 0.7);
+}
+
+.active-switcher-card-cash {
+  background: rgba(255, 243, 205, 0.8); /* تمييز كاش خفيف */
+}
+
+.active-switcher-card .asc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.active-switcher-card .asc-status {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
 	/* ====== Google Places Autocomplete (اقتراح العناوين) ====== */
 .pac-container {
     /* يخليه فوق كل عناصر الخريطة و القائمة */
@@ -945,11 +1186,32 @@ body.driver-mode .auth-lang-switcher {
     <button id="driverNavBtn" class="driver-nav-btn" title="التوجيه إلى المتجر">
         <div class="driver-nav-icon"></div>
     </button>
+    <!-- زر الإدخال اليدوي -->
+    <button id="driverExtraManualBtn" class="driver-extra-child-btn">
+        <img src="manual.png" alt="" />
+    </button>
+
+    <!-- زر المسح (scan) -->
+    <button id="driverExtraScanBtn" class="driver-extra-child-btn">
+        <img src="scan.png" alt="" />
+    </button>
 
     <!-- زر عنوان العميل (أيقونة مستخدم) -->
     <button id="customerSearchBtn" class="driver-search-btn" title="عنوان العميل">
         <div class="driver-search-icon"></div>
     </button>
+    <!-- زر إضافة طلب من نفس المطعم -->
+    <button id="driverExtraOrdersBtn" class="driver-extra-order-btn" title="إضافة طلب">
+        <img src="order1.png" alt="" />
+    </button>
+<!-- زر مبدّل الطلبات النشطة فوق زر الإضافة -->
+<button id="driverActiveSwitcherBtn" class="driver-active-switcher-btn hidden">
+  <!-- الصورة: أنت تغيّر الـ src كما تريد -->
+  <img id="driverActiveSwitcherIcon" src="active.png" alt="" />
+
+  <!-- شارة عدد الطلبات النشطة -->
+  <span id="driverActiveSwitcherBadge" class="driver-active-switcher-badge"></span>
+</button>
 
     <!-- لوحة إدخال عنوان العميل -->
     <div id="customerAddressPanel" class="driver-address-panel hidden">
@@ -957,6 +1219,29 @@ body.driver-mode .auth-lang-switcher {
             <input id="customerAddressInput" type="text" placeholder="أدخل عنوان العميل" autocomplete="off" />
             <button id="startCustomerNavBtn" class="driver-address-go-btn">بدء التوجيه</button>
         </div>
+    </div>
+    <!-- نافذة الإدخال اليدوي لطلب إضافي -->
+    <div id="driverExtraManualPanel" class="driver-extra-manual-panel hidden">
+      <div class="driver-extra-manual-inner">
+        <div class="driver-extra-price-row">
+          <input
+            id="driverExtraPriceInput"
+            type="number"
+            step="0.01"
+            min="0"
+          />
+          <button
+            type="button"
+            id="driverExtraCashToggle"
+            class="driver-extra-cash-btn"
+          ></button>
+        </div>
+        <button
+          type="button"
+          id="driverExtraConfirmBtn"
+          class="driver-extra-confirm-btn"
+        ></button>
+      </div>
     </div>
 
     <!-- شريط علوي يطفو فوق الخريطة -->
@@ -1550,7 +1835,19 @@ orderDetails_orderPrice: "Order amount",
 prompt_editOrderPrice: "Enter the new order amount (€):",
 alert_invalid_orderPrice: "Invalid amount.",
 alert_orderPriceUpdated: "Order amount updated successfully.",
+"driver_extraOrders_add_title": "Add order from same restaurant",
+  "driver_extraOrders_manual_title": "Add new order manually",
+  "driver_extraOrders_scan_title": "Add order via QR code",
 
+  "extraOrder_price_placeholder": "Enter order amount",
+  "extraOrder_cash_off": "cash",
+  "extraOrder_cash_on": "Cash",
+  "extraOrder_confirm_btn": "Confirm extra order",
+  "extraOrders_price_required": "Please enter the price",
+extraOrders_no_active_call: "No active order to attach an extra order to.",
+extraOrders_missing_merchant: "Could not determine the base merchant for this order.",
+extraOrders_created_success: "Extra order has been created successfully.",
+extraOrders_create_failed: "Failed to create extra order: ",
   },
 
   de: {
@@ -1793,7 +2090,19 @@ orderDetails_orderPrice: "Bestellwert",
 prompt_editOrderPrice: "Neuen Bestellwert eingeben (€):",
 alert_invalid_orderPrice: "Ungültiger Betrag.",
 alert_orderPriceUpdated: "Bestellwert wurde erfolgreich aktualisiert.",
+ "driver_extraOrders_add_title": "Zusätzliche Bestellung vom gleichen Restaurant hinzufügen",
+  "driver_extraOrders_manual_title": "Neue Bestellung manuell hinzufügen",
+  "driver_extraOrders_scan_title": "Bestellung per QR-Code hinzufügen",
 
+  "extraOrder_price_placeholder": "Bestellbetrag eingeben",
+  "extraOrder_cash_off": "Bar",
+  "extraOrder_cash_on": "Bar",
+  "extraOrder_confirm_btn": "Zusatzbestellung bestätigen",
+  "extraOrders_price_required": "Bitte den Preis eingeben",
+extraOrders_no_active_call: "Es gibt keinen aktiven Auftrag für eine Zusatzbestellung.",
+extraOrders_missing_merchant: "Das zugehörige Restaurant für diesen Auftrag konnte nicht ermittelt werden.",
+extraOrders_created_success: "Die Zusatzbestellung wurde erfolgreich erstellt.",
+extraOrders_create_failed: "Fehler beim Erstellen der Zusatzbestellung: ",
   },
 
   ar: {
@@ -2035,7 +2344,19 @@ orderDetails_orderPrice: "قيمة الطلب",
 prompt_editOrderPrice: "أدخل قيمة الطلب الجديدة (€):",
 alert_invalid_orderPrice: "قيمة غير صالحة.",
 alert_orderPriceUpdated: "تم تحديث قيمة الطلب بنجاح.",
+  "driver_extraOrders_add_title": "إضافة طلب من نفس المطعم",
+  "driver_extraOrders_manual_title": "إضافة طلب جديد يدويًا",
+  "driver_extraOrders_scan_title": "إضافة طلب عبر رمز QR",
 
+  "extraOrder_price_placeholder": "أدخل سعر الطلب",
+  "extraOrder_cash_off": "كاش",
+  "extraOrder_cash_on": "كاش",
+  "extraOrder_confirm_btn": "تأكيد الإضافة",
+"extraOrders_price_required": "الرجاء إدخال السعر",
+extraOrders_no_active_call: "لا يوجد طلب نشط لاستخدامه كأساس للطلب الإضافي.",
+extraOrders_missing_merchant: "لا يمكن تحديد المطعم الأساسي لهذا الطلب.",
+extraOrders_created_success: "تم إضافة الطلب الإضافي بنجاح.",
+extraOrders_create_failed: "تعذّر إنشاء الطلب الإضافي: ",
   },
     tr: {
     // Main header and tabs
@@ -2281,18 +2602,30 @@ orderDetails_orderPrice: "Sipariş tutarı",
 prompt_editOrderPrice: "Yeni sipariş tutarını girin (€):",
 alert_invalid_orderPrice: "Geçersiz tutar.",
 alert_orderPriceUpdated: "Sipariş tutarı başarıyla güncellendi.",
+"driver_extraOrders_add_title": "Aynı restorandan ek sipariş ekle",
+  "driver_extraOrders_manual_title": "Yeni siparişi manuel ekle",
+  "driver_extraOrders_scan_title": "QR kod ile sipariş ekle",
 
+  "extraOrder_price_placeholder": "Sipariş tutarını girin",
+  "extraOrder_cash_off": "Nakit",
+  "extraOrder_cash_on": "Nakit",
+  "extraOrder_confirm_btn": "Ek siparişi onayla",
+  "extraOrders_price_required": "Lütfen tutarı girin",
+extraOrders_no_active_call: "Ek sipariş bağlanacak aktif bir sipariş yok.",
+extraOrders_missing_merchant: "Bu sipariş için temel restoran belirlenemedi.",
+extraOrders_created_success: "Ek sipariş başarıyla oluşturuldu.",
+extraOrders_create_failed: "Ek sipariş oluşturulurken bir hata oluştu: ",
   }
 
 };
-
-
+// ================== الترجمة + الهيلبرز ==================
 function t(key) {
   const dict = translations[currentLang] || translations.en;
   if (dict && key in dict) return dict[key];
   if (translations.en && key in translations.en) return translations.en[key];
   return key;
 }
+
 function setVehicleSelectValue(value) {
   const hiddenInput = document.getElementById("vehicleType");
   const textSpan = document.getElementById("vehicleSelectText");
@@ -2332,10 +2665,10 @@ function setVehicleSelectValue(value) {
     }
   }
 }
+
 function updateDriverVehicleIcon(vehicleType) {
   if (!driverVehicleIconEl) return;
 
-  // نفس أسماء ملفات الصور التي استخدمتها في الدروبداون
   const iconFiles = {
     car: "car.png",
     motorcycle: "motorcycle.png",
@@ -2351,8 +2684,7 @@ function updateDriverVehicleIcon(vehicleType) {
 }
 
 function applyTranslations(lang) {
-    currentLang = ["en", "de", "tr", "ar"].includes(lang) ? lang : "en";
-
+  currentLang = ["en", "de", "tr", "ar"].includes(lang) ? lang : "en";
 
   const dict = translations[currentLang] || translations.en;
 
@@ -2397,7 +2729,8 @@ function applyTranslations(lang) {
   if (cityInput && dict.city_placeholder) {
     cityInput.placeholder = dict.city_placeholder;
   }
-    const driverTypeLabelEl = document.getElementById("driverTypeLabel");
+
+  const driverTypeLabelEl = document.getElementById("driverTypeLabel");
   const driverTypePlaceholderEl = document.getElementById("driverTypePlaceholder");
   const driverTypeOptionIndependentEl = document.getElementById("driverTypeOptionIndependent");
   const driverTypeOptionEmployeeEl = document.getElementById("driverTypeOptionEmployee");
@@ -2415,7 +2748,7 @@ function applyTranslations(lang) {
     driverTypeOptionEmployeeEl.textContent = dict.driverType_employee;
   }
 
-    const vehicleTypeLabelEl = document.getElementById("vehicleTypeLabel");
+  const vehicleTypeLabelEl = document.getElementById("vehicleTypeLabel");
   if (vehicleTypeLabelEl && dict.vehicleType_label) {
     vehicleTypeLabelEl.textContent = dict.vehicleType_label;
   }
@@ -2517,7 +2850,8 @@ function applyTranslations(lang) {
   if (pricingBtnSpan && dict.pricing_section_btn) {
     pricingBtnSpan.textContent = dict.pricing_section_btn;
   }
-  // --- Pricing texts inside the pane ---
+
+  // نصوص التسعير
   const pricingIntroEl = document.getElementById("pricingIntroText");
   if (pricingIntroEl && dict.pricing_intro) {
     pricingIntroEl.textContent = dict.pricing_intro;
@@ -2541,10 +2875,8 @@ function applyTranslations(lang) {
     pricingModeIndependentOptionEl.textContent = dict.pricing_mode_independent;
   }
   if (pricingModeNoteEl && dict.pricing_mode_note_independent_only) {
-  pricingModeNoteEl.textContent = dict.pricing_mode_note_independent_only;
-}
-
- 
+    pricingModeNoteEl.textContent = dict.pricing_mode_note_independent_only;
+  }
 
   const pricingDeliveryLabel = document.getElementById("pricingDeliveryLabel");
   if (pricingDeliveryLabel && dict.pricing_label_delivery) {
@@ -2576,8 +2908,6 @@ function applyTranslations(lang) {
     savePricingBtnEl.textContent = dict.pricing_save_btn;
   }
 
-  // ملاحظة: نص الـ base fee يتم توليده لاحقاً في populatePricingFormFromData
-
   const logoutBtnSpan = document.querySelector("#driverLogoutBtn span");
   if (logoutBtnSpan && dict.logout) {
     logoutBtnSpan.textContent = dict.logout;
@@ -2587,7 +2917,7 @@ function applyTranslations(lang) {
     footerEl.textContent = dict.footer_text;
   }
 
-  // تحديث ملخص الطلبات (النصوص فقط، الأرقام من النداءات)
+  // تحديث ملخص الطلبات
   if (Array.isArray(lastDriverCalls) && typeof renderDriverOrders === "function") {
     renderDriverOrders(lastDriverCalls);
   } else {
@@ -2603,7 +2933,6 @@ function applyTranslations(lang) {
         t("summary_completed_orders") + "<br><strong>0</strong>";
     }
 
-    // صندوق القائمة الجانبية
     if (driverEarningsEl) {
       driverEarningsEl.style.display = "";
       const unit = t("distance_km_short");
@@ -2615,13 +2944,11 @@ function applyTranslations(lang) {
           unit +
           "</strong>";
       } else {
-        const earningsText =
+        driverEarningsEl.innerHTML =
           t("summary_earnings") + "<br><strong>0 €</strong>";
-        driverEarningsEl.innerHTML = earningsText;
       }
     }
 
-    // الشريط العلوي فوق الخريطة
     if (driverEarningsFloatingEl) {
       if (isEmployee) {
         driverEarningsFloatingEl.innerHTML =
@@ -2651,7 +2978,7 @@ function applyTranslations(lang) {
   updateOnlineBtn();
 }
 
-/* ========== DOM ========== */
+// ================== DOM ELEMENTS ==================
 const registerTab = document.getElementById("registerTab");
 const loginTab = document.getElementById("loginTab");
 const registerSection = document.getElementById("registerSection");
@@ -2663,12 +2990,11 @@ const vehicleSelectToggle = document.getElementById("vehicleSelectToggle");
 const vehicleSelectOptions = document.getElementById("vehicleSelectOptions");
 
 if (vehicleSelectToggle && vehicleSelectOptions) {
-  // فتح/إغلاق القائمة
+  // فتح/إغلاق قائمة نوع المركبة
   vehicleSelectToggle.addEventListener("click", () => {
     vehicleSelectOptions.classList.toggle("hidden");
   });
 
-  // اختيار نوع مركبة
   vehicleSelectOptions.addEventListener("click", (e) => {
     const option = e.target.closest(".vehicle-option");
     if (!option) return;
@@ -2677,7 +3003,6 @@ if (vehicleSelectToggle && vehicleSelectOptions) {
     vehicleSelectOptions.classList.add("hidden");
   });
 
-  // إغلاق القائمة عند الضغط خارجها
   document.addEventListener("click", (e) => {
     if (
       !vehicleSelectToggle.contains(e.target) &&
@@ -2701,31 +3026,10 @@ const driverLogoutBtn = document.getElementById("driverLogoutBtn");
 const driverLegalBtn = document.getElementById("driverLegalBtn");
 if (driverLegalBtn) {
   driverLegalBtn.addEventListener("click", () => {
-    // نص قانوني مختصر بالألمانية (Beta + Haftung)
     modalContent.innerHTML = `
       <div><strong>Rechtlicher Hinweis &amp; Haftungsausschluss (Beta-Version)</strong></div>
       <div class="small" style="margin-top:8px;">
-        Die Fahreroberfläche von „Taussil“ befindet sich in einer Testphase (Beta-Version)
-        und wird ausschließlich zu Erprobungs- und Verbesserungszwecken eingesetzt.<br /><br />
-
-        Taussil stellt lediglich die technische Plattform zur Verfügung, über die Lieferaufträge
-        zwischen Händlern und Fahrern vermittelt werden. Taussil ist selbst nicht Vertragspartei
-        der Lieferverhältnisse und wird nicht Partei von Zahlungs- oder Beförderungsverträgen
-        zwischen Händler, Fahrer und Endkunden.<br /><br />
-
-        Insbesondere gilt:<br />
-        <ul>
-          <li>Die Verantwortung für die ordnungsgemäße Ausführung der Lieferungen liegt ausschließlich beim Fahrer.</li>
-          <li>Die Verantwortung für das Einziehen und Weiterleiten von Barzahlungen an den Händler liegt ausschließlich beim Fahrer.</li>
-          <li>Taussil übernimmt keine Haftung für verlorene, verweigerte oder unterschlagene Bargeldbeträge oder Waren.</li>
-          <li>Streitigkeiten über Zahlung, Leistung, Verspätung oder Schaden bestehen ausschließlich zwischen Händler, Fahrer und Endkunden.</li>
-        </ul>
-
-        Fahrer sind selbst dafür verantwortlich, alle für ihre Tätigkeit geltenden rechtlichen Pflichten
-        (z. B. Gewerbeanmeldung, Steuern, Versicherung, Fahrerlaubnis) zu prüfen und zu erfüllen.<br /><br />
-
-        Die Nutzung der App in dieser Beta-Version erfolgt auf eigenes Risiko. Es besteht kein Anspruch
-        auf jederzeit fehlerfreien Betrieb oder auf bestimmte Funktionen.
+        ...
       </div>
       <div class="btn-row" style="margin-top:14px;">
         <button id="legalCloseBtn">Schließen</button>
@@ -2763,6 +3067,9 @@ const driverBottomStatusEl = document.getElementById("driverBottomStatus");
 
 // زر التوجيه
 const driverNavBtn = document.getElementById("driverNavBtn");
+const driverExtraOrdersBtn = document.getElementById("driverExtraOrdersBtn");
+const driverActiveSwitcherBtn   = document.getElementById("driverActiveSwitcherBtn");
+const driverActiveSwitcherBadge = document.getElementById("driverActiveSwitcherBadge");
 
 // زر عنوان العميل وحقل العنوان
 const customerSearchBtn = document.getElementById("customerSearchBtn");
@@ -2770,11 +3077,86 @@ const customerAddressPanel = document.getElementById("customerAddressPanel");
 const customerAddressInput = document.getElementById("customerAddressInput");
 const startCustomerNavBtn = document.getElementById("startCustomerNavBtn");
 
+// عناصر نافذة الطلب الإضافي اليدوي
+const driverExtraManualPanel  = document.getElementById("driverExtraManualPanel");
+const driverExtraPriceInput   = document.getElementById("driverExtraPriceInput");
+const driverExtraCashBtn      = document.getElementById("driverExtraCashBtn");
+const driverExtraConfirmBtn   = document.getElementById("driverExtraConfirmBtn");
+
+let driverExtraIsCash = false;
+// ⬅⬅ هنا مباشرة ألصق الكود التالي
+if (driverExtraCashBtn) {
+  driverExtraCashBtn.addEventListener("click", () => {
+    // قلب الحالة
+    driverExtraIsCash = !driverExtraIsCash;
+
+    // الشكل (أبيض ↔ أحمر)
+    driverExtraCashBtn.classList.toggle("cash-on", driverExtraIsCash);
+
+    // نص الزر من الترجمة
+    driverExtraCashBtn.textContent = driverExtraIsCash
+      ? t("extraOrders_btn_cash_on")
+      : t("extraOrders_btn_cash");
+  });
+}
+// إعادة ضبط نافذة الطلب الإضافي اليدوي (تصفير الحقل + الكاش + إخفاء المودال)
+function resetDriverExtraManualForm() {
+  // حقل السعر
+  if (driverExtraPriceInput) {
+    driverExtraPriceInput.value = "";
+    driverExtraPriceInput.classList.remove("driver-extra-price-error");
+    driverExtraPriceInput.placeholder = t("extraOrders_price_placeholder");
+  }
+
+  // حالة الكاش
+  driverExtraIsCash = false;
+  if (driverExtraCashBtn) {
+    driverExtraCashBtn.classList.remove("cash-on");
+    driverExtraCashBtn.textContent = t("extraOrders_btn_cash");
+  }
+
+  // إخفاء المودال (لو كنت تستدعيها عند الإغلاق)
+  if (driverExtraManualPanel) {
+    driverExtraManualPanel.classList.add("hidden");
+  }
+}
+
+// زر تأكيد إضافة الطلب الإضافي
+if (driverExtraConfirmBtn) {
+  driverExtraConfirmBtn.addEventListener("click", () => {
+    if (!driverExtraPriceInput) return;
+
+    const raw = (driverExtraPriceInput.value || "")
+      .replace(",", ".")
+      .trim();
+
+    if (!raw) {
+      driverExtraPriceInput.classList.add("driver-extra-price-error");
+      driverExtraPriceInput.value = "";
+      driverExtraPriceInput.placeholder = t("extraOrders_price_required");
+      driverExtraPriceInput.focus();
+      return;
+    }
+
+    const price = parseFloat(raw);
+    if (isNaN(price) || price <= 0) {
+      driverExtraPriceInput.classList.add("driver-extra-price-error");
+      driverExtraPriceInput.value = "";
+      driverExtraPriceInput.placeholder = t("extraOrders_price_required");
+      driverExtraPriceInput.focus();
+      return;
+    }
+
+    driverExtraPriceInput.classList.remove("driver-extra-price-error");
+    driverExtraPriceInput.placeholder = t("extraOrders_price_placeholder");
+
+    // هنا تمرير حالة الكاش الحقيقية
+    createDriverExtraCallFromManual(price, driverExtraIsCash);
+  });
+}
+
 // كرت الطلب النشط + كرت الأرباح العائم
 const driverCurrentOrderEl = document.getElementById("driverCurrentOrder");
-
-
-
 const driverEarningsFloatingEl = document.getElementById("driverEarningsFloating");
 const cashFloatingBadgeEl = document.getElementById("cashFloatingBadge");
 
@@ -2782,7 +3164,6 @@ const driverApprovalOverlay = document.getElementById("driverApprovalOverlay");
 const driverApprovalStartBtn = document.getElementById("driverApprovalStartBtn");
 
 const modalBackdrop = document.getElementById("modalBackdrop");
-
 const modalContent = document.getElementById("modalContent");
 const closeModal = document.getElementById("closeModal");
 const orderModalEl = document.getElementById("orderModal");
@@ -2790,20 +3171,17 @@ const orderModalEl = document.getElementById("orderModal");
 const mainHeader = document.getElementById("mainHeader");
 const authTabs = document.getElementById("authTabs");
 const footerEl = document.querySelector("footer");
-const authLangSwitcher = document.querySelector(".auth-lang-switcher"); // ✅ جديد
+const authLangSwitcher = document.querySelector(".auth-lang-switcher");
 
-// 🔊 صوت الأونلاين + فلاج لتشغيله فقط عند ضغط الزر
+// أصوات
 const onlineSoundEl = document.getElementById("onlineSound");
 let playOnlineSoundNext = false;
 
-// صوت النداء الجديد
 const callSoundEl = document.getElementById("callSound");
-// 🔊 صوت إلغاء الطلب من التاجر
 const orderCancelledSoundEl = document.getElementById("orderCancelledSound");
-// 🔊 صوت منبثق اعتماد السائق
 const driverApprovalSoundEl = document.getElementById("driverApprovalSound");
 
-// حالة السائق
+// حالة السائق والمتغيّرات العامة
 let driverCurrentOnline = false;
 let driverUid = null;
 let activeDriverSessionId = null;
@@ -2811,9 +3189,7 @@ let activeDriverSessionId = null;
 let driverDashboardShownOnce = false;
 let isManualLoginInProgress = false;
 
-// ✅ جديد: حالة اعتماد السائق من الأدمن
 let driverApprovalStatus = "pending";
-// بيانات/استماعات
 let driverMap;
 let currentDriverData = null;
 let driverOrdersListener = null;
@@ -2824,15 +3200,15 @@ let driverOrdersInitialLoaded = false;
 let lastDriverCalls = [];
 let driverCallsCache = [];
 let directionsService = null;
-let directionsRenderer = null; // لعرض المسار على الخريطة
-let currentOrderCollapsed = false; // حالة طي/فتح بطاقة الطلب النشط
-let autoCollapseCurrentOrderAfterAccept = false; // بعد قبول الطلب نطوي الكرت مرة واحدة
+let driverSelectedActiveCallId = null; // اختيار يدوي للطلب الحالي في الواجهة
 
-// مسار الطريق الحالي (من Google Directions)
+let directionsRenderer = null;
+let currentOrderCollapsed = false;
+let autoCollapseCurrentOrderAfterAccept = false;
+
 let routePath = [];
 let remainingRoutePolyline = null;
 
-// توجيه حي
 let navigationWatchId = null;
 let isGuidanceOn = false;
 let driverMarker = null;
@@ -2841,7 +3217,7 @@ let driverGlowInner = null;
 let driverGlowOuter = null;
 let driverGlowPulseInterval = null;
 let navigationTarget = null;
-let navigationMode = null; // "merchant" أو "customer" حسب الهدف الحالي
+let navigationMode = null;
 // تتبع موقع السائق وتحديثه على Firestore (خلفية)
 let locationWatchId = null;
 let lastLocationUpdateAt = 0;
@@ -4644,17 +5020,385 @@ function driverHasActiveJob() {
     return !(s === "delivered" || s === "cancelled" || s === "rejected");
   });
 }
+// ✅ إعادة حساب busy في وثيقة السائق اعتماداً على الطلبات النشطة فقط
+async function recomputeDriverBusyFlag() {
+  if (!driverUid) return;
+
+  try {
+    const activeSnap = await db
+      .collection("drivers")
+      .doc(driverUid)
+      .collection("calls")
+      .where("status", "in", [
+        "pending",
+        "accepted",
+        "in_progress",
+        "heading_to_customer"
+      ])
+      .limit(1)
+      .get();
+
+    const hasActive = !activeSnap.empty;
+
+    await db.collection("drivers").doc(driverUid).update({
+      busy: hasActive
+    });
+  } catch (e) {
+    console.warn("تعذر إعادة حساب حالة busy للسائق:", e);
+  }
+}
 
 /* اختيار الطلب النشط الحالي (مستخدم للتوجيه) */
 function getCurrentActiveCall() {
   if (!lastDriverCalls || !lastDriverCalls.length) return null;
+
   const active = lastDriverCalls.filter((o) => {
     const s = (o.status || "pending").toLowerCase();
-    return !(s === "delivered" || s === "cancelled" || s === "rejected");
+    return !(
+      s === "delivered" ||
+      s === "cancelled" ||
+      s === "rejected"
+    );
   });
   if (!active.length) return null;
-  const inProgress = active.find((c) => c.status === "in_progress");
+
+  // 1) لو في اختيار يدوي، وموجود ضمن النشطة → نعيده
+  if (driverSelectedActiveCallId) {
+    const selected = active.find((c) => c.id === driverSelectedActiveCallId);
+    if (selected) {
+      return selected;
+    }
+  }
+
+  // 2) خلاف ذلك: نعطي أولوية للـ in_progress
+  const inProgress = active.find(
+    (c) => (c.status || "").toLowerCase() === "in_progress"
+  );
   return inProgress || active[0];
+}
+
+// ⬇️ إنشاء طلب إضافي extraOrder من السائق (إدخال يدوي)
+// المنطق الجديد: نحاول أولاً استهلاك نداء حقيقي موجود للتاجر
+// (source="assistant" و status="auto_pending") بدون إنشاء نداء جديد للتاجر.
+// لو لم نجد شيئاً، نرجع لمنطق إنشاء نداء جديد كما في السابق.
+async function createDriverExtraCallFromManual(price, isCash) {
+  if (!driverUid) {
+    alert(t("alert_currentDriverNotSet"));
+    return;
+  }
+
+  // 1) نستخدم الطلب النشط الحالي كـ base
+  const baseCall = getCurrentActiveCall && getCurrentActiveCall();
+  if (!baseCall) {
+    alert(t("extraOrders_no_active_call"));
+    return;
+  }
+
+  const merchantId = baseCall.merchantId;
+  if (!merchantId) {
+    alert(t("extraOrders_missing_merchant"));
+    return;
+  }
+
+  const now = firebase.firestore.FieldValue.serverTimestamp();
+
+  // 2) نقرأ التسعيرة من الطلب الأساسي أو من بيانات السائق
+  const driverPricingSource = baseCall.pricing || currentDriverData || {};
+  const pricingMode = driverPricingSource.pricingMode || "per_km";
+
+  const pricing = {
+    pricingMode: pricingMode,
+    baseFee:
+      pricingMode === "per_km"
+        ? (typeof driverPricingSource.baseFee === "number"
+            ? driverPricingSource.baseFee
+            : (typeof BASE_DELIVERY_FEE === "number" ? BASE_DELIVERY_FEE : 0))
+        : 0,
+    pricePerKmDelivery:
+      typeof driverPricingSource.pricePerKmDelivery === "number"
+        ? driverPricingSource.pricePerKmDelivery
+        : null,
+    includeToMerchantSegment: !!driverPricingSource.includeToMerchantSegment,
+    useSamePriceForBoth: driverPricingSource.useSamePriceForBoth !== false,
+    pricePerKmToMerchant:
+      typeof driverPricingSource.pricePerKmToMerchant === "number"
+        ? driverPricingSource.pricePerKmToMerchant
+        : null,
+    freeKm:
+      typeof driverPricingSource.freeKm === "number"
+        ? driverPricingSource.freeKm
+        : 0
+  };
+
+  // 3) إعداد بيانات الكاش من إدخال السائق
+  const manualOrderPrice = price;
+  const manualCollectCash = !!isCash;
+  const manualPaymentType = manualCollectCash ? "cash" : "online";
+  const manualCashAmount = manualCollectCash ? manualOrderPrice : null;
+
+  // 4) محاولة إيجاد نداء في طابور التاجر للاستهلاك:
+  //    merchants/{merchantId}/calls حيث status="auto_pending" و source="assistant"
+  let queueCall = null;
+
+  try {
+    const queueSnap = await db
+  .collectionGroup("calls")
+  .where("merchantId", "==", merchantId)
+  .where("status", "==", "auto_pending")
+  .where("source", "==", "assistant")
+  .orderBy("createdAt", "asc")
+  .limit(1)
+  .get();
+
+    queueSnap.forEach((doc) => {
+      const data = doc.data() || {};
+      if ((data.source || "") !== "assistant") return;
+
+      // نختار أقدم نداء (حسب createdAt) إن وُجد
+      if (!queueCall) {
+        queueCall = {
+          id: doc.id,
+          ref: doc.ref,
+          data
+        };
+      } else {
+        const prev = queueCall.data.createdAt && queueCall.data.createdAt.toDate
+          ? queueCall.data.createdAt.toDate().getTime()
+          : 0;
+        const cur = data.createdAt && data.createdAt.toDate
+          ? data.createdAt.toDate().getTime()
+          : 0;
+        if (cur && (!prev || cur < prev)) {
+          queueCall = {
+            id: doc.id,
+            ref: doc.ref,
+            data
+          };
+        }
+      }
+    });
+  } catch (e) {
+    console.warn("خطأ أثناء قراءة نداءات طابور التاجر:", e);
+  }
+
+  // مراجع وثائق السائق والتاجر
+  const driverCallRef = queueCall
+    ? db
+        .collection("drivers")
+        .doc(driverUid)
+        .collection("calls")
+        .doc(queueCall.id) // 👈 نفس الـ id لو استهلكنا نداء من الطابور
+    : db
+        .collection("drivers")
+        .doc(driverUid)
+        .collection("calls")
+        .doc(); // 👈 id جديد لو لم يوجد طابور
+
+  const newCallId = driverCallRef.id;
+
+  const merchantCallRef = queueCall
+    ? queueCall.ref                      // 👈 نداء موجود (استهلاك)
+    : db
+        .collection("merchants")
+        .doc(merchantId)
+        .collection("calls")
+        .doc(newCallId);                 // 👈 نداء جديد للتاجر (fallback)
+
+  const merchantCallPath = merchantCallRef.path;
+
+  // بيانات السائق
+  const driverFirstName =
+    baseCall.driverFirstName ||
+    (currentDriverData && currentDriverData.firstName) ||
+    "";
+  const driverLastName =
+    baseCall.driverLastName ||
+    (currentDriverData && currentDriverData.lastName) ||
+    "";
+  const driverPhone =
+    baseCall.driverPhone ||
+    (currentDriverData && currentDriverData.phone) ||
+    "";
+
+  // 5) دالة مساعدة لبناء البيانات المشتركة (سواء استهلكنا نداء أو أنشأنا جديداً)
+  function buildCommonData(existingMerchantData) {
+    const src = existingMerchantData || {};
+
+    // الأفضلية لقيمة الطلب القادمة من التاجر (لو موجودة)،
+    // وإلا نستخدم القيمة التي أدخلها السائق.
+    const effectiveOrderPrice =
+  typeof src.orderPrice === "number" && src.orderPrice > 0
+    ? src.orderPrice
+    : manualOrderPrice;
+
+// 👇 هذه الثلاثة نعتمد فيها دائماً على إدخال السائق للطلب الإضافي
+const effectiveCollectCash = manualCollectCash;
+const effectivePaymentType = manualPaymentType;
+const effectiveCashAmount  = manualCashAmount;
+
+    return {
+      // حقول الكاش
+      cashAmount: effectiveCashAmount,
+      collectCash: effectiveCollectCash,
+      paymentType: effectivePaymentType,
+
+      // التوقيت
+      createdAt: src.createdAt || now,
+      respondedAt: src.respondedAt || now,
+
+      // بيانات العميل والعناوين (نستفيد من الموجود لو موجود)
+      customerName: src.customerName || "",
+      deliveryAddress: src.deliveryAddress || "",
+
+      // التاجر
+      merchantCallPath: merchantCallPath,
+      merchantCity: src.merchantCity || baseCall.merchantCity || "",
+      merchantId: merchantId,
+      merchantLat:
+        typeof src.merchantLat === "number"
+          ? src.merchantLat
+          : (typeof baseCall.merchantLat === "number" ? baseCall.merchantLat : null),
+      merchantLng:
+        typeof src.merchantLng === "number"
+          ? src.merchantLng
+          : (typeof baseCall.merchantLng === "number" ? baseCall.merchantLng : null),
+      merchantName: src.merchantName || baseCall.merchantName || "",
+
+      // بيانات السائق
+      driverFirstName: driverFirstName,
+      driverId: driverUid,
+      driverLastName: driverLastName,
+      driverPhone: driverPhone,
+      driverStartLat: src.driverStartLat || null,
+      driverStartLng: src.driverStartLng || null,
+
+      // أسعار الطلب
+      orderPrice: effectiveOrderPrice,
+      orderValue:
+        typeof src.orderValue === "number" ? src.orderValue : null,
+
+      // التسعيرة
+      pricing: src.pricing || pricing,
+
+      // ملاحظات
+      notes: src.notes || "",
+
+      // حالة الطلب
+      status: "accepted",
+      startedAt: src.startedAt || null,
+
+      // أعلام extraOrder
+      type: "extraOrder",
+      source: src.source || "driver_extra",
+      extraOrder: true,
+      baseCallId: baseCall.id || null
+    };
+  }
+
+  try {
+    if (queueCall) {
+      // =============================
+      // 6) هناك نداء في الطابور → استهلاكه
+      // =============================
+      await db.runTransaction(async (tx) => {
+        const freshSnap = await tx.get(queueCall.ref);
+        if (!freshSnap.exists) {
+          throw new Error("queue_call_missing");
+        }
+        const freshData = freshSnap.data() || {};
+
+        const freshStatus = (freshData.status || "").toLowerCase();
+        const freshSource = freshData.source || "";
+
+        // لو لم يعد Auto Pending أو تغير المصدر، نعتبره مستهلك من مكان آخر
+        if (freshStatus !== "auto_pending" || freshSource !== "assistant") {
+          throw new Error("queue_call_already_taken");
+        }
+
+        // نبني البيانات المشتركة مع الأخذ بعين الاعتبار البيانات الموجودة في نداء التاجر
+        const commonData = buildCommonData(freshData);
+
+        const driverCallData = {
+          ...commonData
+        };
+
+        const merchantCallData = {
+          ...freshData,
+          ...commonData,
+          // نضمن أن المصدر الآن يشير أنه أصبح نداء عادي (أو نتركه assistant حسب لوجيكك)
+          source: "assistant",
+          driverUid: driverUid
+        };
+
+        // تحديث نداء التاجر الموجود
+        tx.set(queueCall.ref, merchantCallData, { merge: true });
+
+        // إنشاء/تحديث نداء السائق بنفس الـ id
+        tx.set(driverCallRef, driverCallData, { merge: true });
+
+        // تحديث حالة السائق إلى busy
+        const driverRef = db.collection("drivers").doc(driverUid);
+        tx.update(driverRef, { busy: true });
+      });
+    } else {
+      // =============================
+      // 7) لا يوجد نداء Auto Pending للتاجر → نرجع لمنطق إنشاء نداء جديد
+      // =============================
+      const commonData = buildCommonData({});
+
+      const driverCallData = {
+        ...commonData
+      };
+
+      const merchantCallData = {
+        ...commonData,
+        driverUid: driverUid
+      };
+
+      await db.runTransaction(async (tx) => {
+        tx.set(driverCallRef, driverCallData);
+        tx.set(merchantCallRef, merchantCallData, { merge: true });
+
+        const driverRef = db.collection("drivers").doc(driverUid);
+        tx.update(driverRef, { busy: true });
+      });
+    }
+
+    // 8) تحديث الكاش المحلي وعرض الطلبات فوراً
+    driverCallsCache.push({
+      id: newCallId,
+      ...(queueCall ? buildCommonData(queueCall.data) : buildCommonData({})),
+      _ref: driverCallRef
+    });
+
+    if (typeof renderDriverOrders === "function") {
+      renderDriverOrders(driverCallsCache);
+    }
+
+    // 9) إغلاق نافذة الإدخال اليدوي + تصفير الحقول
+    if (typeof resetDriverExtraManualForm === "function") {
+      resetDriverExtraManualForm();
+    }
+    if (driverExtraManualPanel) {
+      driverExtraManualPanel.classList.add("hidden");
+    }
+  } catch (err) {
+    console.error("خطأ في إنشاء/استهلاك الطلب الإضافي:", err);
+
+    // لو كان الخطأ بسبب استهلاك النداء من جهة أخرى، لا ننشئ نداء جديد للتاجر.
+    if (
+      err &&
+      (err.message === "queue_call_missing" ||
+        err.message === "queue_call_already_taken")
+    ) {
+      alert(t("extraOrders_consume_failed") || "Auto queue call is already taken.");
+    } else {
+      alert(
+        (t("extraOrders_create_failed") || "Failed to create extra order") +
+          (err && err.message ? ": " + err.message : "")
+      );
+    }
+  }
 }
 
 /* ========== إعدادات تسعير التوصيل (داخل القائمة الجانبية) ========== */
@@ -4894,27 +5638,26 @@ function showOrderCancelledByMerchantModal(call) {
     btn.onclick = () => {
       // دالة مساعدة لتجميع تنظيف الحالة بعد كل شيء
       const finishCleanup = async () => {
-        if (driverUid) {
-          try {
-            await db.collection("drivers").doc(driverUid).update({
-              busy: false
-            });
-          } catch (e) {
-            console.warn("تعذر تحديث حالة السائق بعد إلغاء التاجر:", e);
-          }
-        }
+  if (driverUid) {
+    try {
+      await recomputeDriverBusyFlag();
+    } catch (e) {
+      console.warn("تعذر إعادة حساب حالة السائق بعد إلغاء التاجر:", e);
+    }
+  }
 
-        try {
-          clearRouteAndNavigation();
-        } catch (e) {}
+  try {
+    clearRouteAndNavigation();
+  } catch (e) {}
 
-        try {
-          // إعادة رسم الواجهة (إخفاء كرت الطلب + إرجاع كبسولة الحالة)
-          renderDriverOrders(lastDriverCalls || []);
-        } catch (e) {}
+  try {
+    // إعادة رسم الواجهة (إخفاء كرت الطلب + إرجاع كبسولة الحالة)
+    renderDriverOrders(lastDriverCalls || []);
+  } catch (e) {}
 
-        closeOrderModal();
-      };
+  closeOrderModal();
+};
+
 
       if (!navigator.geolocation) {
         // لا يمكن تحديد الموقع → ننظف فقط
@@ -5285,6 +6028,27 @@ function renderDriverOrders(allCalls) {
       s === "rejected"
     );
   });
+  // زر مبدّل الطلبات النشطة + الشارة
+  if (driverActiveSwitcherBtn) {
+    if (active.length > 0) {
+      driverActiveSwitcherBtn.classList.remove("hidden");
+      if (driverActiveSwitcherBadge) {
+        driverActiveSwitcherBadge.textContent = String(active.length);
+      }
+    } else {
+      driverActiveSwitcherBtn.classList.add("hidden");
+      if (driverActiveSwitcherBadge) {
+        driverActiveSwitcherBadge.textContent = "";
+      }
+      // لو ما عاد عندنا طلبات نشطة، نلغي الاختيار اليدوي
+      driverSelectedActiveCallId = null;
+    }
+  }
+  // تأمين: لو الطلب المحدّد لم يعد ضمن النشطة، نعيد ضبط الاختيار
+  const activeIds = active.map((c) => c.id);
+  if (driverSelectedActiveCallId && !activeIds.includes(driverSelectedActiveCallId)) {
+    driverSelectedActiveCallId = null;
+  }
 
   const completed = lastDriverCalls.filter((c) => {
     const s = (c.status || "pending").toLowerCase();
@@ -5526,6 +6290,98 @@ if (driverActiveCountEl) {
         : t("status_hint_offline");
     }
   }
+}
+function showActiveOrdersSwitcher() {
+  if (!modalContent || !modalBackdrop) return;
+
+  const active = (lastDriverCalls || []).filter((c) => {
+    const s = (c.status || "pending").toLowerCase();
+    return !(
+      s === "delivered" ||
+      s === "cancelled" ||
+      s === "rejected"
+    );
+  });
+
+  const current = getCurrentActiveCall();
+  const currentId = current ? current.id : null;
+
+  let html = `<div><strong>${t("activeSwitcher_title")}</strong></div>`;
+
+  if (!active.length) {
+    html += `
+      <div class="small" style="margin-top:8px;">
+        ${t("activeSwitcher_empty")}
+      </div>
+    `;
+  } else {
+    html += `
+      <div class="small" style="margin-top:8px;">
+        ${t("activeSwitcher_hint")}
+      </div>
+      <div class="active-switcher-list">
+    `;
+
+    active.forEach((c) => {
+      const isCurrent = currentId && c.id === currentId;
+      const statusLabel = escapeHtml(getStatusLabel(c.status));
+      const isCash = isCashOrder(c);
+
+      const classes = [
+        "active-switcher-card",
+        isCurrent ? "active-switcher-card-current" : "",
+        isCash ? "active-switcher-card-cash" : ""
+      ].filter(Boolean).join(" ");
+
+      html += `
+        <div class="${classes}" data-call-id="${escapeHtml(c.id)}">
+          <div class="asc-header">
+            <strong>#${escapeHtml(c.id)}</strong>
+            <span class="asc-status">${statusLabel}</span>
+          </div>
+          <div class="asc-merchant">
+            ${escapeHtml(c.merchantName || "")}
+          </div>
+          <div class="asc-address small">
+            ${escapeHtml(c.deliveryAddress || "-")}
+          </div>
+        </div>
+      `;
+    });
+
+    html += `</div>`;
+  }
+
+  html += `
+    <div class="btn-row" style="margin-top:12px;">
+      <button class="secondary" onclick="closeOrderModal()">
+        ${t("orderDetails_closeBtn")}
+      </button>
+    </div>
+  `;
+
+  modalContent.innerHTML = html;
+  if (orderModalEl) orderModalEl.classList.remove("hidden");
+  modalBackdrop.style.display = "flex";
+  window.scrollTo(0, 0);
+
+  // ربط ضغط الكروت بتغيير الطلب الحالي
+  const cards = modalContent.querySelectorAll(".active-switcher-card");
+  cards.forEach((cardEl) => {
+    cardEl.addEventListener("click", () => {
+      const id = cardEl.getAttribute("data-call-id");
+      if (!id) return;
+
+      // تخزين الاختيار اليدوي
+      driverSelectedActiveCallId = id;
+
+      // إعادة رسم الواجهة: كرت الطلب + قوائم + زر البادج
+      renderDriverOrders(lastDriverCalls || []);
+
+      // إغلاق المودال
+      closeOrderModal();
+    });
+  });
 }
 
 /* ========== تفاصيل الطلب (من calls) للسائق ========== */
@@ -5787,11 +6643,9 @@ const pricing = {
           respondedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-                if (driverUid) {
-          await db.collection("drivers").doc(driverUid).update({
-            busy: false
-          });
-        }
+                     if (driverUid) {
+        await recomputeDriverBusyFlag();
+      }
 
         // ✅ تم التفاعل مع النداء (رفض) -> أوقف تكرار الصوت
         stopNewCallSoundLoop(call.id);
@@ -6101,11 +6955,8 @@ window.driverCompleteCall = function (callId) {
         await updateDriverCallAndMerchant(callId, patch);
 
         if (driverUid) {
-          await db.collection("drivers").doc(driverUid).update({
-            busy: false
-          });
+          await recomputeDriverBusyFlag();
         }
-
         // تنظيف الخريطة والتوجيه
         clearRouteAndNavigation();
 
@@ -6185,10 +7036,8 @@ window.driverCancelCall = async function (callId) {
       cancelledAt: firebase.firestore.FieldValue.serverTimestamp()
     });
 
-    if (driverUid) {
-      await db.collection("drivers").doc(driverUid).update({
-        busy: false
-      });
+        if (driverUid) {
+      await recomputeDriverBusyFlag();
     }
 
         // تنظيف كامل لمسار التوجيه وأي نقاط عميل/تاجر
@@ -6257,7 +7106,79 @@ if (authLangSelect) {
 
   handleLanguageChange(saved || "en");
 })();
+// فتح/إغلاق أزرار manual / scan عند الضغط على زر الإضافة
+if (driverExtraOrdersBtn) {
+  driverExtraOrdersBtn.addEventListener("click", () => {
+    document.body.classList.toggle("driver-extra-open");
+  });
+}
+// زر مبدّل الطلبات النشطة: يفتح منبثق اختيار الطلب الحالي
+if (driverActiveSwitcherBtn) {
+  driverActiveSwitcherBtn.addEventListener("click", () => {
+    showActiveOrdersSwitcher();
+  });
+}
 
+// اختيارياً: إغلاق المروحة بعد الضغط على أي زر فرعي
+// فتح نافذة الإدخال اليدوي
+if (driverExtraManualBtn) {
+  driverExtraManualBtn.addEventListener("click", () => {
+    document.body.classList.remove("driver-extra-open");
+
+    if (driverExtraManualPanel) {
+      driverExtraManualPanel.classList.remove("hidden");
+    }
+
+    if (driverExtraPriceInput) {
+  driverExtraPriceInput.addEventListener("input", () => {
+    driverExtraPriceInput.classList.remove("driver-extra-price-error");
+    // رجّع الـ placeholder الطبيعي لو كنت تستخدمه
+    driverExtraPriceInput.placeholder = t("extraOrders_price_placeholder");
+  });
+}
+
+    if (driverExtraCashToggle) {
+      driverExtraCashToggle.classList.remove("cash-on");
+      driverExtraCashToggle.textContent = t("extraOrder_cash_off");
+    }
+
+    if (driverExtraConfirmBtn) {
+      driverExtraConfirmBtn.textContent = t("extraOrder_confirm_btn");
+    }
+  });
+}
+
+// تبديل حالة الكاش (أبيض ↔ أحمر)
+if (driverExtraCashToggle) {
+  driverExtraCashToggle.addEventListener("click", () => {
+    const isOn = !driverExtraCashToggle.classList.contains("cash-on");
+    driverExtraCashToggle.classList.toggle("cash-on", isOn);
+    driverExtraCashToggle.textContent = isOn
+      ? t("extraOrder_cash_on")
+      : t("extraOrder_cash_off");
+
+    // ✅ السطر المهم: ربط الزر بالفلاغ الذي يستخدمه إنشاء الوثيقة
+    driverExtraIsCash = isOn;
+  });
+}
+
+
+// إغلاق النافذة عند الضغط خارج الصندوق الأبيض
+if (driverExtraManualPanel) {
+  driverExtraManualPanel.addEventListener("click", (e) => {
+    if (e.target === driverExtraManualPanel) {
+      driverExtraManualPanel.classList.add("hidden");
+function closeDriverExtraManualPanel() {
+  if (driverExtraManualPanel) {
+    driverExtraManualPanel.classList.add("hidden");
+  }
+  // ✅ كل إغلاق يعيد التهيئة
+  resetDriverExtraManualForm();
+}
+
+    }
+  });
+}
 /* ========== Clean up when leave ========== */
 window.addEventListener("beforeunload", () => {
   if (driverOrdersListener) {
