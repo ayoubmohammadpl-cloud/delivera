@@ -4803,6 +4803,53 @@ function ensureDriverMarker(lat, lng, heading) {
   updateDriverGlow(currentLatLng);
 }
 
+// حساب المسافة أمام السائق حسب السرعة (speed بوحدة m/s)
+function getMetersAheadForSpeed(speed) {
+  // لو ما في سرعة أو غير صالحة → نرجع القيمة الافتراضية
+  if (typeof speed !== "number" || isNaN(speed) || speed <= 0) {
+    return 120; // نفس القيمة التي كنت تستخدمها ثابتة
+  }
+
+  const kmh = speed * 3.6;
+
+  if (kmh < 20) return 80;    // داخل المدينة، بطيء
+  if (kmh < 40) return 110;   // سرعة متوسطة في المدينة
+  if (kmh < 70) return 150;   // ضواحي / طرق أسرع
+  return 200;                 // طريق سريع
+}
+
+// تمركز سينمائي للخريطة: نضع السائق أسفل الشاشة قليلاً ونرى الطريق أمامه
+function centerMapCinematic(currentLatLng, heading, speed) {
+  if (!driverMap || !currentLatLng) return;
+
+  // لو ما في heading واضح → تمركز عادي بسيط
+  if (typeof heading !== "number" || isNaN(heading)) {
+    driverMap.setCenter(currentLatLng);
+    return;
+  }
+
+  // نحدد المسافة أمام السائق حسب السرعة
+  const metersAhead = getMetersAheadForSpeed(speed);
+
+  // نقطة أمام السائق على مسافة metersAhead
+  const aheadPoint = google.maps.geometry.spherical.computeOffset(
+    currentLatLng,
+    metersAhead,
+    heading
+  );
+
+  const bounds = new google.maps.LatLngBounds();
+  bounds.extend(currentLatLng);
+  bounds.extend(aheadPoint);
+
+  // نضبط الـ bounds بحيث السائق + المنطقة أمامه تكون داخل الشاشة
+  driverMap.fitBounds(bounds);
+
+  // نضمن عدم النزول عن زوم معيّن
+  if (driverMap.getZoom() < 16) {
+    driverMap.setZoom(16);
+  }
+}
 
 /* بدء/إيقاف التوجيه الحي على نفس الخريطة مع تدوير حسب الاتجاه */
 function startGuidance(targetLat, targetLng) {
@@ -4832,45 +4879,53 @@ function startGuidance(targetLat, targetLng) {
     timeout: 20000
   };
 
-  navigationWatchId = navigator.geolocation.watchPosition(
-    (pos) => {
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
-      const heading =
-        typeof pos.coords.heading === "number" && !isNaN(pos.coords.heading)
-          ? pos.coords.heading
-          : null;
+navigationWatchId = navigator.geolocation.watchPosition(
+  (pos) => {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
 
-      if (!driverMap) return;
+    const heading =
+      typeof pos.coords.heading === "number" && !isNaN(pos.coords.heading)
+        ? pos.coords.heading
+        : null;
 
-      const currentLatLng = new google.maps.LatLng(lat, lng);
+    const speed =
+      typeof pos.coords.speed === "number" && !isNaN(pos.coords.speed)
+        ? pos.coords.speed
+        : null; // m/s - غالباً تكون null على المتصفح، لذلك عندنا fallback في الدالة
 
-      // ✅ تحديث موقع السائق في Firestore أيضاً (نفس الـ Throttle السابق)
-      handleDriverLocationUpdate(lat, lng);
+    if (!driverMap) return;
 
-      // ماركر السائق + الهالة + تمركز الخريطة
-      ensureDriverMarker(lat, lng, heading);
+    const currentLatLng = new google.maps.LatLng(lat, lng);
 
-      // تحديث المسار المتبقي: مسح الجزء الذي تم قطعه
-      updateRouteProgress(currentLatLng);
+    // ✅ تحديث موقع السائق في Firestore (Throttle داخلي كما عندك)
+    handleDriverLocationUpdate(lat, lng);
 
-      // 🟦 هالة شادو أزرق حول السائق
-      updateDriverGlow(currentLatLng);
+    // ماركر السائق
+    ensureDriverMarker(lat, lng, heading);
 
-      // تدوير الخريطة حسب اتجاه السائق (إن كان متوفراً)
-      if (heading !== null && typeof driverMap.setHeading === "function") {
-        driverMap.setHeading(heading);
-        if (typeof driverMap.setTilt === "function") {
-          driverMap.setTilt(45);
-        }
+    // ✅ تمركز سينمائي حسب السرعة والاتجاه
+    centerMapCinematic(currentLatLng, heading, speed);
+
+    // تحديث المسار المتبقي: مسح الجزء الذي تم قطعه
+    updateRouteProgress(currentLatLng);
+
+    // 🟦 هالة شادو أزرق حول السائق
+    updateDriverGlow(currentLatLng);
+
+    // تدوير الخريطة حسب اتجاه السائق (إن كان متوفراً)
+    if (heading !== null && typeof driverMap.setHeading === "function") {
+      driverMap.setHeading(heading);
+      if (typeof driverMap.setTilt === "function") {
+        driverMap.setTilt(45);
       }
-    },
-
-    (err) => {
-      console.error("خطأ في التوجيه الحي:", err);
-    },
-    watchOptions
-  );
+    }
+  },
+  (err) => {
+    console.error("خطأ في التوجيه الحي:", err);
+  },
+  watchOptions
+);
 }
 
 function stopGuidance() {
