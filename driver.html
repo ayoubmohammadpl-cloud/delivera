@@ -321,7 +321,7 @@ body.driver-mode .auth-lang-switcher {
 
     /* الأهم: عدم التمدد على عرض الشريط */
     width: auto;
-    min-width: 120px;
+    min-width: 80px;
     max-width: 200px;
 
     text-align: center;
@@ -545,7 +545,7 @@ body.driver-mode .auth-lang-switcher {
     border:none;
     background:transparent;
     cursor:pointer;
-    font-size:30px;
+    font-size:25px;
     line-height:1;
     padding:2px 4px;
     color: #353640;   /* ✅ لون السهم */
@@ -576,7 +576,7 @@ body.driver-mode .auth-lang-switcher {
     color:#fff;
     padding:6px 10px;
     border-radius:999px;
-    font-size:16px;
+    font-size:12px;
     text-align:center;
     box-shadow:0 4px 12px rgba(0,0,0,0.35);
     min-width:80px;
@@ -584,7 +584,7 @@ body.driver-mode .auth-lang-switcher {
 }
 .driver-earnings-floating strong {
     display:block;
-    font-size:16px;
+    font-size:13px;
 }
     /* زر عنوان العميل (أيقونة مستخدم) فوق زر المتجر مباشرة */
     /* أزرار المتجر + العميل: بدون دائرة سوداء */
@@ -1279,7 +1279,7 @@ body.driver-extra-open #driverExtraScanBtn {
   ☀
 </button>
         <!-- زر الحالة في منتصف الشريط -->
-        <button id="toggleOnlineBtn" class="driver-toggle-btn">الحالة: أوفلاين</button>
+        <button id="toggleOnlineBtn" class="driver-toggle-btn">أوفلاين</button>
     </div>
 
     <div class="driver-top-left">
@@ -1664,8 +1664,8 @@ const translations = {
     start_customer_nav: "Start navigation",
 
     // Online/offline button + bottom capsule
-    online_btn_online: "Status: Online",
-    online_btn_offline: "Status: Offline",
+    online_btn_online: "Online",
+    online_btn_offline: "Offline",
     status_hint_online: "You are online and ready to receive orders",
     status_hint_offline: "You are currently offline — tap to go online",
     status_active_one: "You have 1 active order",
@@ -1906,8 +1906,8 @@ extraOrders_create_failed: "Failed to create extra order: ",
     customerAddress_placeholder: "Kundenadresse eingeben",
     start_customer_nav: "Navigation starten",
 
-    online_btn_online: "Status: Online",
-    online_btn_offline: "Status: Offline",
+    online_btn_online: "Online",
+    online_btn_offline: "Offline",
     status_hint_online: "Du bist online und kannst Aufträge erhalten",
     status_hint_offline:
       "Du bist derzeit offline – tippe, um online zu gehen",
@@ -2161,8 +2161,8 @@ extraOrders_create_failed: "Fehler beim Erstellen der Zusatzbestellung: ",
     customerAddress_placeholder: "أدخل عنوان العميل",
     start_customer_nav: "بدء التوجيه",
 
-    online_btn_online: "الحالة: أونلاين",
-    online_btn_offline: "الحالة: أوفلاين",
+    online_btn_online: "أونلاين",
+    online_btn_offline: "أوفلاين",
     status_hint_online:
       "أنت متصل الآن ومستعد لاستقبال الطلبات",
     status_hint_offline:
@@ -2419,8 +2419,8 @@ extraOrders_create_failed: "تعذّر إنشاء الطلب الإضافي: ",
     start_customer_nav: "Navigasyonu başlat",
 
     // Online/offline button + bottom capsule
-    online_btn_online: "Durum: Çevrimiçi",
-    online_btn_offline: "Durum: Çevrimdışı",
+    online_btn_online: "Çevrimiçi",
+    online_btn_offline: "Çevrimdışı",
     status_hint_online: "Çevrimiçisiniz ve sipariş almaya hazırsınız",
     status_hint_offline: "Şu anda çevrimdışısınız — çevrimiçi olmak için dokunun",
     status_active_one: "1 aktif siparişiniz var",
@@ -4046,11 +4046,15 @@ function startDriverLocationTracking() {
     timeout: 20000
   };
 
-  locationWatchId = navigator.geolocation.watchPosition(
+    locationWatchId = navigator.geolocation.watchPosition(
     (pos) => {
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
-      // هنا فقط نكتب في Firestore (مع Throttle داخلي)
+
+      // 1) تحديث الماركر على الخريطة (بدون توجيه سينمائي)
+      ensureDriverMarker(lat, lng, null);
+
+      // 2) تحديث Firestore مع Throttle داخلي
       handleDriverLocationUpdate(lat, lng);
     },
     (err) => {
@@ -4059,7 +4063,6 @@ function startDriverLocationTracking() {
     watchOptions
   );
 }
-
 // إيقاف تتبع الموقع في الخلفية
 function stopDriverLocationTracking() {
   if (locationWatchId !== null && navigator.geolocation) {
@@ -4462,26 +4465,13 @@ function showDriverRouteToMerchant(startLat, startLng, merchantLat, merchantLng)
     }
   );
 }
-// ========== Smooth driver marker animation ==========
-let driverMoveAnimId = null;
-
 function animateDriverMarkerTo(newLat, newLng) {
   if (!driverMap || typeof google === "undefined" || !google.maps) return;
+  if (!driverMarker) return; // الإنشاء يتم في ensureDriverMarker فقط
 
   const newPos = new google.maps.LatLng(newLat, newLng);
-
-  // أول مرة: أنشئ الماركر مباشرة بدون أنيميشن
-  if (!driverMarker) {
-    driverMarker = new google.maps.Marker({
-      map: driverMap,
-      position: newPos,
-      icon: getDriverMarkerIcon(0) // سنضيف heading لاحقاً
-    });
-    return;
-  }
-
-  const startPos = driverMarker.getPosition();
-  const duration = 500; // مدة الحركة بالميلي ثانية
+  const startPos = driverMarker.getPosition() || newPos;
+  const duration = 500; // 0.5 ثانية
   const startTime = performance.now();
 
   if (driverMoveAnimId) {
@@ -4506,54 +4496,6 @@ function animateDriverMarkerTo(newLat, newLng) {
   }
 
   driverMoveAnimId = requestAnimationFrame(step);
-}
-// ========== Driver navigation camera ==========
-let lastDriverPos = null;
-
-function updateDriverNavigationView(newLat, newLng) {
-  if (!driverMap || typeof google === "undefined" || !google.maps) return;
-
-  const newPos = new google.maps.LatLng(newLat, newLng);
-
-  // حساب heading من الموقع السابق إلى الجديد
-  let heading = 0;
-  if (lastDriverPos) {
-    heading = google.maps.geometry.spherical.computeHeading(
-      lastDriverPos,
-      newPos
-    );
-  }
-  lastDriverPos = newPos;
-
-  // نقطة أمام السائق بحوالي 80 متر (لتشبه عرض Google Maps)
-  const cameraTarget =
-    google.maps.geometry.spherical.computeOffset(newPos, 80, heading);
-
-  const zoom = 17; // أقرب قليلاً من 16
-  const tilt = 45; // أنت أصلاً تستخدم 45
-
-  // لو متوفر moveCamera (الـ JS الجديد)
-  if (driverMap.moveCamera) {
-    driverMap.moveCamera({
-      center: cameraTarget,
-      zoom,
-      heading,
-      tilt
-    });
-  } else {
-    // fallback للواجهات القديمة
-    driverMap.setOptions({
-      center: cameraTarget,
-      zoom,
-      heading,
-      tilt
-    });
-  }
-
-  // تحديث شكل الماركر حسب heading (إن أردت سهم متجه)
-  if (driverMarker) {
-    driverMarker.setIcon(getDriverMarkerIcon(heading));
-  }
 }
 
 function showDriverRouteToCustomer(startLat, startLng, destLat, destLng) {
@@ -4882,7 +4824,8 @@ function updateDriverGlow(currentLatLng) {
       strokeOpacity: 0,
       strokeWeight: 0,
       fillColor: "#89d9ee",
-      fillOpacity: 5.55         // مركز قوي (شادو مركّز)
+      fillOpacity: 0.55         // مركز قوي (شادو مركّز)
+
     });
   } else {
     driverGlowInner.setCenter(currentLatLng);
@@ -4966,77 +4909,35 @@ function stopDriverGlow() {
     driverGlowOuter = null;
   }
 }
-// ⬅️ وضع سينمائي أثناء الملاحة: السائق أسفل الشاشة والطريق أمامه
-function centerMapCinematic(currentLatLng, heading) {
-  if (!driverMap || typeof google === "undefined" || !google.maps) return;
 
-  // لو ما في ملاحة حيّة أو مكتبة geometry غير متوفرة → سلوك عادي
-  if (
-    !isGuidanceOn ||
-    !google.maps.geometry ||
-    !google.maps.geometry.spherical
-  ) {
-    driverMap.setCenter(currentLatLng);
-    return;
-  }
-
-  // مسافة أمام السائق (متر) – عدّلها حسب ما تحب
-  const metersAhead = 80;
-
-  const effectiveHeading =
-    typeof heading === "number" && !isNaN(heading)
-      ? heading
-      : (driverMap.getHeading() || 0);
-
-  // نحسب نقطة متقدّمة باتجاه حركة السائق
-  const centerAhead = google.maps.geometry.spherical.computeOffset(
-    currentLatLng,
-    metersAhead,
-    effectiveHeading
-  );
-
-  // مركز الخريطة يكون أمام السائق → السائق ينزل لأسفل الشاشة
-  driverMap.setCenter(centerAhead);
-
-  // تقريب بسيط أثناء القيادة
-  const targetZoom = 17;
-  if ((driverMap.getZoom() || 0) < targetZoom) {
-    driverMap.setZoom(targetZoom);
-  }
-
-  // Tilt أعلى ليعطي شعور 3D أكثر
-  if (typeof driverMap.setTilt === "function") {
-    driverMap.setTilt(60);
-  }
-}
-
-// إنشاء/تحديث ماركر السائق + إبقائه في وسط الخريطة
 function ensureDriverMarker(lat, lng, heading) {
   if (!driverMap || typeof google === "undefined" || !google.maps) return;
 
-  const currentLatLng = new google.maps.LatLng(lat, lng);
+  const pos = new google.maps.LatLng(lat, lng);
 
   if (!driverMarker) {
+    // أيقونة السائق (سهم متجه للأمام)
     const icon = {
       path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-    scale: 6,
-    strokeWeight: 2,
-    strokeColor: "#ffffff",
-    fillColor: "#4285F4",
-    fillOpacity: 1,
-    rotation: heading || 0, // هنا نستخدم الاتجاه
-    anchor: new google.maps.Point(0, 2)
-  };
+      scale: 6,
+      strokeWeight: 2,
+      strokeColor: "#ffffff",
+      fillColor: "#4285F4",
+      fillOpacity: 1,
+      rotation: typeof heading === "number" ? heading : 0,
+      anchor: new google.maps.Point(0, 2)
+    };
+
     driverMarker = new google.maps.Marker({
       map: driverMap,
-      position: currentLatLng,
+      position: pos,
       icon
     });
   } else {
-    animateDriverMarkerTo(newLat, newLng);
-	updateDriverNavigationView(newLat, newLng);
-updateRemainingRoutePolyline(newLat, newLng);
+    // حركة سلسة من الموقع الحالي إلى الجديد
+    animateDriverMarkerTo(lat, lng);
 
+    // تحديث اتجاه الأيقونة لو توفر heading
     if (typeof heading === "number") {
       const icon = driverMarker.getIcon();
       if (icon && typeof icon === "object") {
@@ -5045,40 +4946,9 @@ updateRemainingRoutePolyline(newLat, newLng);
       }
     }
   }
-// ========== Remaining route update ==========
-function updateRemainingRoutePolyline(driverLat, driverLng) {
-  if (!routePath || !routePath.length) return;
-  if (!remainingRoutePolyline || !driverMap || !google.maps) return;
 
-  const driverPos = new google.maps.LatLng(driverLat, driverLng);
-
-  // إيجاد أقرب نقطة على المسار إلى السائق
-  let closestIndex = 0;
-  let minDist = Infinity;
-
-  for (let i = 0; i < routePath.length; i++) {
-    const p = routePath[i];
-    const dist = google.maps.geometry.spherical.computeDistanceBetween(
-      driverPos,
-      p
-    );
-    if (dist < minDist) {
-      minDist = dist;
-      closestIndex = i;
-    }
-  }
-
-  // المسار المتبقي من السائق إلى نهاية المسار
-  const remainingPath = routePath.slice(closestIndex);
-
-  remainingRoutePolyline.setPath(remainingPath);
-}
-
-   // وضع سينمائي أثناء الملاحة، وعادي في بقية الحالات
-  centerMapCinematic(currentLatLng, heading);
-
-  // الهالة المتوهجة
-  updateDriverGlow(currentLatLng);
+  // ✅ جديد: الهالة المتوهجة حول السائق
+  updateDriverGlow(pos);
 }
 
 // حساب المسافة أمام السائق حسب السرعة (speed بوحدة m/s)
@@ -5188,8 +5058,7 @@ navigationWatchId = navigator.geolocation.watchPosition(
     // تحديث المسار المتبقي: مسح الجزء الذي تم قطعه
     updateRouteProgress(currentLatLng);
 
-    // 🟦 هالة شادو أزرق حول السائق
-    updateDriverGlow(currentLatLng);
+ 
 
     // تدوير الخريطة حسب اتجاه السائق (إن كان متوفراً)
     if (heading !== null && typeof driverMap.setHeading === "function") {
