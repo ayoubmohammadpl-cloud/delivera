@@ -4720,6 +4720,49 @@ function stopDriverGlow() {
     driverGlowOuter = null;
   }
 }
+// ⬅️ وضع سينمائي أثناء الملاحة: السائق أسفل الشاشة والطريق أمامه
+function centerMapCinematic(currentLatLng, heading) {
+  if (!driverMap || typeof google === "undefined" || !google.maps) return;
+
+  // لو ما في ملاحة حيّة أو مكتبة geometry غير متوفرة → سلوك عادي
+  if (
+    !isGuidanceOn ||
+    !google.maps.geometry ||
+    !google.maps.geometry.spherical
+  ) {
+    driverMap.setCenter(currentLatLng);
+    return;
+  }
+
+  // مسافة أمام السائق (متر) – عدّلها حسب ما تحب
+  const metersAhead = 5;
+
+  const effectiveHeading =
+    typeof heading === "number" && !isNaN(heading)
+      ? heading
+      : (driverMap.getHeading() || 0);
+
+  // نحسب نقطة متقدّمة باتجاه حركة السائق
+  const centerAhead = google.maps.geometry.spherical.computeOffset(
+    currentLatLng,
+    metersAhead,
+    effectiveHeading
+  );
+
+  // مركز الخريطة يكون أمام السائق → السائق ينزل لأسفل الشاشة
+  driverMap.setCenter(centerAhead);
+
+  // تقريب بسيط أثناء القيادة
+  const targetZoom = 18.2;
+  if ((driverMap.getZoom() || 0) < targetZoom) {
+    driverMap.setZoom(targetZoom);
+  }
+
+  // Tilt أعلى ليعطي شعور 3D أكثر
+  if (typeof driverMap.setTilt === "function") {
+    driverMap.setTilt(60);
+  }
+}
 
 // إنشاء/تحديث ماركر السائق + إبقائه في وسط الخريطة
 function ensureDriverMarker(lat, lng, heading) {
@@ -4753,12 +4796,13 @@ function ensureDriverMarker(lat, lng, heading) {
     }
   }
 
-  // نخلي الخريطة متمركزة على السائق
-  driverMap.setCenter(currentLatLng);
+   // وضع سينمائي أثناء الملاحة، وعادي في بقية الحالات
+  centerMapCinematic(currentLatLng, heading);
 
   // الهالة المتوهجة
   updateDriverGlow(currentLatLng);
 }
+
 
 /* بدء/إيقاف التوجيه الحي على نفس الخريطة مع تدوير حسب الاتجاه */
 function startGuidance(targetLat, targetLng) {
