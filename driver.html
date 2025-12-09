@@ -4439,7 +4439,7 @@ function showDriverRouteToMerchant(startLat, startLng, merchantLat, merchantLng)
           path: routePath,
           strokeColor: "#4285F4",
           strokeOpacity: 0.9,
-          strokeWeight: 5,
+          strokeWeight: 6,
           map: driverMap
         });
 
@@ -4461,6 +4461,99 @@ function showDriverRouteToMerchant(startLat, startLng, merchantLat, merchantLng)
       }
     }
   );
+}
+// ========== Smooth driver marker animation ==========
+let driverMoveAnimId = null;
+
+function animateDriverMarkerTo(newLat, newLng) {
+  if (!driverMap || typeof google === "undefined" || !google.maps) return;
+
+  const newPos = new google.maps.LatLng(newLat, newLng);
+
+  // أول مرة: أنشئ الماركر مباشرة بدون أنيميشن
+  if (!driverMarker) {
+    driverMarker = new google.maps.Marker({
+      map: driverMap,
+      position: newPos,
+      icon: getDriverMarkerIcon(0) // سنضيف heading لاحقاً
+    });
+    return;
+  }
+
+  const startPos = driverMarker.getPosition();
+  const duration = 500; // مدة الحركة بالميلي ثانية
+  const startTime = performance.now();
+
+  if (driverMoveAnimId) {
+    cancelAnimationFrame(driverMoveAnimId);
+  }
+
+  function step(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(1, elapsed / duration);
+
+    const interpPos = google.maps.geometry.spherical.interpolate(
+      startPos,
+      newPos,
+      t
+    );
+
+    driverMarker.setPosition(interpPos);
+
+    if (t < 1) {
+      driverMoveAnimId = requestAnimationFrame(step);
+    }
+  }
+
+  driverMoveAnimId = requestAnimationFrame(step);
+}
+// ========== Driver navigation camera ==========
+let lastDriverPos = null;
+
+function updateDriverNavigationView(newLat, newLng) {
+  if (!driverMap || typeof google === "undefined" || !google.maps) return;
+
+  const newPos = new google.maps.LatLng(newLat, newLng);
+
+  // حساب heading من الموقع السابق إلى الجديد
+  let heading = 0;
+  if (lastDriverPos) {
+    heading = google.maps.geometry.spherical.computeHeading(
+      lastDriverPos,
+      newPos
+    );
+  }
+  lastDriverPos = newPos;
+
+  // نقطة أمام السائق بحوالي 80 متر (لتشبه عرض Google Maps)
+  const cameraTarget =
+    google.maps.geometry.spherical.computeOffset(newPos, 80, heading);
+
+  const zoom = 17; // أقرب قليلاً من 16
+  const tilt = 45; // أنت أصلاً تستخدم 45
+
+  // لو متوفر moveCamera (الـ JS الجديد)
+  if (driverMap.moveCamera) {
+    driverMap.moveCamera({
+      center: cameraTarget,
+      zoom,
+      heading,
+      tilt
+    });
+  } else {
+    // fallback للواجهات القديمة
+    driverMap.setOptions({
+      center: cameraTarget,
+      zoom,
+      heading,
+      tilt
+    });
+  }
+
+  // تحديث شكل الماركر حسب heading (إن أردت سهم متجه)
+  if (driverMarker) {
+    driverMarker.setIcon(getDriverMarkerIcon(heading));
+  }
 }
 
 function showDriverRouteToCustomer(startLat, startLng, destLat, destLng) {
@@ -4504,7 +4597,7 @@ function showDriverRouteToCustomer(startLat, startLng, destLat, destLng) {
           path: routePath,
           strokeColor: "#4285F4",
           strokeOpacity: 0.9,
-          strokeWeight: 5,
+          strokeWeight: 6,
           map: driverMap
         });
       } else {
@@ -4926,20 +5019,24 @@ function ensureDriverMarker(lat, lng, heading) {
   if (!driverMarker) {
     const icon = {
       path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-      scale: 5,
-      strokeColor: "#ffffff",
-      strokeWeight: 2,
-      fillColor: "#4285F4",
-      fillOpacity: 1,
-      rotation: typeof heading === "number" ? heading : 0
-    };
+    scale: 6,
+    strokeWeight: 2,
+    strokeColor: "#ffffff",
+    fillColor: "#4285F4",
+    fillOpacity: 1,
+    rotation: heading || 0, // هنا نستخدم الاتجاه
+    anchor: new google.maps.Point(0, 2)
+  };
     driverMarker = new google.maps.Marker({
       map: driverMap,
       position: currentLatLng,
       icon
     });
   } else {
-    driverMarker.setPosition(currentLatLng);
+    animateDriverMarkerTo(newLat, newLng);
+	updateDriverNavigationView(newLat, newLng);
+updateRemainingRoutePolyline(newLat, newLng);
+
     if (typeof heading === "number") {
       const icon = driverMarker.getIcon();
       if (icon && typeof icon === "object") {
@@ -4948,6 +5045,34 @@ function ensureDriverMarker(lat, lng, heading) {
       }
     }
   }
+// ========== Remaining route update ==========
+function updateRemainingRoutePolyline(driverLat, driverLng) {
+  if (!routePath || !routePath.length) return;
+  if (!remainingRoutePolyline || !driverMap || !google.maps) return;
+
+  const driverPos = new google.maps.LatLng(driverLat, driverLng);
+
+  // إيجاد أقرب نقطة على المسار إلى السائق
+  let closestIndex = 0;
+  let minDist = Infinity;
+
+  for (let i = 0; i < routePath.length; i++) {
+    const p = routePath[i];
+    const dist = google.maps.geometry.spherical.computeDistanceBetween(
+      driverPos,
+      p
+    );
+    if (dist < minDist) {
+      minDist = dist;
+      closestIndex = i;
+    }
+  }
+
+  // المسار المتبقي من السائق إلى نهاية المسار
+  const remainingPath = routePath.slice(closestIndex);
+
+  remainingRoutePolyline.setPath(remainingPath);
+}
 
    // وضع سينمائي أثناء الملاحة، وعادي في بقية الحالات
   centerMapCinematic(currentLatLng, heading);
