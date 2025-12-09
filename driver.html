@@ -1463,7 +1463,8 @@ body.driver-extra-open #driverExtraScanBtn {
 <audio id="driverApprovalSound" src="unterwegs.mp3" preload="auto"></audio>
 
 <!-- Google Maps API -->
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCUMgXQwwe7afBlRpp6zrXunbTVSCXfSqQ&libraries=places&map_ids=a07979cd0230b599b0df811d"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCUMgXQwwe7afBlRpp6zrXunbTVSCXfSqQ&v=beta&map_ids=a07979cd0230b599b0df811d&libraries=geometry,places">
+  defer</script>
 
 
 <script>
@@ -4180,15 +4181,17 @@ function initDriverMap() {
     if (!driverMap && typeof google !== "undefined" && google.maps && google.maps.Map) {
       driverMap = new google.maps.Map(driverMapContainer, {
   center,
-  zoom: 13,
+  zoom: 16,
+  mapId: "a07979cd0230b599b0df811d",        // نفس الـ Map ID في السكربت
   disableDefaultUI: true,
   zoomControl: false,
   gestureHandling: "greedy",
-  tilt: 0,
-  heading: 0,
 
-  // 👈 هنا نربط الخريطة بالتصميم من الـ Console
-  mapId: "a07979cd0230b599b0df811d"
+  // مهم جداً لتدوير/إمالة الخريطة
+  tilt: 45,
+  heading: 0,
+  tiltInteractionEnabled: true,
+  headingInteractionEnabled: true
 });
 
     } else if (driverMap) {
