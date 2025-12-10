@@ -366,7 +366,7 @@ body.driver-mode .auth-lang-switcher {
         max-width: 90%;
         background: #ffffff;
         box-shadow: -4px 0 18px rgba(0,0,0,0.25);
-        z-index: 3;
+        z-index: 2100;
         transform: translateX(100%);
         transition: transform 0.25s ease-out;
         display: flex;
@@ -391,7 +391,7 @@ body.driver-mode .auth-lang-switcher {
         position: fixed;
         inset: 0;
         background: rgba(0,0,0,0.35);
-        z-index: 2;
+        z-index: 2000;
         opacity: 0;
         pointer-events: none;
         transition: opacity 0.2s ease-out;
@@ -548,12 +548,55 @@ body.driver-mode .auth-lang-switcher {
     font-size:25px;
     line-height:1;
     padding:2px 4px;
-    color: #353640;   /* ✅ لون السهم */
+    color: #28a745;   /* ✅ لون السهم */
 }
 
 /* جسم البطاقة */
 .driver-current-order-body {
     margin-top:4px;
+}
+/* صفوف المطعم / العميل داخل بطاقة الطلب النشط */
+.driver-current-order-row {
+    margin-top: 4px;
+}
+
+/* صفوف المطعم / العميل داخل بطاقة الطلب النشط */
+.driver-current-order-row {
+  margin-top: 6px;
+  display: block;       /* يمنع أي flex موروث */
+  text-align: start;    /* يحترم RTL / LTR تلقائياً */
+}
+
+/* نص الاسم داخل الصف */
+.driver-current-order-row .small {
+  display: block;
+  text-align: inherit;  /* نفس اتجاه الصف */
+}
+
+/* العنوان القابل للضغط داخل البطاقة */
+.driver-current-order-link {
+  display: block;       /* سطر كامل تحت الاسم */
+  width: 100%;
+  text-align: inherit;  /* نفس اتجاه النص */
+
+  border: none;
+  background: none;
+  padding: 0;
+  margin-top: 2px;
+  font: inherit;
+  color: #007bff;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.driver-current-order-link:hover {
+  opacity: 0.9;
+}
+
+/* سطر المبلغ في البطاقة */
+.driver-current-order-amount {
+    margin-top: 6px;
+    font-weight: 600;
 }
 
 /* وضع مصغّر: فقط سهم في الأسفل لاسترجاع البطاقة */
@@ -830,7 +873,7 @@ body.driver-extra-open #driverExtraScanBtn {
   padding: 0;
   background: transparent;
   cursor: pointer;
-  z-index: 1200;
+  z-index: 1100;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1039,27 +1082,24 @@ body.driver-extra-open #driverExtraScanBtn {
   text-decoration: underline;
   cursor: pointer;
 }
+/* ===== شارة الكاش العائمة مع وضع نهاري / ليلي ===== */
+
 .cash-floating-badge {
   position: absolute;
   top: 140px;
   left: 10px;
-  z-index: 6;                  /* أعلى من الخريطة، وأقل أو مساوي لصناديق أخرى */
+  z-index: 6;
   min-width: 64px;
   min-height: 64px;
   padding: 8px;
   border-radius: 999px;        /* دائرة */
-  background: #cc0000;         /* خلفية حمراء */
-  color: #ffffff;              /* نص أبيض */
   font-weight: 700;
   font-size: 14px;
-  box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  pointer-events: none;    /* لا يعطل تفاعل الخريطة */
-  background: rgba(255, 255, 255, 0.5);
-
+  pointer-events: none;        /* لا يعطل تفاعل الخريطة */
 }
 
 .cash-floating-badge.hidden {
@@ -1071,17 +1111,33 @@ body.driver-extra-open #driverExtraScanBtn {
   z-index: 2;
 }
 
-/* وميض أحمر منتشر خلف الصندوق الدائري */
+/* عنصر الوميض الخلفي – النبض دائماً أحمر في كل الأوضاع */
 .cash-floating-badge::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
+  z-index: 1;
   box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.9);
   animation: cashPulse 1.4s infinite;
-  z-index: 1;
 }
 
+/* 🔹 الوضع الليلي + القيمة الافتراضية: خلفية فاتحة على الخريطة الداكنة */
+body.driver-map-dark .cash-floating-badge,
+body:not(.driver-map-light):not(.driver-map-dark) .cash-floating-badge {
+  background: rgba(255, 255, 255, 0.5);
+  color: #111;
+  box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.6);
+}
+
+/* 🔹 الوضع النهاري: خلفية سوداء مع نفس النبض الأحمر */
+body.driver-map-light .cash-floating-badge {
+  background: rgba(0, 0, 0, 0.8);   /* أسود شبه شفاف */
+  color: #ffffff;
+  box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.6);
+}
+
+/* النبض الأحمر (ثابت في كل الأوضاع) */
 @keyframes cashPulse {
   0% {
     transform: scale(1);
@@ -1876,6 +1932,10 @@ extraOrders_no_active_call: "No active order to attach an extra order to.",
 extraOrders_missing_merchant: "Could not determine the base merchant for this order.",
 extraOrders_created_success: "Extra order has been created successfully.",
 extraOrders_create_failed: "Failed to create extra order: ",
+"activeSwitcher_title": "Active orders",
+"activeSwitcher_empty": "No active orders currently",
+"activeSwitcher_hint": "Tap any active order below to set it as your current order.",
+
   },
 
   de: {
@@ -2131,6 +2191,10 @@ extraOrders_no_active_call: "Es gibt keinen aktiven Auftrag für eine Zusatzbest
 extraOrders_missing_merchant: "Das zugehörige Restaurant für diesen Auftrag konnte nicht ermittelt werden.",
 extraOrders_created_success: "Die Zusatzbestellung wurde erfolgreich erstellt.",
 extraOrders_create_failed: "Fehler beim Erstellen der Zusatzbestellung: ",
+"activeSwitcher_title": "Aktive Aufträge",
+"activeSwitcher_empty": "Derzeit keine aktiven Aufträge",
+"activeSwitcher_hint": "Wähle unten einen aktiven Auftrag aus, um ihn als aktuellen Auftrag festzulegen.",
+
   },
 
   ar: {
@@ -2385,6 +2449,10 @@ extraOrders_no_active_call: "لا يوجد طلب نشط لاستخدامه كأ
 extraOrders_missing_merchant: "لا يمكن تحديد المطعم الأساسي لهذا الطلب.",
 extraOrders_created_success: "تم إضافة الطلب الإضافي بنجاح.",
 extraOrders_create_failed: "تعذّر إنشاء الطلب الإضافي: ",
+"activeSwitcher_title": "الطلبات النشطة",
+"activeSwitcher_empty": "لا توجد طلبات نشطة حالياً",
+"activeSwitcher_hint": "اضغط على أي طلب نشط أدناه لتعيينه كالطلب الحالي.",
+
   },
     tr: {
     // Main header and tabs
@@ -2643,6 +2711,10 @@ extraOrders_no_active_call: "Ek sipariş bağlanacak aktif bir sipariş yok.",
 extraOrders_missing_merchant: "Bu sipariş için temel restoran belirlenemedi.",
 extraOrders_created_success: "Ek sipariş başarıyla oluşturuldu.",
 extraOrders_create_failed: "Ek sipariş oluşturulurken bir hata oluştu: ",
+"activeSwitcher_title": "Aktif siparişler",
+"activeSwitcher_empty": "Şu anda aktif sipariş yok",
+"activeSwitcher_hint": "Aşağıdaki aktif siparişlerden birini seçerek onu geçerli siparişin olarak ayarlayabilirsin.",
+
   }
 
 };
@@ -3054,10 +3126,31 @@ const driverLogoutBtn = document.getElementById("driverLogoutBtn");
 const driverLegalBtn = document.getElementById("driverLegalBtn");
 if (driverLegalBtn) {
   driverLegalBtn.addEventListener("click", () => {
+    // نص قانوني مختصر بالألمانية (Beta + Haftung)
     modalContent.innerHTML = `
       <div><strong>Rechtlicher Hinweis &amp; Haftungsausschluss (Beta-Version)</strong></div>
       <div class="small" style="margin-top:8px;">
-        ...
+        Die Fahreroberfläche von „Taussil“ befindet sich in einer Testphase (Beta-Version)
+        und wird ausschließlich zu Erprobungs- und Verbesserungszwecken eingesetzt.<br /><br />
+
+        Taussil stellt lediglich die technische Plattform zur Verfügung, über die Lieferaufträge
+        zwischen Händlern und Fahrern vermittelt werden. Taussil ist selbst nicht Vertragspartei
+        der Lieferverhältnisse und wird nicht Partei von Zahlungs- oder Beförderungsverträgen
+        zwischen Händler, Fahrer und Endkunden.<br /><br />
+
+        Insbesondere gilt:<br />
+        <ul>
+          <li>Die Verantwortung für die ordnungsgemäße Ausführung der Lieferungen liegt ausschließlich beim Fahrer.</li>
+          <li>Die Verantwortung für das Einziehen und Weiterleiten von Barzahlungen an den Händler liegt ausschließlich beim Fahrer.</li>
+          <li>Taussil übernimmt keine Haftung für verlorene, verweigerte oder unterschlagene Bargeldbeträge oder Waren.</li>
+          <li>Streitigkeiten über Zahlung, Leistung, Verspätung oder Schaden bestehen ausschließlich zwischen Händler, Fahrer und Endkunden.</li>
+        </ul>
+
+        Fahrer sind selbst dafür verantwortlich, alle für ihre Tätigkeit geltenden rechtlichen Pflichten
+        (z. B. Gewerbeanmeldung, Steuern, Versicherung, Fahrerlaubnis) zu prüfen und zu erfüllen.<br /><br />
+
+        Die Nutzung der App in dieser Beta-Version erfolgt auf eigenes Risiko. Es besteht kein Anspruch
+        auf jederzeit fehlerfreien Betrieb oder auf bestimmte Funktionen.
       </div>
       <div class="btn-row" style="margin-top:14px;">
         <button id="legalCloseBtn">Schließen</button>
@@ -4278,6 +4371,12 @@ function applyDriverMapTheme(theme) {
     localStorage.setItem("driverMapTheme", driverMapTheme);
   } catch (e) {}
 
+  // ✅ جديد: كلاس على body لتمييز وضع الخريطة (يُستخدم لشارة الكاش)
+  if (document && document.body) {
+    document.body.classList.toggle("driver-map-dark", driverMapTheme === "dark");
+    document.body.classList.toggle("driver-map-light", driverMapTheme === "light");
+  }
+
   updateMapThemeToggleButton();
   rebuildDriverMap();
 }
@@ -4299,6 +4398,12 @@ function setupMapThemeToggle() {
       driverMapTheme = saved;
     }
   } catch (e) {}
+
+  // ✅ مزامنة كلاس الـ body مع القيمة الحالية عند التحميل
+  if (document && document.body) {
+    document.body.classList.toggle("driver-map-dark", driverMapTheme === "dark");
+    document.body.classList.toggle("driver-map-light", driverMapTheme === "light");
+  }
 
   updateMapThemeToggleButton();
 
@@ -4689,6 +4794,129 @@ function startCustomerNavigation() {
     geoOptions
   );
 }
+// التوجيه إلى المطعم من بطاقة الطلب الحالي
+window.driverNavigateToMerchant = function (callId) {
+  if (!driverUid) {
+    alert(t("alert_currentDriverNotSet"));
+    return;
+  }
+
+  const call =
+    (driverCallsCache && driverCallsCache.find((c) => c.id === callId)) ||
+    getCurrentActiveCall();
+
+  if (!call) {
+    alert(t("alert_orderNotFound"));
+    return;
+  }
+
+  if (
+    call.merchantLat == null ||
+    call.merchantLng == null ||
+    isNaN(call.merchantLat) ||
+    isNaN(call.merchantLng)
+  ) {
+    // نستخدم نفس منطق التنبيه عن نقص العنوان
+    alert(t("alert_customer_address_required"));
+    return;
+  }
+
+  if (!navigator.geolocation) {
+    alert(t("alert_geo_not_supported"));
+    return;
+  }
+
+  const geoOptions = {
+    enableHighAccuracy: true,
+    timeout: 20000,
+    maximumAge: 5000
+  };
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+
+      // رسم المسار: السائق → المطعم
+      showDriverRouteToMerchant(
+        lat,
+        lng,
+        call.merchantLat,
+        call.merchantLng
+      );
+
+      // إعادة تشغيل التوجيه الحي باتجاه المطعم
+      if (typeof stopGuidance === "function") {
+        stopGuidance();
+      }
+      navigationMode = "merchant";
+      startGuidance(call.merchantLat, call.merchantLng);
+
+      // نطوي البطاقة بعد اختيار التوجيه
+      if (window.toggleCurrentOrderPanel) {
+        toggleCurrentOrderPanel(true);
+      }
+    },
+    (err) => {
+      alert(t("alert_geo_failed_prefix") + err.message);
+    },
+    geoOptions
+  );
+};
+// التوجيه إلى العميل من بطاقة الطلب الحالي
+window.driverNavigateToCustomer = function (callId) {
+  if (!driverUid) {
+    alert(t("alert_currentDriverNotSet"));
+    return;
+  }
+
+  const call =
+    (driverCallsCache && driverCallsCache.find((c) => c.id === callId)) ||
+    getCurrentActiveCall();
+
+  if (!call) {
+    alert(t("alert_orderNotFound"));
+    return;
+  }
+
+  // لو ما عندنا customerDestination في الذاكرة لكن عندنا إحداثيات من الـ call
+  if (
+    (!customerDestination ||
+      typeof customerDestination.lat !== "number" ||
+      typeof customerDestination.lng !== "number") &&
+    typeof call.customerLat === "number" &&
+    typeof call.customerLng === "number"
+  ) {
+    try {
+      // نستخدم نفس الدالة لضبط ماركر العميل + حفظ العنوان (لن يضر لو نفس القيم)
+      setCustomerDestination(
+        call.customerLat,
+        call.customerLng,
+        call.deliveryAddress || ""
+      );
+    } catch (e) {
+      console.warn("setCustomerDestination failed:", e);
+    }
+  }
+
+  // بعد الضبط المفترض أن يكون لدينا customerDestination صالح
+  if (
+    !customerDestination ||
+    customerDestination.lat == null ||
+    customerDestination.lng == null
+  ) {
+    alert(t("alert_customer_address_required"));
+    return;
+  }
+
+  // نستخدم نفس دالة التوجيه إلى العميل
+  startCustomerNavigation();
+
+  // نطوي البطاقة بعد اختيار التوجيه
+  if (window.toggleCurrentOrderPanel) {
+    toggleCurrentOrderPanel(true);
+  }
+};
 
 // فتح الملاحة الخارجية حسب الهدف الحالي على خريطة السائق
 function openExternalNavigationToCurrentTarget() {
@@ -6123,21 +6351,32 @@ function renderDriverCurrentOrder(call) {
   const statusLabel = escapeHtml(getStatusLabel(call.status));
   const isCash = isCashOrder(call);
 
-  let feeValue = "—";
-  if (call.cost && typeof call.cost.totalFee === "number") {
-    feeValue = call.cost.totalFee.toFixed(2) + " €";
-  } else if (call.deliveryFee != null) {
-    feeValue = String(call.deliveryFee);
-  }
+  // اسم + عنوان المطعم
+  const merchantName = call.merchantName || "";
+  const merchantAddress =
+    call.merchantAddress ||
+    call.merchantFullAddress ||
+    call.merchantCity ||
+    "";
 
-  const feeHtml = isCash
-    ? `<span class="cash-amount-highlight">${escapeHtml(feeValue)}</span>`
-    : escapeHtml(feeValue);
-// ✅ جديد: قراءة orderPrice وتجهيزه للعرض
-  const orderPrice =
-    typeof call.orderPrice === "number" ? call.orderPrice : null; // ✅ جديد
+  // اسم + عنوان العميل
+  const customerName = call.customerName || "";
+  const customerAddress = call.deliveryAddress || "";
+
+  // قيمة الطلب (مع fallback بسيط على cashAmount لو ما في orderPrice)
+  const rawOrderPrice =
+    typeof call.orderPrice === "number"
+      ? call.orderPrice
+      : (typeof call.cashAmount === "number" ? call.cashAmount : null);
+
   const orderPriceStr =
-    orderPrice != null ? orderPrice.toFixed(2) + " €" : "";        // ✅ جديد
+    rawOrderPrice != null ? rawOrderPrice.toFixed(2) + " €" : "";
+
+  const amountHtml = orderPriceStr
+    ? (isCash
+        ? `<span class="cash-amount-highlight">${escapeHtml(orderPriceStr)}</span>`
+        : escapeHtml(orderPriceStr))
+    : "—";
 
   let buttonsHtml = "";
   const statusCode = (call.status || "accepted").toLowerCase();
@@ -6147,7 +6386,6 @@ function renderDriverCurrentOrder(call) {
     statusCode === "in_progress" ||
     statusCode === "heading_to_customer"
   ) {
-    // ✅ جديد: زر تعديل السعر + زر تم التسليم
     buttonsHtml = `
       <button onclick="driverEditOrderPrice('${call.id}')">
         ${t("currentOrder_btn_editPrice")}
@@ -6158,26 +6396,7 @@ function renderDriverCurrentOrder(call) {
     `;
   }
 
-  // ✅ جديد: سطر قيمة orderPrice
-  const orderPriceLineHtml = orderPriceStr
-    ? `<div class="small">
-         ${t("currentOrder_orderPrice")}: ${escapeHtml(orderPriceStr)}
-       </div>`
-    : "";
-
-  // سطر التكلفة يظهر فقط لغير الموظف
-  const costLineHtml = !isEmployee
-    ? `<div class="small">
-         ${t("currentOrder_expectedCost")}: ${feeHtml}
-       </div>`
-    : "";
-
   driverCurrentOrderEl.innerHTML = `
-    <div class="driver-current-order-header">
-      <div class="driver-current-order-header-text">
-        <div><strong>#${call.id}</strong> — ${escapeHtml(call.merchantName || "")}</div>
-        <span class="small">${statusLabel}</span>
-      </div>
       <button type="button"
               class="driver-current-order-toggle"
               onclick="window.toggleCurrentOrderPanel && window.toggleCurrentOrderPanel()">
@@ -6185,17 +6404,38 @@ function renderDriverCurrentOrder(call) {
       </button>
     </div>
     <div class="driver-current-order-body">
-      <div class="small">
-        ${escapeHtml(call.deliveryAddress || "-")}
+      <!-- مطعم -->
+      <div class="small driver-current-order-row">
+        <div><strong>${escapeHtml(merchantName || "-")}</strong></div>
+        <button type="button"
+                class="driver-current-order-link"
+                onclick="window.driverNavigateToMerchant && window.driverNavigateToMerchant('${call.id}')">
+          ${escapeHtml(merchantAddress || "-")}
+        </button>
       </div>
-	  ${orderPriceLineHtml} <!-- ✅ جديد: سطر قيمة الطلب -->
-      ${costLineHtml}
+
+      <!-- عميل -->
+      <div class="small driver-current-order-row">
+        <div><strong>${escapeHtml(customerName || "-")}</strong></div>
+        <button type="button"
+                class="driver-current-order-link"
+                onclick="window.driverNavigateToCustomer && window.driverNavigateToCustomer('${call.id}')">
+          ${escapeHtml(customerAddress || "-")}
+        </button>
+      </div>
+
+      <!-- المبلغ -->
+      <div class="small driver-current-order-amount">
+        ${t("currentOrder_orderPrice")}: ${amountHtml}
+      </div>
+
       <div class="btn-row">
         ${buttonsHtml}
       </div>
     </div>
   `;
 
+  // تمييز الطلب الكاش
   driverCurrentOrderEl.classList.toggle("cash-current-order", isCash);
 
   driverCurrentOrderEl.classList.remove("hidden");
@@ -6425,7 +6665,7 @@ if (driverActiveCountEl) {
   const totalDistanceTitle = t("orderCard_totalDistance");
   const finalCostTitle = t("orderCard_finalCost");
 
-  // 9) الطلبات الحالية (Active)
+    // 9) الطلبات الحالية (Active)
   active.forEach((c) => {
     const card = document.createElement("div");
     const isCurrent = currentActiveId && c.id === currentActiveId;
@@ -6436,30 +6676,26 @@ if (driverActiveCountEl) {
       (isCurrent ? " order-card-current" : "") +
       (isCash ? " order-card-cash" : "");
 
-    const statusLabel = escapeHtml(getStatusLabel(c.status));
+    // قيمة الطلب (orderPrice)
+    const orderPrice =
+      typeof c.orderPrice === "number" ? c.orderPrice : null;
+    const orderPriceStr =
+      orderPrice != null ? orderPrice.toFixed(2) + " €" : "";
 
-    let feeValue = "—";
-    if (c.cost && typeof c.cost.totalFee === "number") {
-      feeValue = c.cost.totalFee.toFixed(2) + " €";
-    } else if (c.deliveryFee != null) {
-      feeValue = String(c.deliveryFee);
-    }
-
-    const feeHtml = isCash
-      ? `<span class="cash-amount-highlight">${escapeHtml(feeValue)}</span>`
-      : escapeHtml(feeValue);
-
-    // سطر التكلفة يظهر فقط لغير الموظف
-    const costLineActive = !isEmployee
-      ? `${expectedCostTitle}: ${feeHtml}<br/>`
-      : "";
-
+    // 👇 الكرت يعرض فقط:
+    // اسم المطعم + اسم العميل + سعر الطلب + عنوان التسليم
     card.innerHTML = `
       <div>
-        <strong>#${c.id}</strong><br/>
-        <span class="small">${statusLabelTitle}: ${statusLabel}</span><br/>
-        ${addressLabelTitle}: ${escapeHtml(c.deliveryAddress || "-")}<br/>
-        ${costLineActive}
+        <strong>${escapeHtml(c.merchantName || "-")}</strong><br/>
+        <span class="small">
+          ${t("orderDetails_customerName")}: ${escapeHtml(c.customerName || "-")}
+        </span><br/>
+        <span class="small">
+          ${t("orderDetails_orderPrice")}: ${escapeHtml(orderPriceStr || "—")}
+        </span><br/>
+        <span class="small">
+          ${t("orderCard_address")}: ${escapeHtml(c.deliveryAddress || "-")}
+        </span>
       </div>
     `;
 
@@ -6571,9 +6807,8 @@ function showActiveOrdersSwitcher() {
       <div class="active-switcher-list">
     `;
 
-    active.forEach((c) => {
+        active.forEach((c) => {
       const isCurrent = currentId && c.id === currentId;
-      const statusLabel = escapeHtml(getStatusLabel(c.status));
       const isCash = isCashOrder(c);
 
       const classes = [
@@ -6582,17 +6817,25 @@ function showActiveOrdersSwitcher() {
         isCash ? "active-switcher-card-cash" : ""
       ].filter(Boolean).join(" ");
 
+      // قيمة الطلب
+      const orderPrice =
+        typeof c.orderPrice === "number" ? c.orderPrice : null;
+      const orderPriceStr =
+        orderPrice != null ? orderPrice.toFixed(2) + " €" : "";
+
       html += `
         <div class="${classes}" data-call-id="${escapeHtml(c.id)}">
-          <div class="asc-header">
-            <strong>#${escapeHtml(c.id)}</strong>
-            <span class="asc-status">${statusLabel}</span>
-          </div>
           <div class="asc-merchant">
-            ${escapeHtml(c.merchantName || "")}
+            <strong>${escapeHtml(c.merchantName || "-")}</strong>
+          </div>
+          <div class="asc-customer small">
+            ${t("orderDetails_customerName")}: ${escapeHtml(c.customerName || "-")}
+          </div>
+          <div class="asc-price small">
+            ${t("orderDetails_orderPrice")}: ${escapeHtml(orderPriceStr || "—")}
           </div>
           <div class="asc-address small">
-            ${escapeHtml(c.deliveryAddress || "-")}
+            ${t("orderCard_address")}: ${escapeHtml(c.deliveryAddress || "-")}
           </div>
         </div>
       `;
