@@ -3067,6 +3067,98 @@ let currentTrackedDriverId = null;
 const driverHaloState = {};
 const multiTrackingByDriver = {};
 const multiCustomerMarkers = {};
+// ⬇⬇ التحكم في رؤية مواقع السائقين حسب حالة التاجر (اعتماد + أونلاين) ⬇⬇
+function canMerchantSeeDriverLocations() {
+  // يسمح برؤية مواقع السائقين فقط إذا الحساب معتمد والتاجر أونلاين
+  return merchantApprovalStatus === "approved" && merchantCurrentOnline === true;
+}
+
+function updateDriversLocationVisibility() {
+  const allowed = canMerchantSeeDriverLocations();
+
+  // 1) ماركرات السائقين فقط (إظهار/إخفاء)
+  Object.keys(driverMarkers).forEach((id) => {
+    const state = driverMarkers[id];
+    if (!state || !state.marker) return;
+    state.marker.setMap(allowed ? map : null);
+  });
+
+  // 2) الهالات:
+  if (!allowed) {
+    // عند المنع: أوقف كل الهالات واحذفها
+    Object.keys(driverHaloState).forEach((id) => {
+      stopDriverHalo(id);
+    });
+  } else {
+    // عند السماح: تأكد أن كل سائق له هالة شغالة
+    Object.keys(driverMarkers).forEach((id) => {
+      if (!driverHaloState[id]) {
+        startDriverHalo(id);
+      }
+    });
+  }
+
+  // 3) تتبع المسارات المتعددة (mt*) لكل سائق
+  Object.keys(multiTrackingByDriver).forEach((id) => {
+    const tr = multiTrackingByDriver[id];
+    if (!tr) return;
+
+    if (tr.routePolyline) {
+      tr.routePolyline.setMap(allowed ? map : null);
+    }
+
+    if (!allowed) {
+      if (tr.etaInfoWindow) tr.etaInfoWindow.close();
+
+      if (tr.etaTimerId) {
+        clearInterval(tr.etaTimerId);
+        tr.etaTimerId = null;
+      }
+      if (tr.nearCountdownTimerId) {
+        clearInterval(tr.nearCountdownTimerId);
+        tr.nearCountdownTimerId = null;
+      }
+
+      tr.etaSeconds = null;
+      tr.etaUpdatedAt = null;
+      tr.nearCountdownSeconds = null;
+    }
+  });
+
+  // 4) التتبع المفرد (trackedDriverId/ETA bubble)
+  if (trackedRoutePolyline) {
+    trackedRoutePolyline.setMap(allowed ? map : null);
+  }
+
+  if (!allowed) {
+    if (trackedEtaInfoWindow) trackedEtaInfoWindow.close();
+
+    if (trackedEtaTimerId) {
+      clearInterval(trackedEtaTimerId);
+      trackedEtaTimerId = null;
+    }
+    if (nearCountdownTimerId) {
+      clearInterval(nearCountdownTimerId);
+      nearCountdownTimerId = null;
+    }
+
+    trackedEtaSeconds = null;
+    trackedEtaUpdatedAt = null;
+    nearCountdownSeconds = null;
+  }
+
+  // 5) عند الرجوع إلى السماح نعيد حساب المسارات والـ ETA
+  if (allowed) {
+    Object.keys(multiTrackingByDriver).forEach((id) => {
+      mtUpdateRouteAndEta(id);
+    });
+    if (trackedDriverId) {
+      updateDriverRouteAndEta();
+    }
+  }
+}
+
+// ⬆⬆ نهاية التحكم في رؤية مواقع السائقين ⬆⬆
 
 let trackedDriverId = null;
 let trackedRoutePolyline = null;
@@ -3151,6 +3243,9 @@ function updateMerchantOnlineBtn() {
   } else {
     hideMerchantMarker();
   }
+
+  // ✅ هنا نطبّق سياسة إظهار/إخفاء مواقع السائقين
+  updateDriversLocationVisibility();
 }
 
 // زر أونلاين / أوفلاين للتاجر
@@ -3450,6 +3545,9 @@ logoutBtn.addEventListener("click", async () => {
   merchantCurrentOnline = false;
   currentMerchantId = null;
   updateMerchantOnlineBtn();
+    // إخفاء أي مواقع/مسارات للسائقين بعد الخروج
+  updateDriversLocationVisibility();
+
 
   try {
     localStorage.removeItem(MERCHANT_SESSION_KEY);
@@ -3707,6 +3805,9 @@ function mtUpdateRouteProgress(driverId, currentLatLng) {
 }
 
 function mtUpdateRouteAndEta(driverId) {
+  // لو التاجر غير معتمد أو أوفلاين → لا نحسب أي مسار لهذا السائق
+  if (!canMerchantSeeDriverLocations()) return;
+
   const tr = multiTrackingByDriver[driverId];
   if (!tr || !tr.destinationType) return;
   if (!map) return;
@@ -4188,6 +4289,9 @@ function initMapAndData(merchantId) {
           .update({ approvalWelcomeShown: true })
           .catch(() => {});
       }
+	        // بعد أي تغيير على حالة الاعتماد/أونلاين نطبّق سياسة الرؤية
+      updateDriversLocationVisibility();
+
     });
 
   if (!map) {
@@ -4292,6 +4396,9 @@ function initMapAndData(merchantId) {
       if (driversPickerPanel && driversPickerPanel.classList.contains("visible")) {
         buildDriversPickerList();
       }
+	        // ✅ بعد تحميل/تحديث السائقين نطبّق سياسة إظهار/إخفاء الماركرات
+      updateDriversLocationVisibility();
+
     });
 
   if (merchantCallsListenerUnsub) merchantCallsListenerUnsub();
@@ -4663,10 +4770,10 @@ function addDriverMarker(id, data) {
     return;
   }
 
-  // إنشاء ماركر جديد
+  // إنشاء ماركر جديد (يظهر فقط لو التاجر مسموح له برؤية المواقع)
   const marker = new google.maps.Marker({
     position: { lat: data.lat, lng: data.lng },
-    map,
+    map: canMerchantSeeDriverLocations() ? map : null,
     title: (data.firstName || "") + " " + (data.lastName || "")
   });
 
@@ -4785,10 +4892,11 @@ function startDriverHalo(driverId, forcedColor) {
   const baseScale = 18;
   const maxScale  = 32;
 
-  const haloMarker = new google.maps.Marker({
+    const haloMarker = new google.maps.Marker({
     position: pos,
-    map,
+    map: canMerchantSeeDriverLocations() ? map : null,
     clickable: false,
+
     zIndex: (markerState.marker.getZIndex() || 100) - 1,
     icon: {
       path: google.maps.SymbolPath.CIRCLE,
@@ -5165,6 +5273,9 @@ function updateRouteProgressAlongPath(currentLatLng) {
 }
 
 function updateDriverRouteAndEta() {
+  // لو التاجر غير معتمد أو أوفلاين → لا مسارات ولا تتبّع
+  if (!canMerchantSeeDriverLocations()) return;
+
   if (!trackedDriverId) return;
   if (!map) return;
   if (!currentDestinationType) return;
